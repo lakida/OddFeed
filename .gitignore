@@ -32,6 +32,13 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Firebase service account (mai caricare su GitHub!)
+firebase-service-account.json
+
+# Logs
+logs/
 
 # typescript
 *.tsbuildinfo

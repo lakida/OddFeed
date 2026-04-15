@@ -1,0 +1,18 @@
+{
+  "name": "oddfeed-news-fetcher",
+  "version": "1.0.0",
+  "description": "OddFeed daily news fetcher — Guardian API + GPT-4o mini",
+  "main": "fetch-news.js",
+  "scripts": {
+    "start": "node fetch-news.js",
+    "fetch": "node fetch-news.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "firebase-admin": "^12.0.0",
+    "openai": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
