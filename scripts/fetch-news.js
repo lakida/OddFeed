@@ -245,8 +245,13 @@ function guessCountry(article) {
 async function main() {
   console.log('🚀 OddFeed — Generazione notizie del giorno\n');
 
-  // Oggi come stringa YYYY-MM-DD
-  const today = new Date().toISOString().split('T')[0];
+  // Supporta --date YYYY-MM-DD per rigenerare giorni specifici
+  const dateArg = process.argv.find(a => a.startsWith('--date='));
+  const today = dateArg
+    ? dateArg.replace('--date=', '')
+    : new Date().toISOString().split('T')[0];
+
+  console.log(`📅 Data target: ${today}\n`);
 
   // Controlla se le notizie di oggi esistono già
   const existing = await db.collection('articles')

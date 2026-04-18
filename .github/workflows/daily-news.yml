@@ -20,13 +20,17 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: 'Sovrascrivi le notizie già esistenti per oggi (--force)'
+        description: 'Sovrascrivi le notizie già esistenti (--force)'
         required: false
         default: 'false'
         type: choice
         options:
           - 'false'
           - 'true'
+      date:
+        description: 'Data da rigenerare in formato YYYY-MM-DD (vuoto = oggi)'
+        required: false
+        default: ''
 
 jobs:
   fetch-and-publish:
@@ -60,11 +64,14 @@ jobs:
           # (mai salvare il file firebase-service-account.json nel repo)
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
+          ARGS=""
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
-            node fetch-news.js --force
-          else
-            node fetch-news.js
+            ARGS="$ARGS --force"
           fi
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date=${{ github.event.inputs.date }}"
+          fi
+          node fetch-news.js $ARGS
 
       # ── 5. Notifica in caso di errore ──────────────────────────────────────
       - name: Notifica fallimento
