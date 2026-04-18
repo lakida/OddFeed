@@ -136,40 +136,47 @@ Rispondi SOLO con un JSON valido:
 async function rewriteWithAI(article) {
   const headline = article.fields?.headline ?? article.webTitle ?? '';
   const trail = article.fields?.trailText ?? '';
-  const bodyPreview = article.fields?.bodyText?.substring(0, 400) ?? '';
+  // Passa fino a 1000 caratteri di corpo — più contesto = meno invenzioni
+  const bodyPreview = (article.fields?.bodyText ?? '').substring(0, 1000);
 
-  const prompt = `Sei il redattore capo di OddFeed, un'app italiana di notizie bizzarre e virali.
-Il tuo stile è quello del Corriere della Sera se diventasse un tabloid: ironico, diretto, sorprendente.
+  const prompt = `Sei il redattore di OddFeed, un'app italiana di notizie bizzarre dal mondo.
 
-NOTIZIA ORIGINALE:
-Titolo: ${headline}
+ARTICOLO ORIGINALE (usalo come unica fonte di fatti):
+Titolo originale: ${headline}
 Sommario: ${trail}
-${bodyPreview ? `Testo: ${bodyPreview}` : ''}
+${bodyPreview ? `Testo originale: ${bodyPreview}` : ''}
 
-REGOLE PER IL TITOLO ITALIANO (FONDAMENTALI):
-- Massimo 65 caratteri — conta ogni lettera
-- Inizia sempre con un'emoji pertinente
-- Deve contenere il fatto più assurdo/sorprendente in modo esplicito
-- Usa numeri specifici quando presenti (es. "per 47 anni", "con 3.000 api")
-- Tono: stupore + ironia leggera, come se tu stessi dicendo "ma ci rendiamo conto?!"
-- NON usare mai: "Un uomo", "Una donna", "Si scopre che" — troppo generico
-- Esempi di TITOLI BUONI: "🐊 Trova un coccodrillo nel wc: era lì da 3 giorni", "💸 Spende 40mila€ per sembrare sua moglie — lei lo lascia", "🧠 Studio: il 73% di noi mente al dentista per questa ragione"
+═══ REGOLE ASSOLUTE ═══
 
-REGOLE PER IL TESTO:
-- Tono da giornalista curioso che racconta a un amico al bar
-- Includi sempre il dettaglio più assurdo nel primo paragrafo
-- Seconda frase del primo paragrafo: il contesto (dove, quando, chi)
-- Secondo paragrafo: sviluppo + reazione delle persone coinvolte
-- Terzo paragrafo: una citazione immaginaria plausibile O un dato che amplifica l'assurdità
+TITOLO (titleIt / titleEn):
+- Max 65 caratteri, emoji in apertura obbligatoria
+- Deve contenere il fatto più sorprendente dell'articolo, in modo esplicito
+- Usa numeri reali se presenti nell'articolo
+- Tono ironico e diretto — vietato: "Un uomo...", "Si scopre che..."
+- Esempi: "🐊 Coccodrillo nel bagno: era nascosto lì da 3 giorni", "💸 Vende i denti del nonno su eBay: era convinto fossero d'oro"
+
+TESTO (fullTextIt / fullTextEn) — REGOLA PRINCIPALE:
+⚠️ Il testo deve raccontare ESATTAMENTE la stessa storia del titolo.
+⚠️ NON inventare fatti, nomi, luoghi o citazioni che non sono nell'articolo originale.
+⚠️ Se l'articolo originale è breve, scrivi meno — meglio corto e vero che lungo e inventato.
+
+Struttura del testo:
+- Paragrafo 1: spiega il fatto del titolo — chi, cosa, dove, quando (solo dati reali)
+- Paragrafo 2: contesto e sviluppo della storia, basato sull'articolo originale
+- Paragrafo 3: conseguenze, reazioni, o dato aggiuntivo presente nell'articolo — se non c'è, accorcia
+
+DESCRIZIONE (descriptionIt / descriptionEn):
+- 1-2 frasi che amplificano il fatto più assurdo (max 160 caratteri)
+- Deve essere coerente con il titolo e il testo
 
 Rispondi SOLO con un JSON valido:
 {
-  "titleIt": "Titolo italiano (max 65 char, emoji iniziale obbligatoria)",
-  "titleEn": "English title (max 65 chars, opening emoji required)",
-  "descriptionIt": "Gancio in italiano: 1-2 frasi che amplificano la cosa più assurda (max 180 caratteri)",
-  "descriptionEn": "Hook in English: 1-2 sentences on the most absurd part (max 180 chars)",
-  "fullTextIt": "3 paragrafi in italiano (80-100 parole ciascuno, separati da \\n\\n)",
-  "fullTextEn": "3 paragraphs in English (80-100 words each, separated by \\n\\n)",
+  "titleIt": "...",
+  "titleEn": "...",
+  "descriptionIt": "...",
+  "descriptionEn": "...",
+  "fullTextIt": "paragrafo 1\\n\\nparagrafo 2\\n\\nparagrafo 3",
+  "fullTextEn": "paragraph 1\\n\\nparagraph 2\\n\\nparagraph 3",
   "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
   "categoryLabelIt": "es. 🐾 Animali",
   "categoryLabelEn": "es. 🐾 Animals",
@@ -179,8 +186,8 @@ Rispondi SOLO con un JSON valido:
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.85,
-    max_tokens: 1200,
+    temperature: 0.6,
+    max_tokens: 1400,
   });
 
   const raw = completion.choices[0].message.content ?? '{}';
