@@ -8,10 +8,11 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { MOCK_NEWS, MOCK_USER } from '../data/mockData';
+import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { fetchTodayNews } from '../services/newsService';
 import { NewsItem } from '../types';
+import { UserStats } from '../../App';
 
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
@@ -59,11 +60,12 @@ interface HomeScreenProps {
   onGoToArchive: () => void;
   readIds: Set<string>;
   isPremium: boolean;
+  userName: string;
+  userStats: UserStats;
 }
 
-export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium }: HomeScreenProps) {
+export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats }: HomeScreenProps) {
   const { t, language } = useTranslation();
-  const [showBanner, setShowBanner] = useState(true);
   const [allNews, setAllNews] = useState<NewsItem[]>(MOCK_NEWS);
 
   useEffect(() => {
@@ -75,10 +77,12 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   const todayNews = allNews.find((n) => n.isToday) ?? allNews[0];
   const recentNews = allNews.filter((n) => n.id !== (todayNews?.id ?? '')).slice(0, isPremium ? 9 : 2);
 
-  const pointsToday = 18;
-  const progress =
-    (MOCK_USER.points - MOCK_USER.level.minPoints) /
-    (MOCK_USER.level.maxPoints - MOCK_USER.level.minPoints);
+  // Livello e progresso reali
+  const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
+  const nextLevel = USER_LEVELS[userStats.level + 1];
+  const progress = nextLevel
+    ? (userStats.points - currentLevel.minPoints) / (nextLevel.minPoints - currentLevel.minPoints)
+    : 1;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -96,7 +100,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           </Text>
 
           {/* Saluto */}
-          <Text style={styles.greetingText}>{t.home.greeting(MOCK_USER.name)}</Text>
+          <Text style={styles.greetingText}>{t.home.greeting(userName)}</Text>
           <Text style={styles.greetingSubtitle}>
             {isPremium ? t.home.todayNewsPlural : t.home.todayNews}
           </Text>
@@ -158,15 +162,17 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {/* Widget punti */}
         <View style={styles.pointsWidget}>
           <View style={styles.pwTop}>
-            <Text style={styles.pwTitle}>{t.homeWidget.title}</Text>
-            <Text style={styles.pwPoints}>{t.homeWidget.earned(pointsToday)}</Text>
+            <Text style={styles.pwTitle}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
+            <Text style={styles.pwStreak}>🔥 {userStats.streak}gg</Text>
           </View>
           <View style={styles.pwBarBg}>
-            <View style={[styles.pwBarFill, { flex: Math.min(progress, 1) }]} />
+            <View style={[styles.pwBarFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
             <View style={{ flex: Math.max(1 - progress, 0) }} />
           </View>
           <Text style={styles.pwHint}>
-            {t.homeWidget.hint}
+            {nextLevel
+              ? `${nextLevel.minPoints - userStats.points} pt per diventare ${nextLevel.name} ${nextLevel.emoji}`
+              : 'Hai raggiunto il livello massimo! 🏆'}
           </Text>
         </View>
 
@@ -350,8 +356,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textSecondary,
   },
-  pwPoints: {
-    fontSize: FontSize.md,
+  pwStreak: {
+    fontSize: FontSize.sm,
     fontWeight: '700',
     color: '#6366F1',
   },

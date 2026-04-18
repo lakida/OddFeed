@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { registerUser, loginUser, logoutUser } from '../services/authService';
+import { fetchSignInMethodsForEmail } from 'firebase/auth';
+import { auth } from '../config/firebase';
 import { useTranslation } from '../context/LanguageContext';
 
 interface LoginScreenProps {
@@ -197,10 +199,26 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
       const code = err?.code ?? '';
       if (code === 'auth/email-already-in-use') {
         setErrors(e => ({ ...e, email: 'Email già registrata. Prova ad accedere.' }));
-      } else if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
+      } else if (code === 'auth/user-not-found') {
         setErrors(e => ({ ...e, email: t.login.errAccountNotFound }));
       } else if (code === 'auth/wrong-password') {
         setErrors(e => ({ ...e, password: t.login.errPasswordWrong }));
+      } else if (code === 'auth/invalid-credential') {
+        // Firebase v11+ restituisce lo stesso codice sia per email inesistente che password sbagliata.
+        // Usiamo fetchSignInMethodsForEmail per distinguere i due casi.
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, email.trim());
+          if (methods.length === 0) {
+            // Email non registrata
+            setErrors(e => ({ ...e, email: t.login.errAccountNotFound }));
+          } else {
+            // Email esiste ma password sbagliata
+            setErrors(e => ({ ...e, password: t.login.errPasswordWrong }));
+          }
+        } catch {
+          // Fallback generico se anche fetchSignInMethods fallisce
+          setErrors(e => ({ ...e, password: 'Email o password non corretti. Controlla e riprova.' }));
+        }
       } else if (code === 'auth/network-request-failed') {
         setErrors(e => ({ ...e, password: 'Errore di rete. Controlla la connessione.' }));
       } else {
@@ -454,7 +472,13 @@ const styles = StyleSheet.create({
   logoWrap: { alignItems: 'center', marginBottom: 48 },
   logo: { fontSize: 36, fontWeight: '700', color: Colors.text, letterSpacing: -1 },
   logoLight: { fontWeight: '300', color: Colors.textSecondary },
-  tagline: { fontSize: FontSize.base, color: Colors.textTertiary, marginTop: 6 },
+  tagline: {
+    fontSize: FontSize.lg,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+    marginTop: 8,
+    letterSpacing: 0.1,
+  },
   title: {
     fontSize: FontSize.xxl, fontWeight: '700',
     color: Colors.text, marginBottom: Spacing.xl,

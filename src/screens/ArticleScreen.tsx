@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,19 @@ import {
   SafeAreaView,
   Share,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS } from '../data/mockData';
 import { ReactionType } from '../types';
 import { useTranslation } from '../context/LanguageContext';
+import { UserStats } from '../../App';
 
 interface ArticleScreenProps {
   newsId: string;
   onBack: () => void;
+  userId: string;
+  userStats: UserStats;
+  onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
 }
 
 const ALL_REACTIONS: { emoji: ReactionType; label: string }[] = [
@@ -31,7 +36,7 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-export default function ArticleScreen({ newsId, onBack }: ArticleScreenProps) {
+export default function ArticleScreen({ newsId, onBack, userId, userStats, onPointsChange }: ArticleScreenProps) {
   const { t } = useTranslation();
   const article = MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const [userReaction, setUserReaction] = useState<ReactionType | null>(article.userReaction);
@@ -40,17 +45,26 @@ export default function ArticleScreen({ newsId, onBack }: ArticleScreenProps) {
   // Link placeholder articolo (in Fase 2 sarà Universal Link reale)
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
 
+  // Assegna punti lettura al primo render (una volta per articolo)
+  useEffect(() => {
+    if (userId) {
+      onPointsChange('read', article.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article.id, userId]);
+
+  // La reazione è immutabile: una volta scelta non si può cambiare
   const handleReact = (emoji: ReactionType) => {
-    const alreadyReacted = userReaction === emoji;
-    setUserReaction(alreadyReacted ? null : emoji);
+    if (userReaction !== null) return; // già reagito, nessuna modifica
+    setUserReaction(emoji);
     setReactions((prev) =>
       prev.map((r) => ({
         ...r,
-        count: r.emoji === emoji
-          ? alreadyReacted ? r.count - 1 : r.count + 1
-          : r.count,
+        count: r.emoji === emoji ? r.count + 1 : r.count,
       }))
     );
+    // Assegna punti reazione
+    if (userId) onPointsChange('react');
   };
 
   const shareText = `${article.title}\n\n${articleUrl}`;
@@ -62,15 +76,13 @@ export default function ArticleScreen({ newsId, onBack }: ArticleScreenProps) {
         title: article.title,
         url: articleUrl,
       });
+      // Assegna punti condivisione (solo se l'utente ha effettivamente condiviso)
+      if (userId) onPointsChange('share');
     } catch (e) {}
   };
 
-  const totalReactions = reactions.reduce((sum, r) => sum + r.count, 0);
-  const topReactions = [...reactions].sort((a, b) => b.count - a.count).slice(0, 3);
-
-  const currentReactionLabel = ALL_REACTIONS.find(r => r.emoji === userReaction)?.label;
-
   const paragraphs = article.fullText.split('\n\n');
+  const hasVoted = userReaction !== null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -101,12 +113,10 @@ export default function ArticleScreen({ newsId, onBack }: ArticleScreenProps) {
             </View>
           </View>
 
-
           {/* Testo */}
           {paragraphs.map((para, i) => (
             <Text key={i} style={styles.articleText}>{para}</Text>
           ))}
-
 
           {/* Reazioni */}
           <Text style={styles.reactionsLabel}>{t.article.reactionLabel}</Text>
@@ -114,16 +124,22 @@ export default function ArticleScreen({ newsId, onBack }: ArticleScreenProps) {
           <View style={styles.reactionsRow}>
             {ALL_REACTIONS.map((r) => {
               const data = reactions.find((rx) => rx.emoji === r.emoji);
-              const isActive = userReaction === r.emoji;
+              const isSelected = userReaction === r.emoji;
+              const isDimmed = hasVoted && !isSelected;
               return (
                 <TouchableOpacity
                   key={r.emoji}
-                  style={[styles.reactionItem, isActive && styles.reactionItemActive]}
+                  style={[
+                    styles.reactionItem,
+                    isSelected && styles.reactionItemSelected,
+                    isDimmed && styles.reactionItemDimmed,
+                  ]}
                   onPress={() => handleReact(r.emoji)}
-                  activeOpacity={0.8}
+                  activeOpacity={hasVoted ? 1 : 0.75}
+                  disabled={isDimmed}
                 >
                   <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-                  <Text style={[styles.reactionCount, isActive && styles.reactionCountActive]}>
+                  <Text style={[styles.reactionCount, isSelected && styles.reactionCountSelected]}>
                     {formatCount(data?.count ?? 0)}
                   </Text>
                 </TouchableOpacity>
@@ -137,9 +153,13 @@ export default function ArticleScreen({ newsId, onBack }: ArticleScreenProps) {
 
       {/* Condividi — fisso in fondo */}
       <View style={styles.shareBar}>
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
+          <Ionicons name="share-outline" size={20} color="#fff" />
           <Text style={styles.shareBtnText}>{t.article.share}</Text>
         </TouchableOpacity>
+        <Text style={styles.shareHint}>
+          Condividi e incuriosisci i tuoi amici 👀
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -199,7 +219,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   verifiedText: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.green },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.lg },
   articleText: {
     fontSize: FontSize.base,
     color: Colors.text,
@@ -214,7 +233,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: Spacing.md,
   },
-  // 5 reazioni su tutta la riga
   reactionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -229,9 +247,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     marginHorizontal: 3,
   },
-  reactionItemActive: {
-    backgroundColor: Colors.text,
-    borderColor: Colors.text,
+  reactionItemSelected: {
+    borderColor: '#6366F1',
+    backgroundColor: '#EEF2FF',
+  },
+  reactionItemDimmed: {
+    opacity: 0.3,
   },
   reactionEmoji: { fontSize: 22 },
   reactionCount: {
@@ -240,31 +261,43 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 3,
   },
-  reactionCountActive: { color: 'rgba(255,255,255,0.8)' },
+  reactionCountSelected: {
+    color: '#6366F1',
+  },
 
+  // Share
   shareBar: {
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     backgroundColor: Colors.bg,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
+    gap: 10,
   },
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: Spacing.md,
+    gap: 10,
+    paddingVertical: 15,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.bg2,
+    backgroundColor: Colors.violet,
+    shadowColor: Colors.violet,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  shareBtnEmoji: { fontSize: 16, color: Colors.textSecondary },
   shareBtnText: {
     fontSize: FontSize.base,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  shareHint: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+    textAlign: 'center',
   },
 });

@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
-import { registerUser, logoutUser } from '../services/authService';
+import { registerUser } from '../services/authService';
 
 interface RegisterScreenProps {
   onBack: () => void;
@@ -74,7 +74,9 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
     setLoading(true);
     try {
       await registerUser(name.trim(), email.trim(), password);
-      await logoutUser();
+      // NON facciamo logoutUser qui: l'utente resta loggato così possiamo
+      // reinviare la email di verifica se necessario. Il logout avverrà
+      // in App.tsx una volta che l'utente ha confermato la mail.
       onSuccess(name.trim());
     } catch (err: any) {
       const code = err?.code ?? '';

@@ -3,11 +3,13 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
   onAuthStateChanged,
+  deleteUser,
   User,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 // Registrazione con email e password
@@ -27,9 +29,44 @@ export async function registerUser(name: string, email: string, password: string
     interests: [],
     notificationSlot: 'Colazione',
     language: 'it',
+    emailVerified: false,
   });
 
+  // Imposta la lingua prima di inviare — Firebase usa questo per scegliere il template
+  auth.languageCode = 'it';
+
+  // Invia email di verifica — con URL di reindirizzamento esplicito
+  try {
+    await sendEmailVerification(credential.user, {
+      url: 'https://oddfeed-15294.firebaseapp.com/__/auth/action',
+      handleCodeInApp: false,
+    });
+    console.log('✅ Email di verifica inviata a:', credential.user.email);
+  } catch (emailErr: any) {
+    // L'account è stato creato correttamente — logghiamo l'errore ma non blocchiamo il flusso
+    console.warn('⚠️ sendEmailVerification error:', emailErr?.code, emailErr?.message);
+  }
+
   return credential.user;
+}
+
+// Reinvia email di verifica
+export async function resendVerificationEmail(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nessun utente loggato');
+  auth.languageCode = 'it';
+  await sendEmailVerification(user, {
+    url: 'https://oddfeed-15294.firebaseapp.com/__/auth/action',
+    handleCodeInApp: false,
+  });
+}
+
+// Controlla se l'utente ha verificato l'email (ricarica il profilo da Firebase)
+export async function reloadUser(): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user) return false;
+  await user.reload();
+  return auth.currentUser?.emailVerified ?? false;
 }
 
 // Login con email e password
@@ -65,6 +102,29 @@ export async function updateUserPreferences(uid: string, data: Partial<{
   level: number;
 }>) {
   await setDoc(doc(db, 'users', uid), data, { merge: true });
+}
+
+// Elimina account (Firestore + Firebase Auth)
+// onBeforeDelete: callback chiamato APPENA PRIMA di deleteUser,
+// così il flag può essere settato prima che Firebase triggeri onAuthStateChanged.
+export async function deleteAccount(onBeforeDelete?: () => void): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nessun utente loggato');
+
+  // 1. Elimina i dati da Firestore
+  try {
+    await deleteDoc(doc(db, 'users', user.uid));
+  } catch (e) {
+    console.warn('Impossibile eliminare dati Firestore:', e);
+  }
+
+  // 2. Setta il flag subito prima di deleteUser:
+  //    deleteUser disconnette l'utente e triggera onAuthStateChanged istantaneamente,
+  //    dobbiamo essere pronti prima che arrivi quell'evento.
+  onBeforeDelete?.();
+
+  // 3. Elimina l'account da Firebase Auth
+  await deleteUser(user);
 }
 
 // Ascolta lo stato di autenticazione

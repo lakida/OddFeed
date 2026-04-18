@@ -1,44 +1,85 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet,
+  SafeAreaView, ScrollView, Alert,
+} from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { auth, db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { CATEGORY_CONFIG } from '../data/categoryConfig';
+import { Category } from '../types';
 
 interface OnboardingScreenProps {
   userName: string;
-  onComplete: (interests: string[], slot: string) => void;
+  isPremium?: boolean;
+  onComplete: (interests: Category[], slot: string) => void;
 }
-
-const ALL_INTERESTS = [
-  'Animali', 'Scienza', 'Tecnologia', 'Record',
-  'Leggi Strane', 'Natura', 'Spazio', 'Storia',
-  'Mistero', 'Cibo', 'Persone', 'Luoghi',
-];
 
 const STEPS = ['benvenuto', 'interessi', 'notifiche', 'pronto'] as const;
 type Step = typeof STEPS[number];
 
-export default function OnboardingScreen({ userName, onComplete }: OnboardingScreenProps) {
-  const { t } = useTranslation();
+export default function OnboardingScreen({
+  userName,
+  isPremium = false,
+  onComplete,
+}: OnboardingScreenProps) {
+  const { t, language } = useTranslation();
   const ob = t.onboarding;
 
   const [step, setStep] = useState<Step>('benvenuto');
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<Category[]>([]);
   const [slot, setSlot] = useState(ob.slots[0]);
 
-  const toggleInterest = (item: string) => {
-    setInterests((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+  const name = userName.charAt(0).toUpperCase() + userName.slice(1);
+  const stepIndex = STEPS.indexOf(step);
+  const progress = (stepIndex + 1) / STEPS.length;
+
+  // Quante categorie non-premium ha selezionato (per il requisito minimo)
+  const freeSelected = interests.filter(id => {
+    const config = CATEGORY_CONFIG.find(c => c.id === id);
+    return config && !config.premiumOnly;
+  }).length;
+  const canContinue = freeSelected >= 3;
+
+  const toggleInterest = (categoryId: Category, isPremiumCategory: boolean) => {
+    const isAlreadySelected = interests.includes(categoryId);
+    // Mostra alert solo quando si tenta di SELEZIONARE una locked, non di deselezionare
+    if (isPremiumCategory && !isPremium && !isAlreadySelected) {
+      Alert.alert(
+        '⭐ Categoria Premium',
+        'Questa categoria è disponibile con OddFeed Premium. Puoi selezionarla ora — riceverai queste notizie dopo l\'attivazione dell\'abbonamento.',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Seleziona comunque',
+            onPress: () => {
+              setInterests(prev =>
+                prev.includes(categoryId)
+                  ? prev.filter(i => i !== categoryId)
+                  : [...prev, categoryId]
+              );
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    setInterests(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(i => i !== categoryId)
+        : [...prev, categoryId]
     );
   };
 
-  const stepIndex = STEPS.indexOf(step);
-  const progress = (stepIndex + 1) / STEPS.length;
-  const name = userName.charAt(0).toUpperCase() + userName.slice(1);
+  // Label categoria nella lingua corrente
+  const getCatLabel = (config: typeof CATEGORY_CONFIG[0]) =>
+    language === 'it' ? config.labelIt : config.labelEn;
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Barra progresso */}
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, { flex: progress }]} />
         <View style={{ flex: 1 - progress }} />
@@ -61,29 +102,90 @@ export default function OnboardingScreen({ userName, onComplete }: OnboardingScr
         <View style={styles.stepContainer}>
           <Text style={styles.stepTitle}>{ob.interestsTitle}</Text>
           <Text style={styles.stepSubtitle}>{ob.interestsSub}</Text>
-          {interests.length < 3 && (
+
+          {!canContinue && (
             <View style={styles.warningBanner}>
-              <Text style={styles.warningText}>{ob.warningMin(interests.length)}</Text>
+              <Text style={styles.warningText}>{ob.warningMin(freeSelected)}</Text>
             </View>
           )}
-          <View style={styles.tagsWrap}>
-            {ALL_INTERESTS.map((item) => {
-              const active = interests.includes(item);
-              return (
-                <TouchableOpacity
-                  key={item}
-                  style={[styles.tag, active && styles.tagActive]}
-                  onPress={() => toggleInterest(item)}
-                >
-                  <Text style={[styles.tagText, active && styles.tagTextActive]}>{item}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.tagsScrollContent}
+          >
+            {/* Categorie free */}
+            <Text style={styles.categoryGroupLabel}>
+              {language === 'it' ? 'Categorie gratuite' : 'Free categories'}
+            </Text>
+            <View style={styles.tagsWrap}>
+              {CATEGORY_CONFIG.filter(c => !c.premiumOnly).map((config) => {
+                const active = interests.includes(config.id);
+                return (
+                  <TouchableOpacity
+                    key={config.id}
+                    style={[styles.tag, active && styles.tagActive]}
+                    onPress={() => toggleInterest(config.id, false)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.tagText, active && styles.tagTextActive]}>
+                      {getCatLabel(config)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Categorie premium */}
+            <View style={styles.premiumGroupHeader}>
+              <Text style={styles.categoryGroupLabel}>
+                {language === 'it' ? 'Categorie Premium' : 'Premium categories'}
+              </Text>
+              <View style={styles.premiumBadgeSmall}>
+                <Text style={styles.premiumBadgeSmallText}>⭐ Premium</Text>
+              </View>
+            </View>
+            {!isPremium && (
+              <Text style={styles.premiumGroupHint}>
+                {language === 'it'
+                  ? 'Selezionale ora — le riceverai dopo aver attivato Premium'
+                  : 'Select now — you\'ll receive them after activating Premium'}
+              </Text>
+            )}
+            <View style={styles.tagsWrap}>
+              {CATEGORY_CONFIG.filter(c => c.premiumOnly).map((config) => {
+                const active = interests.includes(config.id);
+                const locked = !isPremium;
+                return (
+                  <TouchableOpacity
+                    key={config.id}
+                    style={[
+                      styles.tag,
+                      styles.tagPremium,
+                      active && styles.tagPremiumActive,
+                      locked && styles.tagLocked,
+                    ]}
+                    onPress={() => toggleInterest(config.id, true)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[
+                      styles.tagText,
+                      styles.tagTextPremium,
+                      active ? styles.tagTextActive : (locked && styles.tagTextLocked),
+                    ]}>
+                      {getCatLabel(config)}
+                    </Text>
+
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+
           <TouchableOpacity
-            style={[styles.primaryBtn, interests.length < 3 && styles.primaryBtnDisabled]}
-            onPress={() => interests.length >= 3 && setStep('notifiche')}
-            activeOpacity={interests.length >= 3 ? 0.85 : 1}
+            style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+            onPress={() => canContinue && setStep('notifiche')}
+            activeOpacity={canContinue ? 0.85 : 1}
           >
             <Text style={styles.primaryBtnText}>{ob.interestsBtn}</Text>
           </TouchableOpacity>
@@ -121,7 +223,16 @@ export default function OnboardingScreen({ userName, onComplete }: OnboardingScr
           <View style={styles.recapCard}>
             <Text style={styles.recapTitle}>{ob.recapTitle}</Text>
             <Text style={styles.recapRow}>{ob.recapSlot(slot)}</Text>
-            <Text style={styles.recapRow}>{ob.recapInterests(interests.join(', '))}</Text>
+            <Text style={styles.recapRow}>
+              {ob.recapInterests(
+                interests
+                  .map(id => {
+                    const config = CATEGORY_CONFIG.find(c => c.id === id);
+                    return config ? (language === 'it' ? config.labelIt : config.labelEn) : id;
+                  })
+                  .join(', ')
+              )}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.primaryBtn}
@@ -129,7 +240,7 @@ export default function OnboardingScreen({ userName, onComplete }: OnboardingScr
               const user = auth.currentUser;
               if (user) {
                 await setDoc(doc(db, 'users', user.uid), {
-                  interests,
+                  interests,           // Array di Category IDs
                   notificationSlot: slot,
                   onboardingDone: true,
                 }, { merge: true });
@@ -147,29 +258,161 @@ export default function OnboardingScreen({ userName, onComplete }: OnboardingScr
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  progressBarBg: { height: 3, backgroundColor: Colors.border, flexDirection: 'row', overflow: 'hidden' },
+
+  progressBarBg: {
+    height: 3,
+    backgroundColor: Colors.border,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
   progressBarFill: { height: 3, backgroundColor: Colors.text },
-  stepContainer: { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: 48, paddingBottom: 32 },
-  stepTitle: { fontSize: FontSize.xxxl, fontWeight: '700', color: Colors.text, marginBottom: Spacing.md, lineHeight: 36 },
-  stepSubtitle: { fontSize: FontSize.base, color: Colors.textSecondary, lineHeight: 24, marginBottom: Spacing.xl },
-  stepNote: { fontSize: FontSize.sm, color: Colors.textTertiary, textAlign: 'center', marginTop: Spacing.md },
-  warningBanner: { backgroundColor: '#FFF3CD', borderWidth: 1, borderColor: '#F0D98A', borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, marginBottom: Spacing.md },
+
+  stepContainer: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 48,
+    paddingBottom: 32,
+  },
+  stepTitle: {
+    fontSize: FontSize.xxxl,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.md,
+    lineHeight: 36,
+  },
+  stepSubtitle: {
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  stepNote: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+  },
+
+  warningBanner: {
+    backgroundColor: '#FFF3CD',
+    borderWidth: 1,
+    borderColor: '#F0D98A',
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
   warningText: { fontSize: FontSize.sm, color: '#7A6010', fontWeight: '500' },
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.xl },
-  tag: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.bg2 },
+
+  // Gruppi categorie
+  tagsScrollContent: { paddingBottom: 16 },
+  categoryGroupLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  premiumGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: Spacing.lg,
+    marginBottom: 4,
+  },
+  premiumGroupHint: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  premiumBadgeSmall: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: Radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#F0C040',
+  },
+  premiumBadgeSmallText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#A07000',
+  },
+
+  // Tags
+  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.md },
+
+  tag: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 11,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bg2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   tagActive: { backgroundColor: Colors.text, borderColor: Colors.text },
   tagText: { fontSize: FontSize.base, color: Colors.textSecondary, fontWeight: '500' },
   tagTextActive: { color: '#fff' },
+
+  // Premium tag
+  tagPremium: { borderColor: '#F0C040', backgroundColor: '#FFFBF0' },
+  tagPremiumActive: { backgroundColor: '#C8860A', borderColor: '#C8860A' },
+  tagLocked: { opacity: 0.6 },
+  tagTextPremium: { color: '#A07000' },
+  tagTextLocked: { color: Colors.textTertiary },
+  lockIcon: { fontSize: 11 },
+
+  // Opzioni slot
   optionsList: { gap: Spacing.sm, marginBottom: Spacing.xl },
-  option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.bg2 },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bg2,
+  },
   optionActive: { borderColor: Colors.text, backgroundColor: Colors.bg, borderWidth: 2 },
   optionText: { fontSize: FontSize.base, color: Colors.text, fontWeight: '500' },
   optionTextActive: { fontWeight: '700' },
   optionCheck: { fontSize: FontSize.base, fontWeight: '700', color: Colors.text },
-  recapCard: { backgroundColor: Colors.bg2, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg, gap: Spacing.sm, marginBottom: Spacing.xl },
-  recapTitle: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+
+  // Recap
+  recapCard: {
+    backgroundColor: Colors.bg2,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  recapTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
   recapRow: { fontSize: FontSize.base, color: Colors.textSecondary, lineHeight: 22 },
-  primaryBtn: { backgroundColor: Colors.text, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center' },
+
+  // CTA
+  primaryBtn: {
+    backgroundColor: Colors.text,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+    marginTop: Spacing.md,
+  },
   primaryBtnDisabled: { opacity: 0.35 },
   primaryBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },
 });

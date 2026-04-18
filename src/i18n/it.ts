@@ -243,6 +243,26 @@ const it = {
     5: 'Fenomeno',
   } as Record<number, string>,
 
+  // Categorie
+  categories: {
+    animali: '🐾 Animali',
+    tecnologia: '💻 Tecnologia',
+    record: '🏆 Record',
+    leggi: '⚖️ Leggi',
+    scienza: '🔬 Scienza',
+    gastronomia: '🍽️ Gastronomia',
+    cultura: '🌍 Cultura',
+    luoghi: '📍 Luoghi',
+    sesso_relazioni: '💋 Sesso & Relazioni',
+    gossip: '🌟 Gossip & Celebrità',
+    crimini_strani: '🔪 Crimini strani',
+    storie_assurde: '🤪 Storie assurde',
+    psicologia_strana: '🧠 Psicologia strana',
+    soldi_folli: '💸 Soldi folli',
+    coincidenze: '🌀 Coincidenze incredibili',
+    premiumBadge: '⭐ Premium',
+  },
+
   // Account eliminato
   accountDeleted: {
     title: 'Account eliminato',

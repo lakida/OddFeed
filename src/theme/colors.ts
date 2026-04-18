@@ -25,6 +25,9 @@ export const Colors = {
   greenBorder: '#B7E4C7',
   gold: '#C9A227',
   red: '#E63946',
+  violet: '#6366F1',
+  violetDark: '#4F52D3',
+  violetBg: '#EEF2FF',
 
   // Tag colori
   tagAnimal: '#1a472a',

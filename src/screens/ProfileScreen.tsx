@@ -12,17 +12,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  Alert,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { MOCK_USER } from '../data/mockData';
+import { USER_LEVELS } from '../data/mockData';
 import { useTranslation, Language } from '../context/LanguageContext';
+import { CATEGORY_CONFIG } from '../data/categoryConfig';
+import { deleteAccount } from '../services/authService';
+import { Category } from '../types';
+import { UserStats } from '../../App';
 
 const NOTIFICATION_SLOTS = ['Colazione', 'Pranzo', 'Pomeriggio', 'Cena'];
-const ALL_INTERESTS = [
-  'Animali', 'Scienza', 'Tecnologia', 'Record',
-  'Leggi Strane', 'Natura', 'Spazio', 'Storia',
-  'Mistero', 'Cibo', 'Persone', 'Luoghi',
-];
 
 // Componente bottom sheet generico
 function BottomSheet({ visible, onClose, title, children }: {
@@ -97,32 +97,78 @@ interface ProfileScreenProps {
   isPremium: boolean;
   onGoToPremium: () => void;
   onLogout: () => void;
+  onAccountDeleted: () => void;
+  userName?: string;
+  userStats?: UserStats;
 }
 
-export default function ProfileScreen({ isPremium, onGoToPremium, onLogout }: ProfileScreenProps) {
+export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAccountDeleted, userName = '', userStats }: ProfileScreenProps) {
   const { t, language, setLanguage } = useTranslation();
-  const user = MOCK_USER;
+
+  // Livello dal profilo reale (fallback al livello 0 se non ancora caricato)
+  const levelIndex = userStats?.level ?? 0;
+  const userLevel = USER_LEVELS[levelIndex] ?? USER_LEVELS[0];
 
   // Stati impostazioni
   const [darkMode, setDarkMode] = useState(false);
   const [showDarkModeInfo, setShowDarkModeInfo] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [notifications, setNotifications] = useState(true);
-  const [notifSlot, setNotifSlot] = useState(user.notificationSlot);
-  const [interests, setInterests] = useState<string[]>(user.interests);
+  const [notifSlot, setNotifSlot] = useState('Colazione');
+  const [interests, setInterests] = useState<Category[]>([]);
 
   // Modal aperti
-  const [showSlot, setShowSlot]         = useState(false);
+  const [showSlot, setShowSlot]           = useState(false);
   const [showInterests, setShowInterests] = useState(false);
-  const [showSources, setShowSources] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showSources, setShowSources]     = useState(false);
+  const [showPrivacy, setShowPrivacy]     = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteFinal, setShowDeleteFinal]     = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const toggleInterest = (item: string) => {
-    setInterests((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+  // Helper: label categoria nella lingua corrente
+  const getCatLabel = (config: typeof CATEGORY_CONFIG[0]) =>
+    language === 'it' ? config.labelIt : config.labelEn;
+
+  // Quante categorie non-premium selezionate (per il requisito minimo)
+  const freeSelected = interests.filter(id => {
+    const config = CATEGORY_CONFIG.find(c => c.id === id);
+    return config && !config.premiumOnly;
+  }).length;
+
+  const toggleInterest = (categoryId: Category, isPremiumCategory: boolean) => {
+    const isAlreadySelected = interests.includes(categoryId);
+    // Mostra alert solo quando si tenta di SELEZIONARE una locked, non di deselezionare
+    if (isPremiumCategory && !isPremium && !isAlreadySelected) {
+      Alert.alert(
+        '⭐ Categoria Premium',
+        language === 'it'
+          ? 'Questa categoria è disponibile con OddFeed Premium. Vuoi attivarla?'
+          : 'This category is available with OddFeed Premium. Want to activate it?',
+        [
+          { text: language === 'it' ? 'Annulla' : 'Cancel', style: 'cancel' },
+          { text: language === 'it' ? 'Vai a Premium' : 'Go Premium', onPress: onGoToPremium },
+        ]
+      );
+      return;
+    }
+
+    // Non permettere di deselezionare se resterebbe sotto il minimo (3 free)
+    const isSelected = interests.includes(categoryId);
+    if (isSelected && !isPremiumCategory && freeSelected <= 3) {
+      Alert.alert(
+        language === 'it' ? 'Minimo 3 categorie' : 'Minimum 3 categories',
+        language === 'it'
+          ? 'Devi mantenere almeno 3 categorie gratuite selezionate.'
+          : 'You must keep at least 3 free categories selected.'
+      );
+      return;
+    }
+
+    setInterests(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(i => i !== categoryId)
+        : [...prev, categoryId]
     );
   };
 
@@ -135,14 +181,14 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout }: Pr
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header profilo */}
         <View style={styles.profileHeader}>
-          <Text style={styles.profileName}>{user.name}</Text>
+          <Text style={styles.profileName}>{userName || '—'}</Text>
           <View style={styles.profileMeta}>
             <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeEmoji}>{user.level.emoji}</Text>
-              <Text style={styles.levelBadgeText}>{t.levels[user.level.level] ?? user.level.name}</Text>
+              <Text style={styles.levelBadgeEmoji}>{userLevel.emoji}</Text>
+              <Text style={styles.levelBadgeText}>{t.levels[userLevel.level] ?? userLevel.name}</Text>
             </View>
             <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.profilePoints}><Text style={styles.bold}>{user.points}</Text> pt</Text>
+            <Text style={styles.profilePoints}><Text style={styles.bold}>{userStats?.points ?? 0}</Text> pt</Text>
             {isPremium && (
               <>
                 <Text style={styles.metaDot}>·</Text>
@@ -176,7 +222,12 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout }: Pr
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowInterests(true)}>
             <Text style={styles.settingsLabel}>{t.profile.interests}</Text>
             <Text style={styles.settingsValue} numberOfLines={1}>
-              {interests.length > 0 ? interests.join(', ') : (language === 'it' ? 'Nessuno' : 'None')}
+              {interests.length > 0
+                ? interests.map(id => {
+                    const config = CATEGORY_CONFIG.find(c => c.id === id);
+                    return config ? config.emoji : id;
+                  }).join(' ')
+                : (language === 'it' ? 'Nessuno' : 'None')}
             </Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
@@ -257,32 +308,77 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout }: Pr
       {/* Modal interessi */}
       <BottomSheet
         visible={showInterests}
-        onClose={() => interests.length >= 3 && setShowInterests(false)}
+        onClose={() => setShowInterests(false)}
         title={t.profile.interestsTitle}
       >
-        {interests.length < 3 ? (
-          <View style={modalStyles.warning}>
-            <Text style={modalStyles.warningText}>
-              {t.profile.interestsMin(interests.length)}
-            </Text>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 440 }}>
+          {freeSelected < 3 ? (
+            <View style={modalStyles.warning}>
+              <Text style={modalStyles.warningText}>
+                {t.profile.interestsMin(freeSelected)}
+              </Text>
+            </View>
+          ) : (
+            <Text style={modalStyles.minHint}>{t.profile.interestsCount(interests.length)}</Text>
+          )}
+
+          {/* Categorie gratuite */}
+          <Text style={modalStyles.groupLabel}>
+            {language === 'it' ? 'Categorie gratuite' : 'Free categories'}
+          </Text>
+          <View style={modalStyles.tagsWrap}>
+            {CATEGORY_CONFIG.filter(c => !c.premiumOnly).map((config) => {
+              const active = interests.includes(config.id);
+              return (
+                <TouchableOpacity
+                  key={config.id}
+                  style={[modalStyles.tag, active && modalStyles.tagActive]}
+                  onPress={() => toggleInterest(config.id, false)}
+                >
+                  <Text style={[modalStyles.tagText, active && modalStyles.tagTextActive]}>
+                    {getCatLabel(config)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        ) : (
-          <Text style={modalStyles.minHint}>{t.profile.interestsCount(interests.length)}</Text>
-        )}
-        <View style={modalStyles.tagsWrap}>
-          {ALL_INTERESTS.map((item) => {
-            const active = interests.includes(item);
-            return (
-              <TouchableOpacity
-                key={item}
-                style={[modalStyles.tag, active && modalStyles.tagActive]}
-                onPress={() => toggleInterest(item)}
-              >
-                <Text style={[modalStyles.tagText, active && modalStyles.tagTextActive]}>{item}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+
+          {/* Categorie premium */}
+          <View style={modalStyles.premiumGroupHeader}>
+            <Text style={modalStyles.groupLabel}>
+              {language === 'it' ? 'Categorie Premium' : 'Premium categories'}
+            </Text>
+            <View style={modalStyles.premiumBadgeSmall}>
+              <Text style={modalStyles.premiumBadgeSmallText}>⭐</Text>
+            </View>
+          </View>
+          <View style={modalStyles.tagsWrap}>
+            {CATEGORY_CONFIG.filter(c => c.premiumOnly).map((config) => {
+              const active = interests.includes(config.id);
+              const locked = !isPremium;
+              return (
+                <TouchableOpacity
+                  key={config.id}
+                  style={[
+                    modalStyles.tag,
+                    modalStyles.tagPremium,
+                    active && modalStyles.tagPremiumActive,
+                    locked && modalStyles.tagLocked,
+                  ]}
+                  onPress={() => toggleInterest(config.id, true)}
+                >
+                  <Text style={[
+                    modalStyles.tagText,
+                    modalStyles.tagTextPremium,
+                    active ? modalStyles.tagTextActive : (locked && modalStyles.tagTextLocked),
+                  ]}>
+                    {getCatLabel(config)}{locked ? ' 🔒' : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
       </BottomSheet>
 
 
@@ -373,12 +469,25 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout }: Pr
         <Text style={modalStyles.bodyText}>{t.profile.deleteFinalBody}</Text>
         <TouchableOpacity
           style={modalStyles.deleteBtn}
-          onPress={() => {
-            setNotifSlot(t.profile.slots[0]);
-            setInterests(['Animali', 'Tecnologia', 'Record']);
-            setDarkMode(false);
-            setNotifications(true);
-            setShowDeleteFinal(false);
+          onPress={async () => {
+            try {
+              setShowDeleteFinal(false);
+              // Passiamo onAccountDeleted come callback da chiamare
+              // DENTRO deleteAccount, appena prima di deleteUser.
+              // Così il flag è settato prima che Firebase triggeri onAuthStateChanged,
+              // ma SOLO se la cancellazione sta effettivamente per andare a buon fine.
+              await deleteAccount(onAccountDeleted);
+            } catch (err: any) {
+              if (err?.code === 'auth/requires-recent-login') {
+                Alert.alert(
+                  'Riautenticazione richiesta',
+                  'Per eliminare l\'account devi aver effettuato l\'accesso di recente. Esci e accedi di nuovo, poi riprova.',
+                  [{ text: 'OK' }]
+                );
+              } else {
+                Alert.alert('Errore', err?.message ?? 'Impossibile eliminare l\'account. Riprova.');
+              }
+            }
           }}
         >
           <Text style={modalStyles.deleteBtnText}>{t.profile.deleteFinalConfirm}</Text>
@@ -437,28 +546,59 @@ const modalStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    marginBottom: Spacing.md,
   },
+  groupLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  premiumGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: Spacing.sm,
+    marginBottom: 4,
+  },
+  premiumBadgeSmall: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: Radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#F0C040',
+  },
+  premiumBadgeSmallText: { fontSize: 11, fontWeight: '700', color: '#A07000' },
   tag: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
+    paddingVertical: 11,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.bg2,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tagActive: {
     backgroundColor: Colors.text,
     borderColor: Colors.text,
   },
+  tagPremium: { borderColor: '#F0C040', backgroundColor: '#FFFBF0' },
+  tagPremiumActive: { backgroundColor: '#C8860A', borderColor: '#C8860A' },
+  tagLocked: { opacity: 0.6 },
   tagText: {
     fontSize: FontSize.base,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
   tagTextActive: { color: '#fff' },
-  tagBlocked: {
-    opacity: 0.5,
-  },
+  tagTextPremium: { color: '#A07000' },
+  tagTextLocked: { color: Colors.textTertiary },
+  tagBlocked: { opacity: 0.5 },
   hint: {
     fontSize: FontSize.base,
     color: Colors.textSecondary,

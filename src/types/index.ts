@@ -1,6 +1,7 @@
 // OddFeed — Tipi globali TypeScript
 
 export type Category =
+  // Categorie esistenti
   | 'animali'
   | 'tecnologia'
   | 'record'
@@ -8,7 +9,27 @@ export type Category =
   | 'scienza'
   | 'gastronomia'
   | 'cultura'
-  | 'luoghi';
+  | 'luoghi'
+  // Nuove categorie
+  | 'sesso_relazioni'
+  | 'gossip'
+  | 'crimini_strani'
+  | 'storie_assurde'
+  | 'psicologia_strana'
+  | 'soldi_folli'
+  | 'coincidenze';
+
+export type CategoryWeight = 'high' | 'medium' | 'low';
+
+export interface CategoryConfig {
+  id: Category;
+  labelIt: string;
+  labelEn: string;
+  emoji: string;
+  weight: number;          // 5=alta, 3=media, 1=bassa
+  premiumOnly: boolean;    // se true, solo utenti premium
+  engagementScore: number; // 1-10, usato per "notizia del giorno"
+}
 
 export type ReactionType = '🤯' | '😮' | '😂' | '🤔' | '❤️';
 

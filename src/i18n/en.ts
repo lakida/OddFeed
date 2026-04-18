@@ -230,6 +230,25 @@ const en: Translations = {
     5: 'Phenomenon',
   } as Record<number, string>,
 
+  categories: {
+    animali: '🐾 Animals',
+    tecnologia: '💻 Technology',
+    record: '🏆 Records',
+    leggi: '⚖️ Laws',
+    scienza: '🔬 Science',
+    gastronomia: '🍽️ Food',
+    cultura: '🌍 Culture',
+    luoghi: '📍 Places',
+    sesso_relazioni: '💋 Sex & Relationships',
+    gossip: '🌟 Gossip & Celebrities',
+    crimini_strani: '🔪 Strange Crimes',
+    storie_assurde: '🤪 Absurd Stories',
+    psicologia_strana: '🧠 Strange Psychology',
+    soldi_folli: '💸 Crazy Money',
+    coincidenze: '🌀 Incredible Coincidences',
+    premiumBadge: '⭐ Premium',
+  },
+
   accountDeleted: {
     title: 'Account deleted',
     subtitle: 'Your account and all your data have been permanently deleted from your device.',

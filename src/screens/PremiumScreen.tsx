@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
+import { purchasePackage, restorePurchases, openManageSubscriptions, PRODUCT_IDS } from '../services/purchaseService';
+import { Alert } from 'react-native';
 
 const FEATURES_FREE = [
   '1 notizia al giorno',
@@ -98,12 +100,31 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
 
         {/* CTA */}
         {isPremium ? (
-          <TouchableOpacity style={styles.ctaBtnCancel} onPress={onDowngrade}>
+          <TouchableOpacity
+            style={styles.ctaBtnCancel}
+            onPress={async () => {
+              await openManageSubscriptions();
+              onDowngrade();
+            }}
+          >
             <Text style={styles.ctaBtnCancelText}>{t.premium.cancelSubscription}</Text>
           </TouchableOpacity>
         ) : (
           <>
-            <TouchableOpacity style={styles.ctaBtn} onPress={onUpgrade}>
+            <TouchableOpacity
+              style={styles.ctaBtn}
+              onPress={async () => {
+                const productId = selected === 'monthly'
+                  ? PRODUCT_IDS.monthly
+                  : PRODUCT_IDS.yearly;
+                try {
+                  const success = await purchasePackage(productId);
+                  if (success) onUpgrade();
+                } catch (e: any) {
+                  Alert.alert('Errore acquisto', e?.message ?? 'Riprova più tardi.');
+                }
+              }}
+            >
               <Text style={styles.ctaBtnText}>
                 {selected === 'monthly' ? t.premium.ctaMonthly : t.premium.ctaYearly}
               </Text>

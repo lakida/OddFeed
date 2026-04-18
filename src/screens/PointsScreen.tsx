@@ -7,20 +7,25 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { MOCK_USER, USER_LEVELS, HOW_TO_EARN } from '../data/mockData';
+import { USER_LEVELS, HOW_TO_EARN } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
+import { UserStats } from '../../App';
 
-export default function PointsScreen() {
+interface PointsScreenProps {
+  userStats: UserStats;
+  userName: string;
+}
+
+export default function PointsScreen({ userStats, userName }: PointsScreenProps) {
   const { t } = useTranslation();
-  const user = MOCK_USER;
-  const currentLevel = user.level;
-  const nextLevel = USER_LEVELS[currentLevel.level + 1];
+  const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
+  const nextLevel = USER_LEVELS[userStats.level + 1];
 
-  const progress =
-    (user.points - currentLevel.minPoints) /
-    (currentLevel.maxPoints - currentLevel.minPoints);
+  const progress = nextLevel
+    ? (userStats.points - currentLevel.minPoints) / (nextLevel.minPoints - currentLevel.minPoints)
+    : 1;
 
-  const pointsToNext = nextLevel ? nextLevel.minPoints - user.points : 0;
+  const pointsToNext = nextLevel ? nextLevel.minPoints - userStats.points : 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -38,20 +43,20 @@ export default function PointsScreen() {
             </View>
             <View>
               <Text style={styles.levelName}>{t.levels[currentLevel.level] ?? currentLevel.name}</Text>
-              <Text style={styles.levelSub}>{t.points.level(currentLevel.level)} · {t.points.totalPoints(user.points)}</Text>
+              <Text style={styles.levelSub}>{t.points.level(currentLevel.level)} · {t.points.totalPoints(userStats.points)}</Text>
             </View>
           </View>
 
           {/* Barra progresso */}
           <View style={styles.progressLabelRow}>
-            <Text style={styles.progressLabel}>{user.points} pt</Text>
+            <Text style={styles.progressLabel}>{userStats.points} pt</Text>
             <Text style={styles.progressLabel}>
               {nextLevel ? <Text style={styles.bold}>{t.levels[nextLevel.level] ?? nextLevel.name}</Text> : null}
               {nextLevel ? ` — ${nextLevel.minPoints} pt` : ''}
             </Text>
           </View>
           <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { flex: Math.min(progress, 1) }]} />
+            <View style={[styles.progressFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
             <View style={{ flex: Math.max(1 - progress, 0) }} />
           </View>
           {nextLevel && (
@@ -64,7 +69,7 @@ export default function PointsScreen() {
           <View style={styles.streakRow}>
             <View style={styles.streakLeft}>
               <Text style={styles.streakLabel}>{t.points.consecutiveDays}</Text>
-              <Text style={styles.streakValue}>{user.streak} giorni</Text>
+              <Text style={styles.streakValue}>{userStats.streak} {userStats.streak === 1 ? 'giorno' : 'giorni'}</Text>
             </View>
             <View style={styles.streakBadge}>
               <Text style={styles.streakBadgeText}>+75 pt</Text>
@@ -91,9 +96,9 @@ export default function PointsScreen() {
         <Text style={styles.sectionTitle}>{t.points.unlocks}</Text>
         <View style={styles.card}>
           {USER_LEVELS.map((lvl, i) => {
-            const isDone    = user.level.level > lvl.level;
-            const isCurrent = user.level.level === lvl.level;
-            const isLocked  = user.level.level < lvl.level;
+            const isDone    = userStats.level > lvl.level;
+            const isCurrent = userStats.level === lvl.level;
+            const isLocked  = userStats.level < lvl.level;
             return (
               <View
                 key={lvl.level}

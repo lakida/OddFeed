@@ -40,13 +40,27 @@ const db = getFirestore();
 // ─── Inizializza OpenAI ────────────────────────────────────────────
 const openai = new OpenAI({ apiKey: OPENAI_KEY });
 
-// ─── Sezioni Guardian più "curiose" ───────────────────────────────
+// ─── Query Guardian per categoria ─────────────────────────────────
+// Ogni query è associata a una categoria OddFeed
 const GUARDIAN_QUERIES = [
-  'weird OR bizarre OR unusual OR strange OR odd',
-  'animals behavior OR animal funny OR animal surprising',
-  'record OR world record OR first ever',
-  'science discovery OR science surprising',
-  'technology unusual OR invention odd',
+  // HIGH engagement
+  { query: 'sex relationship bizarre OR unusual couple love strange', category: 'sesso_relazioni' },
+  { query: 'celebrity gossip scandal shocking star famous', category: 'gossip' },
+  { query: 'crime bizarre unusual theft robbery weird criminal', category: 'crimini_strani' },
+  { query: 'weird bizarre absurd unusual story incredible', category: 'storie_assurde' },
+  // MEDIUM engagement
+  { query: 'psychology study human behavior surprising brain', category: 'psicologia_strana' },
+  { query: 'money millionaire bizarre spending rich absurd', category: 'soldi_folli' },
+  { query: 'coincidence incredible unlikely chance fate', category: 'coincidenze' },
+  { query: 'technology invention unusual gadget bizarre engineer', category: 'tecnologia' },
+  { query: 'record world first ever extraordinary achievement', category: 'record' },
+  // LOW engagement
+  { query: 'animals behavior surprising extraordinary animal', category: 'animali' },
+  { query: 'science discovery surprising unexpected finding', category: 'scienza' },
+  { query: 'law unusual bizarre illegal rule country', category: 'leggi' },
+  { query: 'culture tradition unusual strange country', category: 'cultura' },
+  { query: 'food unusual strange bizarre eating world', category: 'gastronomia' },
+  { query: 'place unusual strange world location extraordinary', category: 'luoghi' },
 ];
 
 // ─── Funzione: cerca notizie su Guardian ──────────────────────────
@@ -81,9 +95,10 @@ Rispondi SOLO con un JSON valido in questo formato esatto:
   "descriptionEn": "Short description in English (2-3 sentences, max 200 chars)",
   "fullTextIt": "Testo completo in italiano (3-4 paragrafi da 60-80 parole ognuno, separati da \\n\\n)",
   "fullTextEn": "Full text in English (3-4 paragraphs of 60-80 words each, separated by \\n\\n)",
-  "category": "una di: animali|scienza|tecnologia|record|leggi|natura|spazio|storia|mistero|cibo|persone|luoghi",
-  "categoryLabelIt": "es. 🐾 Animali",
-  "categoryLabelEn": "es. 🐾 Animals"
+  "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
+  "categoryLabelIt": "es. 🐾 Animali (con emoji appropriata)",
+  "categoryLabelEn": "es. 🐾 Animals (with appropriate emoji)",
+  "engagementLevel": "high|medium|low"
 }`;
 
   const completion = await openai.chat.completions.create({
@@ -102,7 +117,7 @@ Rispondi SOLO con un JSON valido in questo formato esatto:
 // ─── Mappa sezione Guardian → paese/fonte ─────────────────────────
 function guessCountry(article) {
   const text = (article.sectionName + ' ' + article.webTitle).toLowerCase();
-  if (text.includes('japan') || text.includes('japan'))    return '🇯🇵 Giappone';
+  if (text.includes('japan') || text.includes('japanese')) return '🇯🇵 Giappone';
   if (text.includes('australia'))                          return '🇦🇺 Australia';
   if (text.includes('uk') || text.includes('britain'))     return '🇬🇧 UK';
   if (text.includes('us') || text.includes('america'))     return '🇺🇸 USA';
@@ -110,6 +125,10 @@ function guessCountry(article) {
   if (text.includes('france') || text.includes('french'))  return '🇫🇷 Francia';
   if (text.includes('italy') || text.includes('italian'))  return '🇮🇹 Italia';
   if (text.includes('china') || text.includes('chinese'))  return '🇨🇳 Cina';
+  if (text.includes('india') || text.includes('indian'))   return '🇮🇳 India';
+  if (text.includes('brazil') || text.includes('brazil'))  return '🇧🇷 Brasile';
+  if (text.includes('canada') || text.includes('canadian'))return '🇨🇦 Canada';
+  if (text.includes('spain') || text.includes('spanish'))  return '🇪🇸 Spagna';
   return '🌍 Mondo';
 }
 
@@ -134,8 +153,10 @@ async function main() {
   // Raccoglie articoli da Guardian
   console.log('📰 Recupero notizie da Guardian API...');
   const allArticles = [];
-  for (const query of GUARDIAN_QUERIES) {
-    const results = await fetchGuardianNews(query, 3);
+  for (const { query, category } of GUARDIAN_QUERIES) {
+    const results = await fetchGuardianNews(query, 2);
+    // Aggiungi la categoria suggerita per aiutare la classificazione AI
+    results.forEach(r => r._suggestedCategory = category);
     allArticles.push(...results);
     await new Promise(r => setTimeout(r, 200)); // rate limiting
   }
@@ -157,6 +178,7 @@ async function main() {
   // Processa con AI e salva su Firestore
   console.log('\n🤖 Rielaborazione con GPT-4o mini...');
   const batch = db.batch();
+  const savedArticles = []; // Per le notifiche personalizzate
 
   for (let i = 0; i < selected.length; i++) {
     const article = selected[i];
@@ -165,8 +187,12 @@ async function main() {
     try {
       const ai = await rewriteWithAI(article);
 
+      // Usa la categoria suggerita dalla query se AI non è sicura
+      const category = ai.category ?? article._suggestedCategory ?? 'storie_assurde';
+      const isPremiumArticle = i > 0; // La prima è free, le altre richiedono premium
+
       const docRef = db.collection('articles').doc();
-      batch.set(docRef, {
+      const articleData = {
         // Contenuto bilingue
         titleIt: ai.titleIt,
         titleEn: ai.titleEn,
@@ -176,16 +202,17 @@ async function main() {
         fullTextEn: ai.fullTextEn,
 
         // Metadati
-        category: ai.category,
+        category,
         categoryLabelIt: ai.categoryLabelIt,
         categoryLabelEn: ai.categoryLabelEn,
+        engagementLevel: ai.engagementLevel ?? 'medium',
         country: guessCountry(article),
         source: 'The Guardian',
         sourceUrl: article.webUrl,
         date: today,
-        isToday: i === 0, // Solo la prima è "di oggi"
-        order: i,         // Ordine di visualizzazione
-        isPremium: i > 0, // La prima è free, le altre richiedono premium
+        isToday: true,
+        order: i,
+        isPremium: isPremiumArticle,
         daysAgo: 0,
 
         // Reazioni (iniziali)
@@ -198,7 +225,10 @@ async function main() {
         ],
 
         createdAt: new Date(),
-      });
+      };
+
+      batch.set(docRef, articleData);
+      savedArticles.push({ id: docRef.id, ...articleData });
 
       process.stdout.write(' ✓\n');
       await new Promise(r => setTimeout(r, 500)); // Rate limiting OpenAI
@@ -210,23 +240,18 @@ async function main() {
   await batch.commit();
   console.log(`\n✅ ${selected.length} notizie salvate su Firestore per il ${today}!`);
 
-  // Invia notifica push a tutti gli utenti registrati
-  console.log('\n🔔 Invio notifiche push...');
-  const firstArticle = selected[0];
-  const aiTitle = await rewriteWithAI(firstArticle).catch(() => null);
-  const notifTitle = aiTitle?.titleIt ?? 'OddFeed — Notizia del giorno';
-  const notifBody = aiTitle?.descriptionIt?.substring(0, 100) ?? 'La tua notizia curiosa di oggi è pronta!';
-
-  await sendPushNotifications(notifTitle, notifBody);
+  // Invia notifica push personalizzata per categoria
+  console.log('\n🔔 Invio notifiche push personalizzate...');
+  await sendPersonalizedNotifications(savedArticles);
   console.log('   L\'app mostrerà automaticamente i nuovi contenuti.');
 }
 
-// ─── Invia notifiche Expo a tutti gli utenti ──────────────────────
-async function sendPushNotifications(title, body) {
-  // Leggi tutti i token da Firestore
+// ─── Notifiche personalizzate per categoria ───────────────────────
+// Per ogni utente, invia la notizia più rilevante in base ai suoi interessi
+
+async function sendPersonalizedNotifications(articles) {
   const usersSnap = await db.collection('users')
     .where('notificationsEnabled', '==', true)
-    .where('expoPushToken', '!=', null)
     .get();
 
   if (usersSnap.empty) {
@@ -234,45 +259,115 @@ async function sendPushNotifications(title, body) {
     return;
   }
 
-  const tokens = usersSnap.docs
-    .map(d => d.data().expoPushToken)
-    .filter(Boolean);
+  const today = new Date().toISOString().split('T')[0];
+  const messages = [];
 
-  console.log(`   Invio a ${tokens.length} dispositivi...`);
+  for (const userDoc of usersSnap.docs) {
+    const user = userDoc.data();
+    if (!user.expoPushToken) continue;
+
+    // Controlla se ha già ricevuto una notifica oggi
+    if (user.lastNotifDate === today) continue;
+
+    const isPremium = user.isPremium ?? false;
+    const interests = user.interests ?? []; // es. ['animali', 'tecnologia']
+    const prefs = user.notificationPrefs ?? {};
+    if (prefs.enabled === false) continue;
+
+    // Trova l'articolo più rilevante per questo utente
+    const relevantArticle = findBestArticleForUser(articles, interests, isPremium);
+    if (!relevantArticle) continue;
+
+    // Costruisci il testo della notifica
+    const { title, body } = buildNotifText(relevantArticle, isPremium);
+
+    messages.push({
+      token: user.expoPushToken,
+      userId: userDoc.id,
+      message: {
+        to: user.expoPushToken,
+        title,
+        body,
+        sound: 'default',
+        badge: 1,
+        data: {
+          type: 'daily_news',
+          newsId: relevantArticle.id,
+          category: relevantArticle.category,
+          screen: 'Article',
+          date: today,
+        },
+      },
+    });
+  }
+
+  if (messages.length === 0) {
+    console.log('   Nessuna notifica da inviare oggi.');
+    return;
+  }
+
+  console.log(`   Invio a ${messages.length} utenti...`);
 
   // Invia in batch da 100 (limite Expo)
   const chunks = [];
-  for (let i = 0; i < tokens.length; i += 100) {
-    chunks.push(tokens.slice(i, i + 100));
+  for (let i = 0; i < messages.length; i += 100) {
+    chunks.push(messages.slice(i, i + 100));
   }
 
   for (const chunk of chunks) {
-    const messages = chunk.map(token => ({
-      to: token,
-      title: `📰 ${title}`,
-      body,
-      sound: 'default',
-      badge: 1,
-      data: { type: 'daily_news', date: new Date().toISOString().split('T')[0] },
-    }));
-
     const res = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(messages),
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(chunk.map(m => m.message)),
     });
 
     const result = await res.json();
-    const errors = result.data?.filter(r => r.status === 'error') ?? [];
-    if (errors.length > 0) {
-      console.log(`   ⚠️  ${errors.length} notifiche fallite`);
-    } else {
-      console.log(`   ✓ ${chunk.length} notifiche inviate`);
-    }
+    const errors = (result.data ?? []).filter(r => r.status === 'error');
+    console.log(`   ✓ ${chunk.length - errors.length} inviate, ⚠️ ${errors.length} fallite`);
+
+    // Aggiorna lastNotifDate per ogni utente notificato con successo
+    const batchUpdate = db.batch();
+    chunk.forEach(({ userId }) => {
+      batchUpdate.update(db.collection('users').doc(userId), { lastNotifDate: today });
+    });
+    await batchUpdate.commit();
   }
+}
+
+// Trova l'articolo migliore per un utente in base ai suoi interessi
+function findBestArticleForUser(articles, interests, isPremium) {
+  const accessibleArticles = isPremium
+    ? articles
+    : articles.filter(a => !a.isPremium);
+
+  if (interests.length === 0) {
+    // Nessuna preferenza: ritorna l'articolo con più engagement
+    return accessibleArticles[0] ?? null;
+  }
+
+  // Priorità: articoli nelle categorie di interesse
+  const interestSet = new Set(interests);
+  const relevant = accessibleArticles.filter(a => interestSet.has(a.category));
+  return relevant[0] ?? accessibleArticles[0] ?? null;
+}
+
+// Costruisce titolo e body della notifica
+function buildNotifText(article, isPremium) {
+  const EMOJI_MAP = {
+    sesso_relazioni: '💋', gossip: '🌟', crimini_strani: '🔪',
+    storie_assurde: '🤪', psicologia_strana: '🧠', soldi_folli: '💸',
+    coincidenze: '🌀', tecnologia: '💻', record: '🏆',
+    animali: '🐾', scienza: '🔬', leggi: '⚖️',
+    cultura: '🌍', gastronomia: '🍽️', luoghi: '📍',
+  };
+  const emoji = EMOJI_MAP[article.category] ?? '📰';
+  const titleText = article.titleIt?.substring(0, 60) ?? 'Notizia del giorno';
+  const title = `${emoji} ${titleText}`;
+  const body = isPremium
+    ? article.descriptionIt?.substring(0, 100) ?? 'La tua notizia Premium di oggi è pronta!'
+    : 'La tua notizia curiosa di oggi è pronta!';
+
+  return { title, body };
 }
 
 main().catch(console.error);

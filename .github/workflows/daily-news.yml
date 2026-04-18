@@ -1,0 +1,74 @@
+name: OddFeed — Notizie del giorno
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Genera le notizie quotidiane di OddFeed:
+#   1. Recupera da Guardian API le notizie più curiose/strane
+#   2. Le riscrive in IT+EN con GPT-4o mini
+#   3. Salva tutto su Firestore
+#   4. Invia notifiche push personalizzate agli utenti
+#
+# Gira automaticamente ogni mattina alle 7:00 (ora italiana).
+# Si può anche avviare manualmente dal tab "Actions" su GitHub.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    # 06:00 UTC = 07:00 CET (inverno) / 08:00 CEST (estate)
+    - cron: '0 6 * * *'
+
+  # Avvio manuale: utile per testare o per rigenerare le notizie di un giorno
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Sovrascrivi le notizie già esistenti per oggi (--force)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  fetch-and-publish:
+    name: Genera e pubblica le notizie
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ─────────────────────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── 3. Dipendenze dello script ─────────────────────────────────────────
+      - name: Installa dipendenze
+        working-directory: scripts
+        run: npm install
+
+      # ── 4. Genera le notizie ───────────────────────────────────────────────
+      - name: Genera notizie del giorno
+        working-directory: scripts
+        env:
+          GUARDIAN_KEY: ${{ secrets.GUARDIAN_KEY }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          # Il service account viene passato come stringa JSON
+          # (mai salvare il file firebase-service-account.json nel repo)
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            node fetch-news.js --force
+          else
+            node fetch-news.js
+          fi
+
+      # ── 5. Notifica in caso di errore ──────────────────────────────────────
+      - name: Notifica fallimento
+        if: failure()
+        run: |
+          echo "::error::La generazione delle notizie è fallita. Controlla i log qui sopra."
+          echo "Il workflow ha fallito il $(date '+%Y-%m-%d') alle $(date '+%H:%M') UTC"
