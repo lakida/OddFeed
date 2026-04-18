@@ -254,9 +254,17 @@ async function main() {
     .get();
 
   if (!existing.empty) {
-    console.log(`ℹ️  Le notizie per oggi (${today}) esistono già su Firestore.`);
-    console.log('   Usa --force per sovrascriverle.');
-    if (!process.argv.includes('--force')) process.exit(0);
+    if (!process.argv.includes('--force')) {
+      console.log(`ℹ️  Le notizie per oggi (${today}) esistono già su Firestore.`);
+      console.log('   Usa --force per sovrascriverle.');
+      process.exit(0);
+    }
+    // --force: cancella prima le notizie esistenti per oggi
+    console.log(`🗑️  --force: cancello ${existing.size} notizie esistenti per ${today}...`);
+    const deleteBatch = db.batch();
+    existing.docs.forEach(doc => deleteBatch.delete(doc.ref));
+    await deleteBatch.commit();
+    console.log('   ✓ Cancellate.\n');
   }
 
   // Raccoglie articoli da Guardian (pool ampio per poi selezionare i migliori)
