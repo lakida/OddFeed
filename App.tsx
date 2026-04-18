@@ -392,10 +392,12 @@ function AppContent() {
     return <AccountDeletedScreen onRestart={() => setAppScreen('Login')} />;
   }
 
+  // Tutti i tab rimangono montati — display:none nasconde senza rimontare
+  // Questo elimina lo scatto al cambio tab e mantiene lo stato di scroll
   return (
     <View style={styles.root}>
       <View style={styles.content}>
-        {activeTab === 'Notizie' && (
+        <View style={{ flex: 1, display: activeTab === 'Notizie' ? 'flex' : 'none' }}>
           <HomeScreen
             onOpenArticle={openArticle}
             onGoToArchive={() => setActiveTab('Archivio')}
@@ -404,19 +406,21 @@ function AppContent() {
             userName={userName}
             userStats={userStats}
           />
-        )}
-        {activeTab === 'Archivio' && <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} />}
-        {activeTab === 'Punti' && (
+        </View>
+        <View style={{ flex: 1, display: activeTab === 'Archivio' ? 'flex' : 'none' }}>
+          <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} />
+        </View>
+        <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
           <PointsScreen userStats={userStats} userName={userName} />
-        )}
-        {activeTab === 'Premium' && (
+        </View>
+        <View style={{ flex: 1, display: activeTab === 'Premium' ? 'flex' : 'none' }}>
           <PremiumScreen
             isPremium={isPremium}
             onUpgrade={() => setIsPremium(true)}
             onDowngrade={() => setIsPremium(false)}
           />
-        )}
-        {activeTab === 'Profilo' && (
+        </View>
+        <View style={{ flex: 1, display: activeTab === 'Profilo' ? 'flex' : 'none' }}>
           <ProfileScreen
             isPremium={isPremium}
             onGoToPremium={() => setActiveTab('Premium')}
@@ -425,7 +429,7 @@ function AppContent() {
             userName={userName}
             userStats={userStats}
           />
-        )}
+        </View>
       </View>
 
       <View style={styles.tabBar}>

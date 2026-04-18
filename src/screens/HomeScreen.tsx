@@ -13,6 +13,7 @@ import { useTranslation } from '../context/LanguageContext';
 import { fetchTodayNews } from '../services/newsService';
 import { NewsItem } from '../types';
 import { UserStats } from '../../App';
+import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
@@ -111,8 +112,11 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           </Text>
         </View>
 
+        {/* Skeleton mentre carica */}
+        {loading && <SkeletonNewsList count={3} />}
+
         {/* Notizia di oggi */}
-        {todayNews && (
+        {!loading && todayNews && (
           <TouchableOpacity
             style={styles.item}
             onPress={() => onOpenArticle(todayNews.id, todayNews)}
@@ -131,7 +135,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         )}
 
         {/* Ultime notizie */}
-        {recentNews.map((item) => (
+        {!loading && recentNews.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.item}
@@ -151,7 +155,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         ))}
 
         {/* Banner premium per utenti free */}
-        {!isPremium && (
+        {!loading && !isPremium && (
           <View style={styles.premiumBanner}>
             <Text style={styles.premiumBannerText}>
               {t.home.premiumBanner}
@@ -160,9 +164,11 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         )}
 
         {/* CTA archivio */}
-        <TouchableOpacity style={styles.ctaArchive} onPress={onGoToArchive} activeOpacity={0.7}>
-          <Text style={styles.ctaText}>{t.common.allNews}</Text>
-        </TouchableOpacity>
+        {!loading && (
+          <TouchableOpacity style={styles.ctaArchive} onPress={onGoToArchive} activeOpacity={0.7}>
+            <Text style={styles.ctaText}>{t.common.allNews}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Widget punti */}
         <View style={styles.pointsWidget}>

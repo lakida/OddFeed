@@ -12,6 +12,7 @@ import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { fetchArchive } from '../services/newsService';
 import { NewsItem } from '../types';
+import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 
 interface ArchiveScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
@@ -24,11 +25,14 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
   const { t, language } = useTranslation();
   const [activeFilter, setActiveFilter] = useState(t.archive.filters[0]);
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     fetchArchive(language, isPremium)
       .then(news => { setArchiveNews(news.length > 0 ? news : MOCK_NEWS); })
-      .catch(() => { setArchiveNews(MOCK_NEWS); });
+      .catch(() => { setArchiveNews(MOCK_NEWS); })
+      .finally(() => setLoading(false));
   }, [language, isPremium]);
 
   return (
@@ -64,8 +68,11 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
           ))}
         </ScrollView>
 
+        {/* Skeleton mentre carica */}
+        {loading && <SkeletonNewsList count={5} />}
+
         {/* Lista notizie */}
-        {archiveNews.map((item) => (
+        {!loading && archiveNews.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.item}
