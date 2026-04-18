@@ -2,12 +2,10 @@ import {
   collection,
   query,
   where,
-  orderBy,
   getDocs,
   doc,
   updateDoc,
   increment,
-  limit,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { NewsItem } from '../types';
@@ -43,7 +41,9 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Carica le notizie di oggi
+// Carica le notizie di oggi.
+// Nota: orderBy rimosso per evitare la necessità di un indice composito Firestore.
+// L'ordinamento viene fatto lato client sul campo 'order'.
 export async function fetchTodayNews(
   language: 'it' | 'en',
   isPremium: boolean
@@ -53,15 +53,20 @@ export async function fetchTodayNews(
   const q = query(
     collection(db, 'articles'),
     where('date', '==', today),
-    orderBy('order', 'asc'),
-    limit(isPremium ? 10 : 1)
   );
 
   const snap = await getDocs(q);
-  return snap.docs.map(d => docToNewsItem(d, language));
+  const all = snap.docs
+    .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }))
+    .sort((a, b) => a.order - b.order)
+    .map(x => x.item);
+
+  // Free: solo la prima notizia; Premium: tutte
+  return isPremium ? all : all.slice(0, 1);
 }
 
-// Carica l'archivio (ultimi 7 giorni free, tutto per premium)
+// Carica l'archivio (ultimi 7 giorni free, tutto per premium).
+// Ordinamento lato client per evitare indici compositi.
 export async function fetchArchive(
   language: 'it' | 'en',
   isPremium: boolean
@@ -74,13 +79,13 @@ export async function fetchArchive(
   const q = query(
     collection(db, 'articles'),
     where('date', '>=', cutoffStr),
-    orderBy('date', 'desc'),
-    orderBy('order', 'asc'),
-    limit(50)
   );
 
   const snap = await getDocs(q);
-  return snap.docs.map(d => docToNewsItem(d, language));
+  return snap.docs
+    .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order)
+    .map(x => x.item);
 }
 
 // Aggiorna il conteggio di una reazione
@@ -91,9 +96,6 @@ export async function addReaction(
 ): Promise<void> {
   try {
     const ref = doc(db, 'articles', articleId);
-    // Firestore non supporta update di array-of-objects direttamente
-    // In V2 implementeremo con subcollection reactions
-    // Per ora aggiorniamo il contatore direttamente
     await updateDoc(ref, {
       [`reactionCounts.${emoji}`]: increment(increment_value),
     });
