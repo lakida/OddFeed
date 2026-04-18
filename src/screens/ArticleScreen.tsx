@@ -84,7 +84,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
     } catch (e) {}
   };
 
-  const paragraphs = article.fullText.split('\n\n');
+  const paragraphs = article.fullText.split('\n\n').slice(0, 2);
   const hasVoted = userReaction !== null;
 
   return (
@@ -223,9 +223,9 @@ const styles = StyleSheet.create({
   },
   verifiedText: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.green },
   articleText: {
-    fontSize: FontSize.base,
+    fontSize: FontSize.lg,
     color: Colors.text,
-    lineHeight: 26,
+    lineHeight: 28,
     marginBottom: Spacing.md,
   },
 

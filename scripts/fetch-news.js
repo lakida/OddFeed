@@ -41,34 +41,40 @@ const db = getFirestore();
 const openai = new OpenAI({ apiKey: OPENAI_KEY });
 
 // ─── Query Guardian per categoria ─────────────────────────────────
-// Ogni query è associata a una categoria OddFeed
+// Query specifiche e aggressive per pescare storie davvero bizzarre
 const GUARDIAN_QUERIES = [
-  // HIGH engagement
-  { query: 'sex relationship bizarre OR unusual couple love strange', category: 'sesso_relazioni' },
-  { query: 'celebrity gossip scandal shocking star famous', category: 'gossip' },
-  { query: 'crime bizarre unusual theft robbery weird criminal', category: 'crimini_strani' },
-  { query: 'weird bizarre absurd unusual story incredible', category: 'storie_assurde' },
-  // MEDIUM engagement
-  { query: 'psychology study human behavior surprising brain', category: 'psicologia_strana' },
-  { query: 'money millionaire bizarre spending rich absurd', category: 'soldi_folli' },
-  { query: 'coincidence incredible unlikely chance fate', category: 'coincidenze' },
-  { query: 'technology invention unusual gadget bizarre engineer', category: 'tecnologia' },
-  { query: 'record world first ever extraordinary achievement', category: 'record' },
-  // LOW engagement
-  { query: 'animals behavior surprising extraordinary animal', category: 'animali' },
-  { query: 'science discovery surprising unexpected finding', category: 'scienza' },
-  { query: 'law unusual bizarre illegal rule country', category: 'leggi' },
-  { query: 'culture tradition unusual strange country', category: 'cultura' },
-  { query: 'food unusual strange bizarre eating world', category: 'gastronomia' },
-  { query: 'place unusual strange world location extraordinary', category: 'luoghi' },
+  // GOLD TIER — storie assurde garantite
+  { query: 'man woman arrested bizarre absurd toilet OR shower OR drunk OR naked OR costume', category: 'crimini_strani' },
+  { query: 'weird law banned illegal absurd country fined', category: 'leggi' },
+  { query: 'alligator snake python found house toilet car surprise', category: 'animali' },
+  { query: 'world record longest fastest biggest smallest unusual attempt', category: 'record' },
+  { query: 'accidental discovered mistake unusual found buried treasure odd', category: 'storie_assurde' },
+  // HIGH — persone assurde
+  { query: 'man OR woman OR couple bizarre obsession collection unusual hobby extreme', category: 'storie_assurde' },
+  { query: 'scam fraud bizarre trick unusual theft comedy mistake', category: 'crimini_strani' },
+  { query: 'millionaire eccentric spending bizarre luxury unusual purchase', category: 'soldi_folli' },
+  { query: 'celebrity bizarre behaviour odd scandal embarrassing moment', category: 'gossip' },
+  { query: 'lawsuit strange sue bizarre legal case unusual court', category: 'leggi' },
+  // MEDIUM — storie virali
+  { query: 'study reveals surprising shocking humans prefer secret desire', category: 'psicologia_strana' },
+  { query: 'animal intelligence surprising behavior first time science discovery', category: 'animali' },
+  { query: 'food challenge eating contest bizarre menu strange restaurant', category: 'gastronomia' },
+  { query: 'town village bizarre tradition ritual festival weird celebration', category: 'cultura' },
+  { query: 'coincidence incredible reunion twins separated same mistake', category: 'coincidenze' },
+  { query: 'invention gadget bizarre unusual robot AI funny useless', category: 'tecnologia' },
+  { query: 'relationship breakup marriage unusual strange proposal divorce', category: 'sesso_relazioni' },
+  { query: 'haunted abandoned strange mysterious place found discovered', category: 'luoghi' },
 ];
 
 // ─── Funzione: cerca notizie su Guardian ──────────────────────────
 async function fetchGuardianNews(query, maxResults = 5) {
+  // Cerca negli ultimi 30 giorni per avere più materiale
+  const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const url = `https://content.guardianapis.com/search?` +
     `q=${encodeURIComponent(query)}&` +
-    `show-fields=headline,trailText,thumbnail&` +
-    `order-by=newest&` +
+    `show-fields=headline,trailText,thumbnail,bodyText&` +
+    `order-by=relevance&` +
+    `from-date=${fromDate}&` +
     `page-size=${maxResults}&` +
     `api-key=${GUARDIAN_KEY}`;
 
@@ -77,39 +83,107 @@ async function fetchGuardianNews(query, maxResults = 5) {
   return data.response?.results ?? [];
 }
 
+// ─── Funzione: scoring AI per selezionare solo storie davvero bizzarre ───
+async function scoreAndSelectArticles(candidates, count = 5) {
+  const summaries = candidates.map((a, i) => {
+    const headline = a.fields?.headline ?? a.webTitle ?? '';
+    const trail = a.fields?.trailText ?? '';
+    return `[${i}] ${headline} | ${trail.substring(0, 120)}`;
+  }).join('\n');
+
+  const prompt = `Sei il curatore di OddFeed, un'app italiana di notizie virali e bizzarre.
+Devi selezionare le ${count} notizie più virali, bizzarre e assurde da questa lista.
+
+CRITERI DI SELEZIONE (in ordine di priorità):
+1. 🏆 Incredibilmente assurda / imbarazzante / surreale
+2. 😂 Ha un elemento comico involontario
+3. 🤯 Fatto che nessuno si aspetta
+4. ⚡ Tocca temi universali (sesso, soldi, crimini stupidi, animali pazzi, leggi assurde)
+5. ✅ Verificabile e reale (non speculativa)
+
+SCARTA: notizie politiche ordinarie, economia generale, conflitti bellici, sport mainstream, salute generica.
+
+Lista articoli:
+${summaries}
+
+Rispondi SOLO con un JSON valido:
+{
+  "selected": [indici degli articoli scelti, dal più virale al meno, es. [3, 7, 1, 12, 5]],
+  "reasoning": "breve spiegazione in una riga"
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 200,
+    });
+    const raw = completion.choices[0].message.content ?? '{}';
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(clean);
+    console.log(`   Selezione AI: ${result.reasoning}`);
+    const indices = result.selected?.slice(0, count) ?? [];
+    return indices.map(i => candidates[i]).filter(Boolean);
+  } catch (e) {
+    console.log(`   ⚠️ Scoring fallito, uso selezione casuale: ${e.message}`);
+    // Fallback: prendi articoli distribuiti dalle varie query
+    return candidates.slice(0, count);
+  }
+}
+
 // ─── Funzione: rielabora con GPT-4o mini ──────────────────────────
 async function rewriteWithAI(article) {
-  const prompt = `Sei il redattore di OddFeed, un'app italiana di notizie curiose e strane dal mondo.
+  const headline = article.fields?.headline ?? article.webTitle ?? '';
+  const trail = article.fields?.trailText ?? '';
+  const bodyPreview = article.fields?.bodyText?.substring(0, 400) ?? '';
 
-Devi riscrivere questo articolo del Guardian in stile OddFeed: breve, coinvolgente, con un tono leggermente ironico ma informativo.
+  const prompt = `Sei il redattore capo di OddFeed, un'app italiana di notizie bizzarre e virali.
+Il tuo stile è quello del Corriere della Sera se diventasse un tabloid: ironico, diretto, sorprendente.
 
-Articolo originale:
-Titolo: ${article.fields?.headline ?? article.webTitle}
-Sommario: ${article.fields?.trailText ?? ''}
+NOTIZIA ORIGINALE:
+Titolo: ${headline}
+Sommario: ${trail}
+${bodyPreview ? `Testo: ${bodyPreview}` : ''}
 
-Rispondi SOLO con un JSON valido in questo formato esatto:
+REGOLE PER IL TITOLO ITALIANO (FONDAMENTALI):
+- Massimo 65 caratteri — conta ogni lettera
+- Inizia sempre con un'emoji pertinente
+- Deve contenere il fatto più assurdo/sorprendente in modo esplicito
+- Usa numeri specifici quando presenti (es. "per 47 anni", "con 3.000 api")
+- Tono: stupore + ironia leggera, come se tu stessi dicendo "ma ci rendiamo conto?!"
+- NON usare mai: "Un uomo", "Una donna", "Si scopre che" — troppo generico
+- Esempi di TITOLI BUONI: "🐊 Trova un coccodrillo nel wc: era lì da 3 giorni", "💸 Spende 40mila€ per sembrare sua moglie — lei lo lascia", "🧠 Studio: il 73% di noi mente al dentista per questa ragione"
+
+REGOLE PER IL TESTO:
+- Tono da giornalista curioso che racconta a un amico al bar
+- Includi sempre il dettaglio più assurdo nel primo paragrafo
+- Seconda frase del primo paragrafo: il contesto (dove, quando, chi)
+- Secondo paragrafo: sviluppo + reazione delle persone coinvolte
+- Terzo paragrafo: una citazione immaginaria plausibile O un dato che amplifica l'assurdità
+
+Rispondi SOLO con un JSON valido:
 {
-  "titleIt": "Titolo in italiano (max 80 caratteri, curioso e diretto)",
-  "titleEn": "Title in English (max 80 chars, curious and direct)",
-  "descriptionIt": "Descrizione breve in italiano (2-3 frasi, max 200 caratteri)",
-  "descriptionEn": "Short description in English (2-3 sentences, max 200 chars)",
-  "fullTextIt": "Testo completo in italiano (3-4 paragrafi da 60-80 parole ognuno, separati da \\n\\n)",
-  "fullTextEn": "Full text in English (3-4 paragraphs of 60-80 words each, separated by \\n\\n)",
+  "titleIt": "Titolo italiano (max 65 char, emoji iniziale obbligatoria)",
+  "titleEn": "English title (max 65 chars, opening emoji required)",
+  "descriptionIt": "Gancio in italiano: 1-2 frasi che amplificano la cosa più assurda (max 180 caratteri)",
+  "descriptionEn": "Hook in English: 1-2 sentences on the most absurd part (max 180 chars)",
+  "fullTextIt": "3 paragrafi in italiano (80-100 parole ciascuno, separati da \\n\\n)",
+  "fullTextEn": "3 paragraphs in English (80-100 words each, separated by \\n\\n)",
   "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
-  "categoryLabelIt": "es. 🐾 Animali (con emoji appropriata)",
-  "categoryLabelEn": "es. 🐾 Animals (with appropriate emoji)",
+  "categoryLabelIt": "es. 🐾 Animali",
+  "categoryLabelEn": "es. 🐾 Animals",
   "engagementLevel": "high|medium|low"
 }`;
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-    max_tokens: 1000,
+    temperature: 0.85,
+    max_tokens: 1200,
   });
 
   const raw = completion.choices[0].message.content ?? '{}';
-  // Rimuovi eventuali backtick markdown
   const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(clean);
 }
@@ -150,15 +224,14 @@ async function main() {
     if (!process.argv.includes('--force')) process.exit(0);
   }
 
-  // Raccoglie articoli da Guardian
+  // Raccoglie articoli da Guardian (pool ampio per poi selezionare i migliori)
   console.log('📰 Recupero notizie da Guardian API...');
   const allArticles = [];
   for (const { query, category } of GUARDIAN_QUERIES) {
-    const results = await fetchGuardianNews(query, 2);
-    // Aggiungi la categoria suggerita per aiutare la classificazione AI
+    const results = await fetchGuardianNews(query, 4); // 4 per query = pool più ampio
     results.forEach(r => r._suggestedCategory = category);
     allArticles.push(...results);
-    await new Promise(r => setTimeout(r, 200)); // rate limiting
+    await new Promise(r => setTimeout(r, 150)); // rate limiting
   }
 
   // Deduplica per URL
@@ -169,11 +242,12 @@ async function main() {
     return true;
   });
 
-  console.log(`   → Trovati ${unique.length} articoli unici`);
+  console.log(`   → Trovati ${unique.length} articoli unici nel pool`);
 
-  // Prende i primi N articoli (1 free, fino a 5 premium)
+  // ⭐ Scoring AI: seleziona le 5 storie più virali/bizzarre dal pool
   const MAX_ARTICLES = 5;
-  const selected = unique.slice(0, MAX_ARTICLES);
+  console.log('\n⭐ Selezione AI delle storie più virali...');
+  const selected = await scoreAndSelectArticles(unique, MAX_ARTICLES);
 
   // Processa con AI e salva su Firestore
   console.log('\n🤖 Rielaborazione con GPT-4o mini...');

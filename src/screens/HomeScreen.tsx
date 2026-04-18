@@ -10,7 +10,7 @@ import {
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
-import { fetchTodayNews } from '../services/newsService';
+import { fetchTodayNews, fetchRecentPastNews } from '../services/newsService';
 import { NewsItem } from '../types';
 import { UserStats } from '../../App';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
@@ -67,21 +67,22 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats }: HomeScreenProps) {
   const { t, language } = useTranslation();
-  const [allNews, setAllNews] = useState<NewsItem[]>([]);
+  const [todayNews, setTodayNews] = useState<NewsItem | null>(null);
+  const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetchTodayNews(language, isPremium)
-      .then(news => {
-        setAllNews(news.length > 0 ? news : MOCK_NEWS);
-      })
-      .catch(() => { setAllNews(MOCK_NEWS); })
-      .finally(() => setLoading(false));
+    // Fetch parallelo: notizia di oggi + 2 dai giorni precedenti
+    Promise.all([
+      fetchTodayNews(language, isPremium).catch(() => []),
+      fetchRecentPastNews(language, 2).catch(() => []),
+    ]).then(([todayArr, pastArr]) => {
+      // Fallback mock solo se Firestore non ha ancora niente
+      setTodayNews(todayArr[0] ?? MOCK_NEWS[0]);
+      setPastNews(pastArr.length > 0 ? pastArr : MOCK_NEWS.slice(1, 3));
+    }).finally(() => setLoading(false));
   }, [language, isPremium]);
-
-  const todayNews = allNews.find((n) => n.isToday) ?? allNews[0];
-  const recentNews = allNews.filter((n) => n.id !== (todayNews?.id ?? '')).slice(0, isPremium ? 9 : 2);
 
   // Livello e progresso reali
   const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
@@ -134,8 +135,8 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           </TouchableOpacity>
         )}
 
-        {/* Ultime notizie */}
-        {!loading && recentNews.map((item) => (
+        {/* 2 notizie dai giorni precedenti — visibili a tutti */}
+        {!loading && pastNews.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.item}

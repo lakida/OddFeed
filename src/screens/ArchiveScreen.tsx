@@ -37,8 +37,14 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+      <View style={styles.heroArea}>
+        <View style={styles.circle1} />
+        <View style={styles.circle2} />
+        <Text style={styles.logo}>
+          Odd<Text style={styles.logoLight}>Feed</Text>
+        </Text>
         <Text style={styles.headerTitle}>{t.archive.title}</Text>
+        <Text style={styles.headerSubtitle}>Tutte le notizie passate, in un posto solo.</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -105,18 +111,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg,
   },
-  header: {
+  heroArea: {
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.bg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  circle1: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#C7D2FE',
+    opacity: 0.35,
+    top: -60,
+    right: -40,
+  },
+  circle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#A5B4FC',
+    opacity: 0.2,
+    bottom: -30,
+    left: 30,
+  },
+  logo: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#3730A3',
+    letterSpacing: -1,
+    marginBottom: Spacing.lg,
+  },
+  logoLight: {
+    fontWeight: '300',
+    color: '#6366F1',
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: -0.5,
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: FontSize.base,
+    color: '#4338CA',
+    opacity: 0.8,
   },
   premiumBanner: {
     marginHorizontal: Spacing.lg,

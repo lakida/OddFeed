@@ -41,12 +41,12 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Carica le notizie di oggi.
+// Carica la notizia di oggi (la prima, quella free).
 // Nota: orderBy rimosso per evitare la necessità di un indice composito Firestore.
 // L'ordinamento viene fatto lato client sul campo 'order'.
 export async function fetchTodayNews(
   language: 'it' | 'en',
-  isPremium: boolean
+  _isPremium: boolean
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
@@ -61,8 +61,29 @@ export async function fetchTodayNews(
     .sort((a, b) => a.order - b.order)
     .map(x => x.item);
 
-  // Free: solo la prima notizia; Premium: tutte
-  return isPremium ? all : all.slice(0, 1);
+  // Home mostra sempre solo 1 notizia di oggi (la prima, free)
+  return all.slice(0, 1);
+}
+
+// Carica le 2 notizie più recenti dei giorni precedenti (per la Home).
+// Mostrate a tutti, free e premium — danno sempre qualcosa da leggere.
+export async function fetchRecentPastNews(
+  language: 'it' | 'en',
+  count = 2
+): Promise<NewsItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const q = query(
+    collection(db, 'articles'),
+    where('date', '<', today),
+  );
+
+  const snap = await getDocs(q);
+  return snap.docs
+    .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order)
+    .slice(0, count)
+    .map(x => x.item);
 }
 
 // Carica l'archivio (ultimi 7 giorni free, tutto per premium).
