@@ -41,21 +41,29 @@ const db = getFirestore();
 const openai = new OpenAI({ apiKey: OPENAI_KEY });
 
 // ─── Query Guardian per categoria ─────────────────────────────────
-// Query specifiche e aggressive per pescare storie davvero bizzarre
+// Le query con tag:'world/italy' pescano articoli taggati Italia dal Guardian.
+// Queste hanno priorità nella selezione finale.
 const GUARDIAN_QUERIES = [
-  // GOLD TIER — storie assurde garantite
+  // 🇮🇹 ITALIA FIRST — almeno 2-3 notizie italiane per ogni giornata
+  { query: 'italy bizarre crime unusual strange absurd', category: 'crimini_strani', tag: 'world/italy' },
+  { query: 'italy court law sentence judge unusual verdict', category: 'leggi', tag: 'world/italy' },
+  { query: 'italy scandal gossip celebrity politician embarrassing', category: 'gossip', tag: 'world/italy' },
+  { query: 'italy discovery found unusual treasure ancient surprising', category: 'storie_assurde', tag: 'world/italy' },
+  { query: 'italy food restaurant tradition record bizarre', category: 'gastronomia', tag: 'world/italy' },
+  { query: 'italy protest demonstration unusual funny absurd', category: 'storie_assurde', tag: 'world/italy' },
+  // GOLD TIER — storie assurde garantite (mondo)
   { query: 'man woman arrested bizarre absurd toilet OR shower OR drunk OR naked OR costume', category: 'crimini_strani' },
   { query: 'weird law banned illegal absurd country fined', category: 'leggi' },
   { query: 'alligator snake python found house toilet car surprise', category: 'animali' },
   { query: 'world record longest fastest biggest smallest unusual attempt', category: 'record' },
   { query: 'accidental discovered mistake unusual found buried treasure odd', category: 'storie_assurde' },
-  // HIGH — persone assurde
+  // HIGH — persone assurde (mondo)
   { query: 'man OR woman OR couple bizarre obsession collection unusual hobby extreme', category: 'storie_assurde' },
   { query: 'scam fraud bizarre trick unusual theft comedy mistake', category: 'crimini_strani' },
   { query: 'millionaire eccentric spending bizarre luxury unusual purchase', category: 'soldi_folli' },
   { query: 'celebrity bizarre behaviour odd scandal embarrassing moment', category: 'gossip' },
   { query: 'lawsuit strange sue bizarre legal case unusual court', category: 'leggi' },
-  // MEDIUM — storie virali
+  // MEDIUM — storie virali (mondo)
   { query: 'study reveals surprising shocking humans prefer secret desire', category: 'psicologia_strana' },
   { query: 'animal intelligence surprising behavior first time science discovery', category: 'animali' },
   { query: 'food challenge eating contest bizarre menu strange restaurant', category: 'gastronomia' },
@@ -67,16 +75,17 @@ const GUARDIAN_QUERIES = [
 ];
 
 // ─── Funzione: cerca notizie su Guardian ──────────────────────────
-async function fetchGuardianNews(query, maxResults = 5) {
-  // Cerca negli ultimi 30 giorni per avere più materiale
+async function fetchGuardianNews(query, maxResults = 5, tag = null) {
   const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const url = `https://content.guardianapis.com/search?` +
+  let url = `https://content.guardianapis.com/search?` +
     `q=${encodeURIComponent(query)}&` +
     `show-fields=headline,trailText,thumbnail,bodyText&` +
     `order-by=relevance&` +
     `from-date=${fromDate}&` +
     `page-size=${maxResults}&` +
     `api-key=${GUARDIAN_KEY}`;
+
+  if (tag) url += `&tag=${encodeURIComponent(tag)}`;
 
   const res = await fetch(url);
   const data = await res.json();
@@ -85,30 +94,44 @@ async function fetchGuardianNews(query, maxResults = 5) {
 
 // ─── Funzione: scoring AI per selezionare solo storie davvero bizzarre ───
 async function scoreAndSelectArticles(candidates, count = 5) {
+  // Separa articoli italiani da internazionali
+  const italianCandidates = candidates.filter(a => a._isItalian);
+  const worldCandidates = candidates.filter(a => !a._isItalian);
+
+  // Garantisce almeno 2 notizie italiane se disponibili
+  const MIN_ITALIAN = Math.min(2, italianCandidates.length);
+  const needed = count - MIN_ITALIAN;
+
+  // Crea la lista con gli italiani etichettati
   const summaries = candidates.map((a, i) => {
     const headline = a.fields?.headline ?? a.webTitle ?? '';
     const trail = a.fields?.trailText ?? '';
-    return `[${i}] ${headline} | ${trail.substring(0, 120)}`;
+    const flag = a._isItalian ? ' 🇮🇹' : '';
+    return `[${i}]${flag} ${headline} | ${trail.substring(0, 120)}`;
   }).join('\n');
 
   const prompt = `Sei il curatore di OddFeed, un'app italiana di notizie virali e bizzarre.
-Devi selezionare le ${count} notizie più virali, bizzarre e assurde da questa lista.
+Il pubblico è italiano, quindi le notizie dall'Italia hanno priorità assoluta.
 
-CRITERI DI SELEZIONE (in ordine di priorità):
-1. 🏆 Incredibilmente assurda / imbarazzante / surreale
-2. 😂 Ha un elemento comico involontario
-3. 🤯 Fatto che nessuno si aspetta
-4. ⚡ Tocca temi universali (sesso, soldi, crimini stupidi, animali pazzi, leggi assurde)
-5. ✅ Verificabile e reale (non speculativa)
+Devi selezionare ${count} notizie rispettando questa regola:
+- OBBLIGATORIO: almeno ${MIN_ITALIAN} notizie con 🇮🇹 (italiane) se disponibili
+- Le restanti ${needed}: le più virali/bizzarre indipendentemente dal paese
 
-SCARTA: notizie politiche ordinarie, economia generale, conflitti bellici, sport mainstream, salute generica.
+CRITERI (in ordine):
+1. 🇮🇹 È italiana (priorità assoluta)
+2. 🏆 Assurda / imbarazzante / surreale
+3. 😂 Elemento comico involontario
+4. 🤯 Fatto che nessuno si aspetta
+5. ⚡ Temi universali: sesso, soldi, crimini stupidi, animali pazzi, leggi assurde
+
+SCARTA: politica ordinaria, economia, guerra, sport mainstream, salute generica.
 
 Lista articoli:
 ${summaries}
 
 Rispondi SOLO con un JSON valido:
 {
-  "selected": [indici degli articoli scelti, dal più virale al meno, es. [3, 7, 1, 12, 5]],
+  "selected": [indici dal più interessante al meno, es. [3, 7, 1, 12, 5]],
   "reasoning": "breve spiegazione in una riga"
 }`;
 
@@ -197,19 +220,24 @@ Rispondi SOLO con un JSON valido:
 
 // ─── Mappa sezione Guardian → paese/fonte ─────────────────────────
 function guessCountry(article) {
-  const text = (article.sectionName + ' ' + article.webTitle).toLowerCase();
-  if (text.includes('japan') || text.includes('japanese')) return '🇯🇵 Giappone';
-  if (text.includes('australia'))                          return '🇦🇺 Australia';
-  if (text.includes('uk') || text.includes('britain'))     return '🇬🇧 UK';
-  if (text.includes('us') || text.includes('america'))     return '🇺🇸 USA';
-  if (text.includes('germany') || text.includes('german')) return '🇩🇪 Germania';
-  if (text.includes('france') || text.includes('french'))  return '🇫🇷 Francia';
-  if (text.includes('italy') || text.includes('italian'))  return '🇮🇹 Italia';
-  if (text.includes('china') || text.includes('chinese'))  return '🇨🇳 Cina';
-  if (text.includes('india') || text.includes('indian'))   return '🇮🇳 India';
-  if (text.includes('brazil') || text.includes('brazil'))  return '🇧🇷 Brasile';
-  if (text.includes('canada') || text.includes('canadian'))return '🇨🇦 Canada';
-  if (text.includes('spain') || text.includes('spanish'))  return '🇪🇸 Spagna';
+  // Se l'articolo viene da una query taggata Italia, è Italia di sicuro
+  if (article._isItalian) return '🇮🇹 Italia';
+
+  const text = (article.sectionName + ' ' + article.webTitle + ' ' + (article.fields?.trailText ?? '')).toLowerCase();
+  if (text.includes('italy') || text.includes('italian') || text.includes('rome') || text.includes('milan') || text.includes('napoli') || text.includes('sicil')) return '🇮🇹 Italia';
+  if (text.includes('japan') || text.includes('japanese') || text.includes('tokyo')) return '🇯🇵 Giappone';
+  if (text.includes('australia') || text.includes('sydney') || text.includes('melbourne')) return '🇦🇺 Australia';
+  if (text.includes('uk') || text.includes('britain') || text.includes('london') || text.includes('england')) return '🇬🇧 UK';
+  if (text.includes(' us ') || text.includes('america') || text.includes('florida') || text.includes('texas') || text.includes('california')) return '🇺🇸 USA';
+  if (text.includes('germany') || text.includes('german') || text.includes('berlin')) return '🇩🇪 Germania';
+  if (text.includes('france') || text.includes('french') || text.includes('paris')) return '🇫🇷 Francia';
+  if (text.includes('china') || text.includes('chinese') || text.includes('beijing')) return '🇨🇳 Cina';
+  if (text.includes('india') || text.includes('indian') || text.includes('mumbai')) return '🇮🇳 India';
+  if (text.includes('brazil') || text.includes('brazilian')) return '🇧🇷 Brasile';
+  if (text.includes('canada') || text.includes('canadian')) return '🇨🇦 Canada';
+  if (text.includes('spain') || text.includes('spanish') || text.includes('madrid')) return '🇪🇸 Spagna';
+  if (text.includes('mexico') || text.includes('mexican')) return '🇲🇽 Messico';
+  if (text.includes('russia') || text.includes('russian') || text.includes('moscow')) return '🇷🇺 Russia';
   return '🌍 Mondo';
 }
 
@@ -234,9 +262,12 @@ async function main() {
   // Raccoglie articoli da Guardian (pool ampio per poi selezionare i migliori)
   console.log('📰 Recupero notizie da Guardian API...');
   const allArticles = [];
-  for (const { query, category } of GUARDIAN_QUERIES) {
-    const results = await fetchGuardianNews(query, 4); // 4 per query = pool più ampio
-    results.forEach(r => r._suggestedCategory = category);
+  for (const { query, category, tag } of GUARDIAN_QUERIES) {
+    const results = await fetchGuardianNews(query, 4, tag ?? null);
+    results.forEach(r => {
+      r._suggestedCategory = category;
+      r._isItalian = !!tag; // marca gli articoli che vengono da query Italia
+    });
     allArticles.push(...results);
     await new Promise(r => setTimeout(r, 150)); // rate limiting
   }
