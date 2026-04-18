@@ -14,9 +14,11 @@ import { MOCK_NEWS } from '../data/mockData';
 import { ReactionType } from '../types';
 import { useTranslation } from '../context/LanguageContext';
 import { UserStats } from '../../App';
+import { NewsItem } from '../types';
 
 interface ArticleScreenProps {
   newsId: string;
+  article?: NewsItem | null;
   onBack: () => void;
   userId: string;
   userStats: UserStats;
@@ -36,9 +38,10 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-export default function ArticleScreen({ newsId, onBack, userId, userStats, onPointsChange }: ArticleScreenProps) {
+export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, userStats, onPointsChange }: ArticleScreenProps) {
   const { t } = useTranslation();
-  const article = MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
+  // Usa l'articolo passato come prop (da Firestore); fallback al mock solo in sviluppo
+  const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const [userReaction, setUserReaction] = useState<ReactionType | null>(article.userReaction);
   const [reactions, setReactions] = useState(article.reactions);
 

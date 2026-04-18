@@ -12,6 +12,7 @@ import {
   getLevelForPoints,
 } from './src/services/pointsService';
 import { User } from 'firebase/auth';
+import { NewsItem } from './src/types';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
@@ -180,6 +181,7 @@ function AppContent() {
   const [userName, setUserName] = useState('');
   const [activeTab, setActiveTab] = useState<Tab>('Notizie');
   const [articleId, setArticleId] = useState<string>('1');
+  const [currentArticle, setCurrentArticle] = useState<NewsItem | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [isPremium, setIsPremium] = useState(false);
   const [userStats, setUserStats] = useState<UserStats>(EMPTY_STATS);
@@ -300,9 +302,10 @@ function AppContent() {
     return unsubscribe;
   }, [loadUserStats]);
 
-  const openArticle = (id: string) => {
+  const openArticle = (id: string, article?: NewsItem) => {
     setReadIds((prev) => new Set(prev).add(id));
     setArticleId(id);
+    setCurrentArticle(article ?? null);
     setAppScreen('Article');
   };
 
@@ -377,6 +380,7 @@ function AppContent() {
     return (
       <ArticleScreen
         newsId={articleId}
+        article={currentArticle}
         onBack={() => setAppScreen('Tabs')}
         userId={currentUser?.uid ?? ''}
         userStats={userStats}

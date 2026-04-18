@@ -56,7 +56,7 @@ const badgeStyles = StyleSheet.create({
 });
 
 interface HomeScreenProps {
-  onOpenArticle: (id: string) => void;
+  onOpenArticle: (id: string, article: NewsItem) => void;
   onGoToArchive: () => void;
   readIds: Set<string>;
   isPremium: boolean;
@@ -66,12 +66,17 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats }: HomeScreenProps) {
   const { t, language } = useTranslation();
-  const [allNews, setAllNews] = useState<NewsItem[]>(MOCK_NEWS);
+  const [allNews, setAllNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     fetchTodayNews(language, isPremium)
-      .then(news => { if (news.length > 0) setAllNews(news); })
-      .catch(() => {}); // fallback ai mock
+      .then(news => {
+        setAllNews(news.length > 0 ? news : MOCK_NEWS);
+      })
+      .catch(() => { setAllNews(MOCK_NEWS); })
+      .finally(() => setLoading(false));
   }, [language, isPremium]);
 
   const todayNews = allNews.find((n) => n.isToday) ?? allNews[0];
@@ -110,7 +115,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {todayNews && (
           <TouchableOpacity
             style={styles.item}
-            onPress={() => onOpenArticle(todayNews.id)}
+            onPress={() => onOpenArticle(todayNews.id, todayNews)}
             activeOpacity={0.7}
           >
             <StatusBadge read={readIds.has(todayNews.id)} t={t} />
@@ -125,12 +130,12 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           </TouchableOpacity>
         )}
 
-        {/* Ultime 3 notizie */}
+        {/* Ultime notizie */}
         {recentNews.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.item}
-            onPress={() => onOpenArticle(item.id)}
+            onPress={() => onOpenArticle(item.id, item)}
             activeOpacity={0.7}
           >
             <StatusBadge read={readIds.has(item.id)} t={t} />

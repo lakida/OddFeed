@@ -14,7 +14,7 @@ import { fetchArchive } from '../services/newsService';
 import { NewsItem } from '../types';
 
 interface ArchiveScreenProps {
-  onOpenArticle: (id: string) => void;
+  onOpenArticle: (id: string, article: NewsItem) => void;
   isPremium: boolean;
 }
 
@@ -23,14 +23,12 @@ const FILTERS = ['Tutto', 'Questa settimana', 'Aprile 2026', 'Animali', 'Record'
 export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
   const [activeFilter, setActiveFilter] = useState(t.archive.filters[0]);
-  const [archiveNews, setArchiveNews] = useState<NewsItem[]>(
-    isPremium ? MOCK_NEWS : MOCK_NEWS.filter((n) => n.daysAgo <= 7)
-  );
+  const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
 
   useEffect(() => {
     fetchArchive(language, isPremium)
-      .then(news => { if (news.length > 0) setArchiveNews(news); })
-      .catch(() => {});
+      .then(news => { setArchiveNews(news.length > 0 ? news : MOCK_NEWS); })
+      .catch(() => { setArchiveNews(MOCK_NEWS); });
   }, [language, isPremium]);
 
   return (
@@ -71,7 +69,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
           <TouchableOpacity
             key={item.id}
             style={styles.item}
-            onPress={() => onOpenArticle(item.id)}
+            onPress={() => onOpenArticle(item.id, item)}
             activeOpacity={0.7}
           >
             <Text style={styles.itemMeta}>
