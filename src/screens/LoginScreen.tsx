@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,19 @@ import {
   Pressable,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { registerUser, loginUser, logoutUser } from '../services/authService';
+import { registerUser, loginUser, logoutUser, signInWithGoogle, signInWithFacebook } from '../services/authService';
 import { fetchSignInMethodsForEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useTranslation } from '../context/LanguageContext';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, FACEBOOK_APP_ID } from '../config/socialAuth';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface LoginScreenProps {
   onLogin: (name: string, isNew?: boolean) => void;
@@ -137,7 +144,7 @@ const eyeStyles = StyleSheet.create({
 
 export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister }: LoginScreenProps) {
   const { t } = useTranslation();
-  const isRegister = false; // La registrazione è ora su schermata separata
+  const isRegister = false;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -145,11 +152,54 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
 
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
   const strength = isRegister ? passwordStrength(password) : 0;
+
+  // ─── Google OAuth ───────────────────────────────────────────────
+  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    // iosClientId è opzionale — serve solo con build nativa (EAS)
+    ...(GOOGLE_IOS_CLIENT_ID.startsWith('INCOLLA') ? {} : { iosClientId: GOOGLE_IOS_CLIENT_ID }),
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const { idToken, accessToken } = googleResponse.authentication!;
+      handleSocialSignIn(async () => signInWithGoogle(idToken ?? null, accessToken ?? null));
+    } else if (googleResponse?.type === 'error' || googleResponse?.type === 'dismiss') {
+      setSocialLoading(null);
+    }
+  }, [googleResponse]);
+
+  // ─── Facebook OAuth ─────────────────────────────────────────────
+  const [, facebookResponse, facebookPromptAsync] = Facebook.useAuthRequest({
+    clientId: FACEBOOK_APP_ID,
+  });
+
+  useEffect(() => {
+    if (facebookResponse?.type === 'success') {
+      const { accessToken } = facebookResponse.authentication!;
+      handleSocialSignIn(async () => signInWithFacebook(accessToken!));
+    } else if (facebookResponse?.type === 'error' || facebookResponse?.type === 'dismiss') {
+      setSocialLoading(null);
+    }
+  }, [facebookResponse]);
+
+  // ─── Handler generico per social login ─────────────────────────
+  const handleSocialSignIn = async (signInFn: () => Promise<any>) => {
+    try {
+      const user = await signInFn();
+      // onAuthStateChanged in App.tsx gestisce il resto (profilo, onboarding, tabs)
+      onLogin(user.displayName ?? user.email ?? '', false);
+    } catch (err: any) {
+      setSocialLoading(null);
+      Alert.alert('Errore di accesso', err?.message ?? 'Impossibile accedere. Riprova.');
+    }
+  };
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -245,26 +295,36 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
           <View style={styles.socialWrap}>
             {/* Google */}
             <TouchableOpacity
-              style={styles.googleBtn}
+              style={[styles.googleBtn, socialLoading === 'google' && styles.btnDisabled]}
               activeOpacity={0.85}
-              onPress={() => Alert.alert('Prossimamente', 'Il login con Google sarà disponibile nella prossima versione.')}
+              disabled={socialLoading !== null}
+              onPress={() => {
+                setSocialLoading('google');
+                googlePromptAsync();
+              }}
             >
-              <GoogleLogo />
-              <Text style={styles.googleBtnText}>
-                {isRegister ? 'Registrati con Google' : 'Continua con Google'}
-              </Text>
+              {socialLoading === 'google'
+                ? <ActivityIndicator size="small" color="#3C4043" />
+                : <GoogleLogo />
+              }
+              <Text style={styles.googleBtnText}>Continua con Google</Text>
             </TouchableOpacity>
 
             {/* Facebook */}
             <TouchableOpacity
-              style={styles.facebookBtn}
+              style={[styles.facebookBtn, socialLoading === 'facebook' && styles.btnDisabled]}
               activeOpacity={0.85}
-              onPress={() => Alert.alert('Prossimamente', 'Il login con Facebook sarà disponibile nella prossima versione.')}
+              disabled={socialLoading !== null}
+              onPress={() => {
+                setSocialLoading('facebook');
+                facebookPromptAsync();
+              }}
             >
-              <FacebookLogo />
-              <Text style={styles.facebookBtnText}>
-                {isRegister ? 'Registrati con Facebook' : 'Continua con Facebook'}
-              </Text>
+              {socialLoading === 'facebook'
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <FacebookLogo />
+              }
+              <Text style={styles.facebookBtnText}>Continua con Facebook</Text>
             </TouchableOpacity>
           </View>
 
@@ -576,6 +636,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
+  btnDisabled: { opacity: 0.6 },
   separatorRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: Spacing.md, marginBottom: Spacing.lg,

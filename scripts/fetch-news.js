@@ -110,29 +110,40 @@ async function scoreAndSelectArticles(candidates, count = 5) {
     return `[${i}]${flag} ${headline} | ${trail.substring(0, 120)}`;
   }).join('\n');
 
-  const prompt = `Sei il curatore di OddFeed, un'app italiana di notizie virali e bizzarre.
-Il pubblico è italiano, quindi le notizie dall'Italia hanno priorità assoluta.
+  const prompt = `Sei il curatore di OddFeed, un'app italiana di notizie bizzarre.
+Il pubblico è italiano: notizie dall'Italia hanno priorità.
 
-Devi selezionare ${count} notizie rispettando questa regola:
-- OBBLIGATORIO: almeno ${MIN_ITALIAN} notizie con 🇮🇹 (italiane) se disponibili
-- Le restanti ${needed}: le più virali/bizzarre indipendentemente dal paese
+REGOLA FONDAMENTALE: seleziona SOLO articoli in cui il fatto bizzarro/assurdo è già evidente nel titolo o nel sommario originale. Non selezionare articoli normali sperando di renderli interessanti in fase di scrittura — non funziona.
 
-CRITERI (in ordine):
-1. 🇮🇹 È italiana (priorità assoluta)
-2. 🏆 Assurda / imbarazzante / surreale
-3. 😂 Elemento comico involontario
-4. 🤯 Fatto che nessuno si aspetta
-5. ⚡ Temi universali: sesso, soldi, crimini stupidi, animali pazzi, leggi assurde
+DOMANDA DA FARTI per ogni articolo: "Se racconto questa storia a un amico al bar, si stupirà o si annoierà?" → Se si annoia, scarta.
 
-SCARTA: politica ordinaria, economia, guerra, sport mainstream, salute generica.
+✅ SELEZIONA se nell'originale c'è già:
+- Una persona che fa qualcosa di ridicolo/illegale/imbarazzante
+- Un animale in un posto assurdo
+- Una legge o sentenza ridicola
+- Un record assurdo o una coincidenza incredibile
+- Uno scandalo imbarazzante
+- Un crimine comico o incompetente
+
+❌ SCARTA SEMPRE (anche se 🇮🇹):
+- Missioni spaziali, astronomia, NASA (notizie normali di scienza)
+- Politica, elezioni, governo, parlamento
+- Economia, mercati, inflazione, banche
+- Guerra, conflitti, crisi internazionali
+- Sport (partite, campionati, trasferimenti)
+- Salute, medicina, farmaci, pandemie
+- Clima, ambiente, disastri naturali
+- Qualsiasi notizia "seria" travestita da bizzarra
+
+QUOTA ITALIA: se ci sono articoli 🇮🇹 che superano il test del bar, includi almeno ${MIN_ITALIAN}.
 
 Lista articoli:
 ${summaries}
 
-Rispondi SOLO con un JSON valido:
+Rispondi SOLO con un JSON valido (puoi selezionarne meno di ${count} se non ci sono abbastanza storie davvero bizzarre):
 {
-  "selected": [indici dal più interessante al meno, es. [3, 7, 1, 12, 5]],
-  "reasoning": "breve spiegazione in una riga"
+  "selected": [indici dal più bizzarro al meno, es. [3, 7, 1]],
+  "reasoning": "breve spiegazione"
 }`;
 
   try {
@@ -147,7 +158,11 @@ Rispondi SOLO con un JSON valido:
     const result = JSON.parse(clean);
     console.log(`   Selezione AI: ${result.reasoning}`);
     const indices = result.selected?.slice(0, count) ?? [];
-    return indices.map(i => candidates[i]).filter(Boolean);
+    const selected = indices.map(i => candidates[i]).filter(Boolean);
+    if (selected.length < 3) {
+      console.log(`   ⚠️  Solo ${selected.length} articoli bizzarri trovati — il pool Guardian non era abbastanza strano oggi.`);
+    }
+    return selected;
   } catch (e) {
     console.log(`   ⚠️ Scoring fallito, uso selezione casuale: ${e.message}`);
     // Fallback: prendi articoli distribuiti dalle varie query
@@ -164,33 +179,30 @@ async function rewriteWithAI(article) {
 
   const prompt = `Sei il redattore di OddFeed, un'app italiana di notizie bizzarre dal mondo.
 
-ARTICOLO ORIGINALE (usalo come unica fonte di fatti):
+ARTICOLO ORIGINALE:
 Titolo originale: ${headline}
 Sommario: ${trail}
 ${bodyPreview ? `Testo originale: ${bodyPreview}` : ''}
 
-═══ REGOLE ASSOLUTE ═══
+═══ REGOLA N.1 — NON INVENTARE MAI ═══
+Il titolo e il testo devono contenere SOLO fatti presenti nell'articolo originale.
+Se nell'originale non c'è nulla di davvero bizzarro, scrivi un titolo onesto e diretto — non aggiungere dettagli inventati per renderlo più strano.
+ESEMPIO VIETATO: l'articolo parla di astronauti vicino alla luna → NON scrivere "il bagno è rotto" se non è scritto nell'originale.
+ESEMPIO CORRETTO: se l'unica cosa strana è X, il titolo parla di X e basta.
 
-TITOLO (titleIt / titleEn):
-- Max 65 caratteri, emoji in apertura obbligatoria
-- Deve contenere il fatto più sorprendente dell'articolo, in modo esplicito
-- Usa numeri reali se presenti nell'articolo
-- Tono ironico e diretto — vietato: "Un uomo...", "Si scopre che..."
-- Esempi: "🐊 Coccodrillo nel bagno: era nascosto lì da 3 giorni", "💸 Vende i denti del nonno su eBay: era convinto fossero d'oro"
+═══ TITOLO ═══
+- Max 65 caratteri, emoji iniziale obbligatoria
+- Riassumi il fatto più insolito CHE ESISTE DAVVERO nell'articolo
+- Usa numeri reali se ci sono nell'originale
+- Tono ironico ma onesto
 
-TESTO (fullTextIt / fullTextEn) — REGOLA PRINCIPALE:
-⚠️ Il testo deve raccontare ESATTAMENTE la stessa storia del titolo.
-⚠️ NON inventare fatti, nomi, luoghi o citazioni che non sono nell'articolo originale.
-⚠️ Se l'articolo originale è breve, scrivi meno — meglio corto e vero che lungo e inventato.
+═══ TESTO ═══
+- Paragrafo 1: chi, cosa, dove, quando — solo dati reali dall'articolo
+- Paragrafo 2: contesto o sviluppo presente nell'articolo
+- Paragrafo 3: solo se c'è materiale reale; altrimenti ometti e lascia 2 paragrafi
 
-Struttura del testo:
-- Paragrafo 1: spiega il fatto del titolo — chi, cosa, dove, quando (solo dati reali)
-- Paragrafo 2: contesto e sviluppo della storia, basato sull'articolo originale
-- Paragrafo 3: conseguenze, reazioni, o dato aggiuntivo presente nell'articolo — se non c'è, accorcia
-
-DESCRIZIONE (descriptionIt / descriptionEn):
-- 1-2 frasi che amplificano il fatto più assurdo (max 160 caratteri)
-- Deve essere coerente con il titolo e il testo
+═══ DESCRIZIONE ═══
+- 1-2 frasi sul fatto più insolito dell'articolo (max 160 caratteri)
 
 Rispondi SOLO con un JSON valido:
 {

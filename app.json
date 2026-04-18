@@ -3,6 +3,7 @@
     "name": "OddFeed",
     "slug": "OddFeed",
     "version": "1.0.0",
+    "scheme": "oddfeed",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -32,7 +33,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
-import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail } from './src/services/authService';
+import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail, ensureSocialUserProfile } from './src/services/authService';
 import { registerForPushNotifications } from './src/services/notificationService';
 import { initializePurchases, checkPremiumStatus } from './src/services/purchaseService';
 import {
@@ -263,10 +263,17 @@ function AppContent() {
     const unsubscribe = onAuthChange(async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Imposta subito un nome provvisorio; verrà sovrascritto dal profilo Firestore
         setUserName(user.displayName ?? '');
 
+        // Google e Facebook non richiedono verifica email
+        const isSocialLogin = user.providerData[0]?.providerId !== 'password';
+
         try {
+          // Per i nuovi utenti social, crea il profilo Firestore automaticamente
+          if (isSocialLogin) {
+            await ensureSocialUserProfile(user);
+          }
+
           const profile = await getUserProfile(user.uid);
 
           // Il nome vero è salvato come 'name' su Firestore durante la registrazione
@@ -276,7 +283,8 @@ function AppContent() {
             setUserName(user.displayName);
           }
 
-          if (!__DEV__ && !user.emailVerified && !profile?.onboardingDone) {
+          // Verifica email solo per login email/password
+          if (!isSocialLogin && !__DEV__ && !user.emailVerified && !profile?.onboardingDone) {
             setAppScreen('EmailVerification');
             return;
           }
@@ -284,7 +292,6 @@ function AppContent() {
           if (profile?.onboardingDone) {
             setIsPremium(profile.isPremium ?? false);
             setAppScreen('Tabs');
-            // Carica le stats in background dopo aver mostrato i Tabs
             loadUserStats(user.uid);
           } else {
             setAppScreen('Onboarding');

@@ -7,6 +7,9 @@ import {
   updateProfile,
   onAuthStateChanged,
   deleteUser,
+  signInWithCredential,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
   User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -130,4 +133,41 @@ export async function deleteAccount(onBeforeDelete?: () => void): Promise<void> 
 // Ascolta lo stato di autenticazione
 export function onAuthChange(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
+}
+
+// Login con Google (passa il token ottenuto da expo-auth-session)
+export async function signInWithGoogle(idToken: string | null, accessToken: string | null) {
+  const credential = GoogleAuthProvider.credential(idToken, accessToken);
+  const result = await signInWithCredential(auth, credential);
+  return result.user;
+}
+
+// Login con Facebook (passa il token ottenuto da expo-auth-session)
+export async function signInWithFacebook(accessToken: string) {
+  const credential = FacebookAuthProvider.credential(accessToken);
+  const result = await signInWithCredential(auth, credential);
+  return result.user;
+}
+
+// Crea il profilo Firestore per un nuovo utente social (Google/Facebook).
+// Ritorna true se il profilo esisteva già, false se è stato creato ora.
+export async function ensureSocialUserProfile(user: User): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'users', user.uid));
+  if (snap.exists()) return true; // profilo già presente
+
+  await setDoc(doc(db, 'users', user.uid), {
+    name: user.displayName ?? '',
+    email: user.email ?? '',
+    createdAt: serverTimestamp(),
+    isPremium: false,
+    points: 0,
+    streak: 0,
+    level: 0,
+    interests: [],
+    notificationSlot: 'Colazione',
+    language: 'it',
+    emailVerified: true,
+    provider: user.providerData[0]?.providerId ?? 'social',
+  });
+  return false; // profilo appena creato → va all'onboarding
 }
