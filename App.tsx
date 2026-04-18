@@ -263,10 +263,18 @@ function AppContent() {
     const unsubscribe = onAuthChange(async (user) => {
       setCurrentUser(user);
       if (user) {
-        setUserName(user.displayName ?? user.email?.split('@')[0] ?? '');
+        // Imposta subito un nome provvisorio; verrà sovrascritto dal profilo Firestore
+        setUserName(user.displayName ?? '');
 
         try {
           const profile = await getUserProfile(user.uid);
+
+          // Il nome vero è salvato come 'name' su Firestore durante la registrazione
+          if (profile?.name) {
+            setUserName(profile.name);
+          } else if (user.displayName) {
+            setUserName(user.displayName);
+          }
 
           if (!__DEV__ && !user.emailVerified && !profile?.onboardingDone) {
             setAppScreen('EmailVerification');
