@@ -13,12 +13,21 @@ import {
   Pressable,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { registerUser, loginUser, logoutUser } from '../services/authService';
+import { registerUser, loginUser, logoutUser, signInWithGoogle } from '../services/authService';
 import { fetchSignInMethodsForEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useTranslation } from '../context/LanguageContext';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../config/socialAuth';
+
+// Configura Google Sign-In
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+  iosClientId: GOOGLE_IOS_CLIENT_ID,
+});
 
 interface LoginScreenProps {
   onLogin: (name: string, isNew?: boolean) => void;
@@ -148,6 +157,28 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
 
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setSocialLoading('google');
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const userInfo = await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+      const user = await signInWithGoogle(tokens.idToken, tokens.accessToken);
+      onLogin(user.displayName ?? user.email ?? 'Utente', false);
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // utente ha annullato, nessun messaggio
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // già in corso
+      } else {
+        Alert.alert('Errore', 'Accesso con Google non riuscito. Riprova.');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
+  };
 
   const strength = isRegister ? passwordStrength(password) : 0;
 
@@ -247,9 +278,14 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
             <TouchableOpacity
               style={styles.googleBtn}
               activeOpacity={0.85}
-              onPress={() => Alert.alert('Prossimamente', 'Il login con Google sarà disponibile nella prossima versione dell\'app.')}
+              onPress={handleGoogleSignIn}
+              disabled={socialLoading !== null}
             >
-              <GoogleLogo />
+              {socialLoading === 'google' ? (
+                <ActivityIndicator size="small" color="#3C4043" style={{ width: 22 }} />
+              ) : (
+                <GoogleLogo />
+              )}
               <Text style={styles.googleBtnText}>Continua con Google</Text>
             </TouchableOpacity>
 
@@ -258,6 +294,7 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
               style={styles.facebookBtn}
               activeOpacity={0.85}
               onPress={() => Alert.alert('Prossimamente', 'Il login con Facebook sarà disponibile nella prossima versione dell\'app.')}
+              disabled={socialLoading !== null}
             >
               <FacebookLogo />
               <Text style={styles.facebookBtnText}>Continua con Facebook</Text>

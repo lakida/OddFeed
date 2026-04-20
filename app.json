@@ -33,7 +33,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.272354842276-php917dld6bdhvii5v88i2gmigk8bq4b"
+        }
+      ]
     ],
     "extra": {
       "eas": {
