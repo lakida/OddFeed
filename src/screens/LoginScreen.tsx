@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,19 +13,12 @@ import {
   Pressable,
   Image,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { registerUser, loginUser, logoutUser, signInWithGoogle, signInWithFacebook } from '../services/authService';
+import { registerUser, loginUser, logoutUser } from '../services/authService';
 import { fetchSignInMethodsForEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useTranslation } from '../context/LanguageContext';
-import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, FACEBOOK_APP_ID } from '../config/socialAuth';
-
-WebBrowser.maybeCompleteAuthSession();
 
 interface LoginScreenProps {
   onLogin: (name: string, isNew?: boolean) => void;
@@ -152,54 +145,11 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
 
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
   const strength = isRegister ? passwordStrength(password) : 0;
-
-  // ─── Google OAuth ───────────────────────────────────────────────
-  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    // iosClientId è opzionale — serve solo con build nativa (EAS)
-    ...(GOOGLE_IOS_CLIENT_ID.startsWith('INCOLLA') ? {} : { iosClientId: GOOGLE_IOS_CLIENT_ID }),
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { idToken, accessToken } = googleResponse.authentication!;
-      handleSocialSignIn(async () => signInWithGoogle(idToken ?? null, accessToken ?? null));
-    } else if (googleResponse?.type === 'error' || googleResponse?.type === 'dismiss') {
-      setSocialLoading(null);
-    }
-  }, [googleResponse]);
-
-  // ─── Facebook OAuth ─────────────────────────────────────────────
-  const [, facebookResponse, facebookPromptAsync] = Facebook.useAuthRequest({
-    clientId: FACEBOOK_APP_ID,
-  });
-
-  useEffect(() => {
-    if (facebookResponse?.type === 'success') {
-      const { accessToken } = facebookResponse.authentication!;
-      handleSocialSignIn(async () => signInWithFacebook(accessToken!));
-    } else if (facebookResponse?.type === 'error' || facebookResponse?.type === 'dismiss') {
-      setSocialLoading(null);
-    }
-  }, [facebookResponse]);
-
-  // ─── Handler generico per social login ─────────────────────────
-  const handleSocialSignIn = async (signInFn: () => Promise<any>) => {
-    try {
-      const user = await signInFn();
-      // onAuthStateChanged in App.tsx gestisce il resto (profilo, onboarding, tabs)
-      onLogin(user.displayName ?? user.email ?? '', false);
-    } catch (err: any) {
-      setSocialLoading(null);
-      Alert.alert('Errore di accesso', err?.message ?? 'Impossibile accedere. Riprova.');
-    }
-  };
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -295,35 +245,21 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
           <View style={styles.socialWrap}>
             {/* Google */}
             <TouchableOpacity
-              style={[styles.googleBtn, socialLoading === 'google' && styles.btnDisabled]}
+              style={styles.googleBtn}
               activeOpacity={0.85}
-              disabled={socialLoading !== null}
-              onPress={() => {
-                setSocialLoading('google');
-                googlePromptAsync();
-              }}
+              onPress={() => Alert.alert('Prossimamente', 'Il login con Google sarà disponibile nella prossima versione dell\'app.')}
             >
-              {socialLoading === 'google'
-                ? <ActivityIndicator size="small" color="#3C4043" />
-                : <GoogleLogo />
-              }
+              <GoogleLogo />
               <Text style={styles.googleBtnText}>Continua con Google</Text>
             </TouchableOpacity>
 
             {/* Facebook */}
             <TouchableOpacity
-              style={[styles.facebookBtn, socialLoading === 'facebook' && styles.btnDisabled]}
+              style={styles.facebookBtn}
               activeOpacity={0.85}
-              disabled={socialLoading !== null}
-              onPress={() => {
-                setSocialLoading('facebook');
-                facebookPromptAsync();
-              }}
+              onPress={() => Alert.alert('Prossimamente', 'Il login con Facebook sarà disponibile nella prossima versione dell\'app.')}
             >
-              {socialLoading === 'facebook'
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <FacebookLogo />
-              }
+              <FacebookLogo />
               <Text style={styles.facebookBtnText}>Continua con Facebook</Text>
             </TouchableOpacity>
           </View>
@@ -636,7 +572,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  btnDisabled: { opacity: 0.6 },
   separatorRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: Spacing.md, marginBottom: Spacing.lg,
