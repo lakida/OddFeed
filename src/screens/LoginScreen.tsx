@@ -16,11 +16,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
-import { registerUser, loginUser, logoutUser, signInWithGoogle } from '../services/authService';
+import { registerUser, loginUser, logoutUser, signInWithGoogle, signInWithFacebook } from '../services/authService';
 import { fetchSignInMethodsForEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useTranslation } from '../context/LanguageContext';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../config/socialAuth';
 
 // Configura Google Sign-In
@@ -180,6 +181,22 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
     }
   };
 
+  const handleFacebookSignIn = async () => {
+    try {
+      setSocialLoading('facebook');
+      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+      if (result.isCancelled) return;
+      const data = await AccessToken.getCurrentAccessToken();
+      if (!data) throw new Error('Nessun token Facebook');
+      const user = await signInWithFacebook(data.accessToken);
+      onLogin(user.displayName ?? user.email ?? 'Utente', false);
+    } catch (error: any) {
+      Alert.alert('Errore', 'Accesso con Facebook non riuscito. Riprova.');
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
   const strength = isRegister ? passwordStrength(password) : 0;
 
   const validate = (): boolean => {
@@ -293,10 +310,14 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
             <TouchableOpacity
               style={styles.facebookBtn}
               activeOpacity={0.85}
-              onPress={() => Alert.alert('Prossimamente', 'Il login con Facebook sarà disponibile nella prossima versione dell\'app.')}
+              onPress={handleFacebookSignIn}
               disabled={socialLoading !== null}
             >
-              <FacebookLogo />
+              {socialLoading === 'facebook' ? (
+                <ActivityIndicator size="small" color="#fff" style={{ width: 22 }} />
+              ) : (
+                <FacebookLogo />
+              )}
               <Text style={styles.facebookBtnText}>Continua con Facebook</Text>
             </TouchableOpacity>
           </View>

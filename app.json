@@ -39,6 +39,18 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.272354842276-php917dld6bdhvii5v88i2gmigk8bq4b"
         }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "2715352588826470",
+          "clientToken": "fd326ac310a3d7351cb0753d6ad88edf",
+          "displayName": "OddFeed",
+          "scheme": "fb2715352588826470",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true
+        }
       ]
     ],
     "extra": {

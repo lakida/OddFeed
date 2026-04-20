@@ -27,4 +27,4 @@ export const GOOGLE_IOS_CLIENT_ID =
   '272354842276-php917dld6bdhvii5v88i2gmigk8bq4b.apps.googleusercontent.com';
 
 export const FACEBOOK_APP_ID =
-  'INCOLLA_QUI_IL_FACEBOOK_APP_ID';
+  '2715352588826470';
