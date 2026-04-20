@@ -298,11 +298,13 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
               onPress={handleGoogleSignIn}
               disabled={socialLoading !== null}
             >
-              {socialLoading === 'google' ? (
-                <ActivityIndicator size="small" color="#3C4043" style={{ width: 22 }} />
-              ) : (
-                <GoogleLogo />
-              )}
+              <View style={{ width: 22, height: 22, justifyContent: 'center', alignItems: 'center' }}>
+                {socialLoading === 'google' ? (
+                  <ActivityIndicator size="small" color="#3C4043" />
+                ) : (
+                  <GoogleLogo />
+                )}
+              </View>
               <Text style={styles.googleBtnText}>Continua con Google</Text>
             </TouchableOpacity>
 
@@ -313,11 +315,13 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
               onPress={handleFacebookSignIn}
               disabled={socialLoading !== null}
             >
-              {socialLoading === 'facebook' ? (
-                <ActivityIndicator size="small" color="#fff" style={{ width: 22 }} />
-              ) : (
-                <FacebookLogo />
-              )}
+              <View style={{ width: 22, height: 26, justifyContent: 'center', alignItems: 'center' }}>
+                {socialLoading === 'facebook' ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <FacebookLogo />
+                )}
+              </View>
               <Text style={styles.facebookBtnText}>Continua con Facebook</Text>
             </TouchableOpacity>
           </View>

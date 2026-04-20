@@ -14,18 +14,18 @@
  * npx expo install react-native-purchases
  */
 
-// ─── Identificatori prodotti (devono corrispondere a App Store / Google Play) ──
+// ─── Identificatori pacchetti RevenueCat (corrispondono agli identifier nell'offering) ──
 export const PRODUCT_IDS = {
-  monthly: 'oddfeed_premium_monthly',
-  yearly:  'oddfeed_premium_yearly',
+  monthly: '$rc_monthly',
+  yearly:  '$rc_annual',
 };
 
 // ─── Chiavi API RevenueCat (da sostituire quando hai l'account) ────────────────
-const REVENUECAT_API_KEY_IOS     = 'test_nhHnVAPEkKCxaoPTtGHucxjxQvA';
+const REVENUECAT_API_KEY_IOS     = 'appl_AafGysRfSpUijqgyWqsRxZihzcM';
 const REVENUECAT_API_KEY_ANDROID = 'YOUR_REVENUECAT_ANDROID_KEY'; // goog_...
 
 // ─── Flag per attivare RevenueCat (false = usa mock, true = reale) ─────────────
-const REVENUECAT_ENABLED = false;
+const REVENUECAT_ENABLED = true;
 
 // ─── Tipi ─────────────────────────────────────────────────────────────────────
 export interface PurchasePackage {
