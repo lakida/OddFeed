@@ -34,7 +34,6 @@
     },
     "plugins": [
       "expo-notifications",
-      "react-native-purchases",
       [
         "@react-native-google-signin/google-signin",
         {
