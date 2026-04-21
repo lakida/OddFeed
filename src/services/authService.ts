@@ -3,7 +3,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
-  sendEmailVerification,
   updateProfile,
   onAuthStateChanged,
   deleteUser,
@@ -14,6 +13,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { sendVerificationOTP } from './emailService';
 
 // Registrazione con email e password
 export async function registerUser(name: string, email: string, password: string) {
@@ -35,36 +35,25 @@ export async function registerUser(name: string, email: string, password: string
     emailVerified: false,
   });
 
-  // Imposta la lingua prima di inviare — Firebase usa questo per scegliere il template
-  auth.languageCode = 'it';
-
-  // Invia email di verifica — con URL di reindirizzamento esplicito
+  // Invia OTP via SendGrid
   try {
-    await sendEmailVerification(credential.user, {
-      url: 'https://oddfeed-15294.firebaseapp.com/__/auth/action',
-      handleCodeInApp: false,
-    });
-    console.log('✅ Email di verifica inviata a:', credential.user.email);
+    await sendVerificationOTP(credential.user.uid, email);
+    console.log('✅ OTP di verifica inviato a:', email);
   } catch (emailErr: any) {
-    // L'account è stato creato correttamente — logghiamo l'errore ma non blocchiamo il flusso
-    console.warn('⚠️ sendEmailVerification error:', emailErr?.code, emailErr?.message);
+    console.warn('⚠️ sendVerificationOTP error:', emailErr?.message);
   }
 
   return credential.user;
 }
 
-// Reinvia email di verifica
+// Reinvia OTP via SendGrid
 export async function resendVerificationEmail(): Promise<void> {
   const user = auth.currentUser;
-  if (!user) throw new Error('Nessun utente loggato');
-  auth.languageCode = 'it';
-  await sendEmailVerification(user, {
-    url: 'https://oddfeed-15294.firebaseapp.com/__/auth/action',
-    handleCodeInApp: false,
-  });
+  if (!user || !user.email) throw new Error('Nessun utente loggato');
+  await sendVerificationOTP(user.uid, user.email);
 }
 
-// Controlla se l'utente ha verificato l'email (ricarica il profilo da Firebase)
+// Non più usato con OTP — mantenuto per compatibilità
 export async function reloadUser(): Promise<boolean> {
   const user = auth.currentUser;
   if (!user) return false;

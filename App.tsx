@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
-import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail, ensureSocialUserProfile } from './src/services/authService';
+import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail, ensureSocialUserProfile, updateUserPreferences } from './src/services/authService';
+import { verifyOTP } from './src/services/emailService';
 import { registerForPushNotifications } from './src/services/notificationService';
 import { initializePurchases, checkPremiumStatus } from './src/services/purchaseService';
 import {
@@ -62,22 +63,49 @@ function RegisterSuccessScreen({ onGoToLogin, userName }: { onGoToLogin: () => v
 
 function EmailVerificationScreen({
   email,
-  onResend,
+  userId,
+  onVerified,
   onLogout,
 }: {
   email: string;
-  onResend: () => void;
+  userId: string;
+  onVerified: () => void;
   onLogout: () => void;
 }) {
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+
+  const handleVerify = async () => {
+    if (code.length !== 6) {
+      Alert.alert('Codice non valido', 'Inserisci il codice a 6 cifre.');
+      return;
+    }
+    setVerifying(true);
+    try {
+      const ok = await verifyOTP(userId, code.trim());
+      if (ok) {
+        await updateUserPreferences(userId, { emailVerified: true });
+        onVerified();
+      } else {
+        Alert.alert('Codice errato', 'Il codice è errato o scaduto. Richiedi un nuovo codice.');
+        setCode('');
+      }
+    } catch {
+      Alert.alert('Errore', 'Verifica fallita. Riprova.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleResend = async () => {
     setResending(true);
     try {
       await resendVerificationEmail();
-      Alert.alert('Email inviata ✓', `Abbiamo reinviato il link di conferma a ${email}.`);
+      Alert.alert('Codice inviato ✓', `Abbiamo inviato un nuovo codice a ${email}.`);
+      setCode('');
     } catch {
-      Alert.alert('Errore', 'Impossibile reinviare la mail. Riprova tra qualche minuto.');
+      Alert.alert('Errore', 'Impossibile reinviare il codice. Riprova tra qualche minuto.');
     } finally {
       setResending(false);
     }
@@ -91,19 +119,35 @@ function EmailVerificationScreen({
           <Text style={verifyStyles.icon}>✉️</Text>
         </View>
 
-        <Text style={verifyStyles.title}>Controlla la tua email</Text>
+        <Text style={verifyStyles.title}>Verifica la tua email</Text>
         <Text style={verifyStyles.subtitle}>
-          Abbiamo inviato un link di attivazione a{'\n'}
+          Abbiamo inviato un codice a 6 cifre a{'\n'}
           <Text style={verifyStyles.email}>{email}</Text>
         </Text>
 
-        <View style={verifyStyles.stepsCard}>
-          <Text style={verifyStyles.stepsTitle}>Come attivare l'account</Text>
-          <Text style={verifyStyles.step}>1. Apri la tua casella di posta</Text>
-          <Text style={verifyStyles.step}>2. Clicca sul link nell'email di OddFeed</Text>
-          <Text style={verifyStyles.step}>3. Verrai reindirizzato alla pagina di accesso</Text>
-          <Text style={verifyStyles.spamHint}>Non trovi la mail? Controlla lo spam.</Text>
-        </View>
+        <TextInput
+          style={verifyStyles.otpInput}
+          value={code}
+          onChangeText={setCode}
+          keyboardType="number-pad"
+          maxLength={6}
+          placeholder="000000"
+          placeholderTextColor={Colors.textTertiary}
+          textAlign="center"
+          autoFocus
+        />
+
+        <TouchableOpacity
+          style={[verifyStyles.verifyBtn, (verifying || code.length !== 6) && verifyStyles.btnDisabled]}
+          onPress={handleVerify}
+          disabled={verifying || code.length !== 6}
+          activeOpacity={0.85}
+        >
+          {verifying
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={verifyStyles.verifyBtnText}>Verifica codice</Text>
+          }
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[verifyStyles.resendBtn, resending && verifyStyles.btnDisabled]}
@@ -112,7 +156,7 @@ function EmailVerificationScreen({
           activeOpacity={0.75}
         >
           <Text style={verifyStyles.resendBtnText}>
-            {resending ? 'Invio in corso…' : 'Reinvia email di attivazione'}
+            {resending ? 'Invio in corso…' : 'Invia nuovo codice'}
           </Text>
         </TouchableOpacity>
 
@@ -137,17 +181,19 @@ const verifyStyles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: Colors.text, textAlign: 'center', letterSpacing: -0.3 },
   subtitle: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24 },
   email: { fontWeight: '700', color: Colors.text },
-  stepsCard: {
-    width: '100%', backgroundColor: Colors.bg2,
-    borderRadius: 14, borderWidth: 1, borderColor: Colors.border,
-    padding: 16, gap: 8, marginTop: 4,
+  otpInput: {
+    width: '100%', borderWidth: 2, borderColor: '#6366F1', borderRadius: 14,
+    paddingVertical: 16, fontSize: 32, fontWeight: '800', letterSpacing: 12,
+    color: Colors.text, backgroundColor: Colors.bg2, marginTop: 8,
   },
-  stepsTitle: { fontSize: 13, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  step: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
-  spamHint: { fontSize: 12, color: Colors.textTertiary, marginTop: 4, fontStyle: 'italic' },
+  verifyBtn: {
+    width: '100%', borderRadius: 12, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#6366F1',
+  },
+  verifyBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   resendBtn: {
     width: '100%', borderRadius: 12, paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#6366F1', backgroundColor: '#EEF2FF', marginTop: 4,
+    borderWidth: 1.5, borderColor: '#6366F1', backgroundColor: '#EEF2FF',
   },
   resendBtnText: { fontSize: 15, fontWeight: '600', color: '#6366F1' },
   btnDisabled: { opacity: 0.5 },
@@ -380,7 +426,8 @@ function AppContent() {
     return (
       <EmailVerificationScreen
         email={currentUser?.email ?? ''}
-        onResend={() => {}}
+        userId={currentUser?.uid ?? ''}
+        onVerified={() => setAppScreen('Onboarding')}
         onLogout={async () => { await logoutUser(); }}
       />
     );
