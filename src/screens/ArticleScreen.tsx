@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Share,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
@@ -24,32 +25,45 @@ interface ArticleScreenProps {
   onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
 }
 
-export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, userStats, onPointsChange }: ArticleScreenProps) {
-  const { t } = useTranslation();
-  // Usa l'articolo passato come prop (da Firestore); fallback al mock solo in sviluppo
-  const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n === 0 ? '' : String(n);
+}
 
-  // Link placeholder articolo
+export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange }: ArticleScreenProps) {
+  const { t } = useTranslation();
+  const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
 
-  // Assegna punti lettura al primo render (una volta per articolo)
+  // Swipe da sinistra per tornare indietro (standard iOS)
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const startX = evt.nativeEvent.pageX - gestureState.dx;
+        return (
+          startX < 40 &&
+          gestureState.dx > 15 &&
+          Math.abs(gestureState.dy) < Math.abs(gestureState.dx)
+        );
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 60) onBack();
+      },
+    })
+  ).current;
+
   useEffect(() => {
-    if (userId) {
-      onPointsChange('read', article.id);
-    }
+    if (userId) onPointsChange('read', article.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article.id, userId]);
-
-  const shareText = `${article.title}\n\n${articleUrl}`;
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: shareText,
+        message: `${article.title}\n\n${articleUrl}`,
         title: article.title,
         url: articleUrl,
       });
-      // Assegna punti condivisione (solo se l'utente ha effettivamente condiviso)
       if (userId) onPointsChange('share');
     } catch (e) {}
   };
@@ -57,8 +71,8 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
   const paragraphs = article.fullText.split('\n\n').slice(0, 2);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Back */}
+    <SafeAreaView style={styles.safe} {...panResponder.panHandlers}>
+      {/* Back — in alto */}
       <TouchableOpacity style={styles.backBtn} onPress={onBack}>
         <Text style={styles.backArrow}>←</Text>
         <Text style={styles.backText}>{t.common.back}</Text>
@@ -90,7 +104,30 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
             <Text key={i} style={styles.articleText}>{para}</Text>
           ))}
 
-          <View style={{ height: 24 }} />
+          {/* Reazioni — solo visualizzazione, non interattive */}
+          {article.reactions && article.reactions.some(r => r.count > 0) && (
+            <View style={styles.reactionsWrap}>
+              <Text style={styles.reactionsLabel}>Come l'hanno presa gli altri</Text>
+              <View style={styles.reactionsRow}>
+                {article.reactions.map((r) => (
+                  <View key={r.emoji} style={styles.reactionItem}>
+                    <Text style={styles.reactionEmoji}>{r.emoji}</Text>
+                    {r.count > 0 && (
+                      <Text style={styles.reactionCount}>{formatCount(r.count)}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Back — in fondo */}
+          <TouchableOpacity style={styles.backBtnBottom} onPress={onBack}>
+            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backBtnBottomText}>{t.common.back}</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 12 }} />
         </View>
       </ScrollView>
 
@@ -100,9 +137,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           <Ionicons name="share-outline" size={20} color="#fff" />
           <Text style={styles.shareBtnText}>{t.article.share}</Text>
         </TouchableOpacity>
-        <Text style={styles.shareHint}>
-          Condividi e incuriosisci i tuoi amici 👀
-        </Text>
+        <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
       </View>
     </SafeAreaView>
   );
@@ -167,6 +202,59 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 28,
     marginBottom: Spacing.md,
+  },
+
+  // Reazioni read-only
+  reactionsWrap: {
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  reactionsLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    marginBottom: Spacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  reactionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reactionItem: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bg2,
+    minWidth: 52,
+  },
+  reactionEmoji: { fontSize: 22 },
+  reactionCount: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    marginTop: 3,
+  },
+
+  // Back button in fondo
+  backBtnBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  backBtnBottomText: {
+    fontSize: FontSize.base,
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
 
   // Share

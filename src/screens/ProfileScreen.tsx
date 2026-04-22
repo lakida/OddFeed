@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Switch,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -242,11 +243,24 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowDarkModeInfo(true)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.settingsItem, styles.itemBorder]}
+            onPress={() => setShowDarkModeInfo(true)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.settingsLabel}>{t.profile.darkMode}</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>Prossimamente</Text>
-            </View>
+            {(userStats?.level ?? 0) >= 1 ? (
+              <Switch
+                value={darkMode}
+                onValueChange={(val) => { setDarkMode(val); if (val) setShowDarkModeInfo(true); }}
+                trackColor={{ false: Colors.border, true: Colors.text }}
+                thumbColor="#fff"
+              />
+            ) : (
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonText}>🧭 Esploratore</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
         </View>

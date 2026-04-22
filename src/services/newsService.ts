@@ -41,28 +41,50 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Filtra per interessi (strict) con fallback a tutto se nessun match.
-// Poi ordina: articoli italiani prima (se language='it'), poi data desc, poi order asc.
+// Filtro strict per Home: interessi → italiano → data.
+// Ogni step filtra solo se ci sono match, altrimenti usa il pool corrente come fallback.
 function filterAndSort<T extends { item: NewsItem; date?: string; order: number }>(
   items: T[],
   interests: string[],
   language: 'it' | 'en'
 ): T[] {
-  // Filtro strict per interessi — se non ci sono match, usa tutto
   let pool = items;
+
+  // Step 1: strict filter per interessi
   if (interests.length > 0) {
     const matched = items.filter(x => interests.includes(x.item.category));
     if (matched.length > 0) pool = matched;
   }
 
+  // Step 2: strict filter italiano (solo se language='it' e ci sono articoli italiani nel pool)
+  if (language === 'it') {
+    const italian = pool.filter(x => x.item.country.includes('Italia'));
+    if (italian.length > 0) pool = italian;
+  }
+
   return [...pool].sort((a, b) => {
-    // Articoli italiani prima quando lingua è italiano
+    if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.order - b.order;
+  });
+}
+
+// Ordinamento morbido per Archivio: mostra TUTTO, ma interessi e italiano vengono prima.
+function softSort<T extends { item: NewsItem; date?: string; order: number }>(
+  items: T[],
+  interests: string[],
+  language: 'it' | 'en'
+): T[] {
+  return [...items].sort((a, b) => {
+    const aInterest = interests.length === 0 || interests.includes(a.item.category) ? 0 : 1;
+    const bInterest = interests.length === 0 || interests.includes(b.item.category) ? 0 : 1;
+    if (aInterest !== bInterest) return aInterest - bInterest;
+
     if (language === 'it') {
       const aIt = a.item.country.includes('Italia') ? 0 : 1;
       const bIt = b.item.country.includes('Italia') ? 0 : 1;
       if (aIt !== bIt) return aIt - bIt;
     }
-    // Poi data più recente prima, poi order ascendente
+
     if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
     return a.order - b.order;
   });
@@ -136,7 +158,7 @@ export async function fetchArchive(
     .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
-  return filterAndSort(all, interests, language).map(x => x.item);
+  return softSort(all, interests, language).map(x => x.item);
 }
 
 // Aggiorna il conteggio di una reazione
