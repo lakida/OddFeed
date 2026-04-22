@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS } from '../data/mockData';
-import { ReactionType } from '../types';
 import { useTranslation } from '../context/LanguageContext';
 import { UserStats } from '../../App';
 import { NewsItem } from '../types';
@@ -25,27 +24,12 @@ interface ArticleScreenProps {
   onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
 }
 
-const ALL_REACTIONS: { emoji: ReactionType; label: string }[] = [
-  { emoji: '🤯', label: 'Sconvolto' },
-  { emoji: '😮', label: 'Sorpreso' },
-  { emoji: '😂', label: 'Divertente' },
-  { emoji: '🤔', label: 'Interessante' },
-  { emoji: '❤️', label: 'Adoro' },
-];
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
-}
-
 export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, userStats, onPointsChange }: ArticleScreenProps) {
   const { t } = useTranslation();
   // Usa l'articolo passato come prop (da Firestore); fallback al mock solo in sviluppo
   const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
-  const [userReaction, setUserReaction] = useState<ReactionType | null>(article.userReaction);
-  const [reactions, setReactions] = useState(article.reactions);
 
-  // Link placeholder articolo (in Fase 2 sarà Universal Link reale)
+  // Link placeholder articolo
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
 
   // Assegna punti lettura al primo render (una volta per articolo)
@@ -55,20 +39,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article.id, userId]);
-
-  // La reazione è immutabile: una volta scelta non si può cambiare
-  const handleReact = (emoji: ReactionType) => {
-    if (userReaction !== null) return; // già reagito, nessuna modifica
-    setUserReaction(emoji);
-    setReactions((prev) =>
-      prev.map((r) => ({
-        ...r,
-        count: r.emoji === emoji ? r.count + 1 : r.count,
-      }))
-    );
-    // Assegna punti reazione
-    if (userId) onPointsChange('react');
-  };
 
   const shareText = `${article.title}\n\n${articleUrl}`;
 
@@ -85,7 +55,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
   };
 
   const paragraphs = article.fullText.split('\n\n').slice(0, 2);
-  const hasVoted = userReaction !== null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -120,35 +89,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           {paragraphs.map((para, i) => (
             <Text key={i} style={styles.articleText}>{para}</Text>
           ))}
-
-          {/* Reazioni */}
-          <Text style={styles.reactionsLabel}>{t.article.reactionLabel}</Text>
-
-          <View style={styles.reactionsRow}>
-            {ALL_REACTIONS.map((r) => {
-              const data = reactions.find((rx) => rx.emoji === r.emoji);
-              const isSelected = userReaction === r.emoji;
-              const isDimmed = hasVoted && !isSelected;
-              return (
-                <TouchableOpacity
-                  key={r.emoji}
-                  style={[
-                    styles.reactionItem,
-                    isSelected && styles.reactionItemSelected,
-                    isDimmed && styles.reactionItemDimmed,
-                  ]}
-                  onPress={() => handleReact(r.emoji)}
-                  activeOpacity={hasVoted ? 1 : 0.75}
-                  disabled={isDimmed}
-                >
-                  <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-                  <Text style={[styles.reactionCount, isSelected && styles.reactionCountSelected]}>
-                    {formatCount(data?.count ?? 0)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
 
           <View style={{ height: 24 }} />
         </View>
@@ -227,45 +167,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 28,
     marginBottom: Spacing.md,
-  },
-
-  // Reazioni
-  reactionsLabel: {
-    fontSize: FontSize.base,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-  },
-  reactionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
-  },
-  reactionItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginHorizontal: 3,
-  },
-  reactionItemSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#EEF2FF',
-  },
-  reactionItemDimmed: {
-    opacity: 0.3,
-  },
-  reactionEmoji: { fontSize: 22 },
-  reactionCount: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: 3,
-  },
-  reactionCountSelected: {
-    color: '#6366F1',
   },
 
   // Share

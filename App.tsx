@@ -482,11 +482,20 @@ function AppContent() {
     return <OnboardingScreen userName={userName} onComplete={handleOnboardingComplete} />;
   }
   if (appScreen === 'Article') {
+    const handleBack = () => {
+      tabFadeAnim.setValue(0);
+      setAppScreen('Tabs');
+      Animated.timing(tabFadeAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    };
     return (
       <ArticleScreen
         newsId={articleId}
         article={currentArticle}
-        onBack={() => setAppScreen('Tabs')}
+        onBack={handleBack}
         userId={currentUser?.uid ?? ''}
         userStats={userStats}
         onPointsChange={handlePointsChange}

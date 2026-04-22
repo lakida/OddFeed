@@ -48,7 +48,7 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
 
         {/* Hero */}
         <View style={styles.hero}>
-          <Text style={styles.heroEmoji}>{isPremium ? '👑' : '⭐'}</Text>
+          {isPremium && <Text style={styles.heroEmoji}>👑</Text>}
           <Text style={styles.heroTitle}>
             {isPremium ? t.premium.heroTitleActive : t.premium.heroTitle}
           </Text>

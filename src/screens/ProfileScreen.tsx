@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Switch,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -243,14 +242,11 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowDarkModeInfo(true)} activeOpacity={1}>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowDarkModeInfo(true)} activeOpacity={0.7}>
             <Text style={styles.settingsLabel}>{t.profile.darkMode}</Text>
-            <Switch
-              value={false}
-              onValueChange={() => setShowDarkModeInfo(true)}
-              trackColor={{ false: Colors.border, true: Colors.text }}
-              thumbColor="#fff"
-            />
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Prossimamente</Text>
+            </View>
           </TouchableOpacity>
 
         </View>
@@ -783,6 +779,19 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   arrow: { fontSize: 18, color: Colors.textTertiary },
+  comingSoonBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    backgroundColor: Colors.bg2,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  comingSoonText: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+  },
   premiumBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
