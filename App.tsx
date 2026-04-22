@@ -451,7 +451,7 @@ function AppContent() {
     );
   }
   if (appScreen === 'AccountDeleted') {
-    return <AccountDeletedScreen onRestart={() => setAppScreen('Login')} />;
+    return <AccountDeletedScreen onRestart={() => setAppScreen('Register')} />;
   }
 
   // Tutti i tab rimangono montati — display:none nasconde senza rimontare

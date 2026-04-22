@@ -40,7 +40,9 @@ export async function registerUser(name: string, email: string, password: string
     await sendVerificationOTP(credential.user.uid, email);
     console.log('✅ OTP di verifica inviato a:', email);
   } catch (emailErr: any) {
+    // In sviluppo mostra l'errore reale per debug
     console.warn('⚠️ sendVerificationOTP error:', emailErr?.message);
+    throw new Error(`OTP_EMAIL_FAILED: ${emailErr?.message}`);
   }
 
   return credential.user;
