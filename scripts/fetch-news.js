@@ -140,7 +140,7 @@ QUOTA ITALIA: se ci sono articoli 🇮🇹 che superano il test del bar, includi
 Lista articoli:
 ${summaries}
 
-Rispondi SOLO con un JSON valido (puoi selezionarne meno di ${count} se non ci sono abbastanza storie davvero bizzarre):
+Rispondi SOLO con un JSON valido. Devi sempre selezionare almeno ${Math.min(3, candidates.length)} articoli — se non ne trovi di perfetti, scegli comunque i meno peggio tra quelli disponibili:
 {
   "selected": [indici dal più bizzarro al meno, es. [3, 7, 1]],
   "reasoning": "breve spiegazione"
@@ -159,8 +159,16 @@ Rispondi SOLO con un JSON valido (puoi selezionarne meno di ${count} se non ci s
     console.log(`   Selezione AI: ${result.reasoning}`);
     const indices = result.selected?.slice(0, count) ?? [];
     const selected = indices.map(i => candidates[i]).filter(Boolean);
+    if (selected.length === 0) {
+      console.log(`   ⚠️  AI ha selezionato 0 articoli — uso fallback con i migliori disponibili.`);
+      return candidates.slice(0, count);
+    }
     if (selected.length < 3) {
-      console.log(`   ⚠️  Solo ${selected.length} articoli bizzarri trovati — il pool Guardian non era abbastanza strano oggi.`);
+      console.log(`   ⚠️  Solo ${selected.length} articoli scelti dall'AI — integro con i successivi disponibili.`);
+      // Completa con articoli non già selezionati
+      const selectedIds = new Set(selected.map(a => a.id));
+      const extras = candidates.filter(a => !selectedIds.has(a.id)).slice(0, count - selected.length);
+      return [...selected, ...extras];
     }
     return selected;
   } catch (e) {
