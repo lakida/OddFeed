@@ -57,6 +57,7 @@ export async function fetchTodayNews(
 
   const snap = await getDocs(q);
   const all = snap.docs
+    .filter(d => _isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }))
     .sort((a, b) => a.order - b.order)
     .map(x => x.item);
@@ -66,9 +67,9 @@ export async function fetchTodayNews(
 }
 
 // Carica le 2 notizie più recenti dei giorni precedenti (per la Home).
-// Mostrate a tutti, free e premium — danno sempre qualcosa da leggere.
 export async function fetchRecentPastNews(
   language: 'it' | 'en',
+  isPremium: boolean,
   count = 2
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
@@ -80,6 +81,7 @@ export async function fetchRecentPastNews(
 
   const snap = await getDocs(q);
   return snap.docs
+    .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }))
     .sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order)
     .slice(0, count)
@@ -104,6 +106,7 @@ export async function fetchArchive(
 
   const snap = await getDocs(q);
   return snap.docs
+    .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }))
     .sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order)
     .map(x => x.item);

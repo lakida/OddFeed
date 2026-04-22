@@ -76,7 +76,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
     // Fetch parallelo: notizia di oggi + 2 dai giorni precedenti
     Promise.all([
       fetchTodayNews(language, isPremium).catch(() => []),
-      fetchRecentPastNews(language, 2).catch(() => []),
+      fetchRecentPastNews(language, isPremium, 2).catch(() => []),
     ]).then(([todayArr, pastArr]) => {
       // Fallback mock solo se Firestore non ha ancora niente
       setTodayNews(todayArr[0] ?? MOCK_NEWS[0]);

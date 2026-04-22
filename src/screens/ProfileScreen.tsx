@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { USER_LEVELS } from '../data/mockData';
 import { useTranslation, Language } from '../context/LanguageContext';
 import { CATEGORY_CONFIG } from '../data/categoryConfig';
-import { deleteAccount } from '../services/authService';
+import { deleteAccount, getUserProfile } from '../services/authService';
+import { auth } from '../config/firebase';
 import { Category } from '../types';
 import { UserStats } from '../../App';
 
@@ -116,6 +117,16 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
   const [notifications, setNotifications] = useState(true);
   const [notifSlot, setNotifSlot] = useState('Colazione');
   const [interests, setInterests] = useState<Category[]>([]);
+
+  // Carica interessi e slot notifica da Firestore al mount
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    getUserProfile(user.uid).then(profile => {
+      if (profile?.interests?.length > 0) setInterests(profile.interests);
+      if (profile?.notificationSlot) setNotifSlot(profile.notificationSlot);
+    }).catch(() => {});
+  }, []);
 
   // Modal aperti
   const [showSlot, setShowSlot]           = useState(false);
