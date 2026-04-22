@@ -123,6 +123,8 @@ function EmailVerificationScreen({
         <Text style={verifyStyles.subtitle}>
           Abbiamo inviato un codice a 6 cifre a{'\n'}
           <Text style={verifyStyles.email}>{email}</Text>
+          {'\n\n'}
+          <Text style={verifyStyles.spamNote}>📂 Non vedi l'email? Controlla la cartella spam.</Text>
         </Text>
 
         <TextInput
@@ -181,6 +183,7 @@ const verifyStyles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: Colors.text, textAlign: 'center', letterSpacing: -0.3 },
   subtitle: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24 },
   email: { fontWeight: '700', color: Colors.text },
+  spamNote: { fontSize: 13, color: Colors.textTertiary, fontStyle: 'italic' },
   otpInput: {
     width: '100%', borderWidth: 2, borderColor: '#6366F1', borderRadius: 14,
     paddingVertical: 16, fontSize: 32, fontWeight: '800', letterSpacing: 12,
