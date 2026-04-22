@@ -324,6 +324,14 @@ async function main() {
   console.log('\n⭐ Selezione AI delle storie più virali...');
   const selected = await scoreAndSelectArticles(unique, MAX_ARTICLES);
 
+  // Riordina: categorie non-premium prima, così il primo articolo (free) non è mai premium
+  const PREMIUM_CATS = new Set(['sesso_relazioni', 'gossip', 'crimini_strani']);
+  selected.sort((a, b) => {
+    const aPremium = PREMIUM_CATS.has(a._suggestedCategory ?? '') ? 1 : 0;
+    const bPremium = PREMIUM_CATS.has(b._suggestedCategory ?? '') ? 1 : 0;
+    return aPremium - bPremium;
+  });
+
   // Processa con AI e salva su Firestore
   console.log('\n🤖 Rielaborazione con GPT-4o mini...');
   const batch = db.batch();
@@ -338,7 +346,8 @@ async function main() {
 
       // Usa la categoria suggerita dalla query se AI non è sicura
       const category = ai.category ?? article._suggestedCategory ?? 'storie_assurde';
-      const isPremiumArticle = i > 0; // La prima è free, le altre richiedono premium
+      // isPremium = true se non è il primo articolo OPPURE se è in una categoria premium
+      const isPremiumArticle = i > 0 || PREMIUM_CATS.has(category);
 
       const docRef = db.collection('articles').doc();
       const articleData = {
