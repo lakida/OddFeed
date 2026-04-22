@@ -41,19 +41,28 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Ordina articoli mettendo quelli nelle categorie preferite dell'utente per primi.
-// Se interessi è vuoto, mantiene l'ordine originale.
-function sortByInterests<T extends { item: NewsItem; date?: string; order: number }>(
+// Filtra per interessi (strict) con fallback a tutto se nessun match.
+// Poi ordina: articoli italiani prima (se language='it'), poi data desc, poi order asc.
+function filterAndSort<T extends { item: NewsItem; date?: string; order: number }>(
   items: T[],
-  interests: string[]
+  interests: string[],
+  language: 'it' | 'en'
 ): T[] {
-  if (interests.length === 0) return items;
-  const interestSet = new Set(interests);
-  return [...items].sort((a, b) => {
-    const aMatch = interestSet.has(a.item.category) ? 0 : 1;
-    const bMatch = interestSet.has(b.item.category) ? 0 : 1;
-    if (aMatch !== bMatch) return aMatch - bMatch;
-    // A parità di interesse, ordina per data desc poi order asc
+  // Filtro strict per interessi — se non ci sono match, usa tutto
+  let pool = items;
+  if (interests.length > 0) {
+    const matched = items.filter(x => interests.includes(x.item.category));
+    if (matched.length > 0) pool = matched;
+  }
+
+  return [...pool].sort((a, b) => {
+    // Articoli italiani prima quando lingua è italiano
+    if (language === 'it') {
+      const aIt = a.item.country.includes('Italia') ? 0 : 1;
+      const bIt = b.item.country.includes('Italia') ? 0 : 1;
+      if (aIt !== bIt) return aIt - bIt;
+    }
+    // Poi data più recente prima, poi order ascendente
     if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
     return a.order - b.order;
   });
@@ -78,7 +87,7 @@ export async function fetchTodayNews(
     .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
-  const sorted = sortByInterests(all, interests);
+  const sorted = filterAndSort(all, interests, language);
   return sorted.slice(0, 1).map(x => x.item);
 }
 
@@ -102,7 +111,7 @@ export async function fetchRecentPastNews(
     .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
-  return sortByInterests(all, interests).slice(0, count).map(x => x.item);
+  return filterAndSort(all, interests, language).slice(0, count).map(x => x.item);
 }
 
 // Carica l'archivio (ultimi 7 giorni free, tutto per premium).
@@ -127,7 +136,7 @@ export async function fetchArchive(
     .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
-  return sortByInterests(all, interests).map(x => x.item);
+  return filterAndSort(all, interests, language).map(x => x.item);
 }
 
 // Aggiorna il conteggio di una reazione
