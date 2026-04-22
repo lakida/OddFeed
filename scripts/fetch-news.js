@@ -284,6 +284,17 @@ async function main() {
     console.log('   ✓ Cancellate.\n');
   }
 
+  // Carica URL degli articoli già pubblicati negli ultimi 30 giorni
+  // per evitare di riproporre la stessa notizia in giorni diversi
+  const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const alreadyPublished = await db.collection('articles')
+    .where('date', '>=', cutoff30)
+    .get();
+  const usedSourceUrls = new Set(
+    alreadyPublished.docs.map(d => d.data().sourceUrl).filter(Boolean)
+  );
+  console.log(`   → ${usedSourceUrls.size} articoli già pubblicati negli ultimi 30 giorni (esclusi dal pool)`);
+
   // Raccoglie articoli da Guardian (pool ampio per poi selezionare i migliori)
   console.log('📰 Recupero notizie da Guardian API...');
   const allArticles = [];
@@ -297,15 +308,16 @@ async function main() {
     await new Promise(r => setTimeout(r, 150)); // rate limiting
   }
 
-  // Deduplica per URL
+  // Deduplica per ID Guardian + escludi articoli già pubblicati in precedenza
   const seen = new Set();
   const unique = allArticles.filter(a => {
     if (seen.has(a.id)) return false;
     seen.add(a.id);
+    if (usedSourceUrls.has(a.webUrl)) return false; // già pubblicato in un giorno precedente
     return true;
   });
 
-  console.log(`   → Trovati ${unique.length} articoli unici nel pool`);
+  console.log(`   → Trovati ${unique.length} articoli nuovi nel pool`);
 
   // ⭐ Scoring AI: seleziona le 5 storie più virali/bizzarre dal pool
   const MAX_ARTICLES = 5;

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated } from 'react-native';
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
 import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail, ensureSocialUserProfile, updateUserPreferences } from './src/services/authService';
 import { verifyOTP } from './src/services/emailService';
@@ -238,6 +238,25 @@ function AppContent() {
   // Flag per intercettare onAuthStateChanged dopo eliminazione account
   const accountJustDeleted = React.useRef(false);
 
+  // ─── Animazione fade tra tab ─────────────────────────────────────────────
+  const tabFadeAnim = useRef(new Animated.Value(1)).current;
+
+  const switchTab = useCallback((tab: Tab) => {
+    if (tab === activeTab) return;
+    Animated.timing(tabFadeAnim, {
+      toValue: 0,
+      duration: 100,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveTab(tab);
+      Animated.timing(tabFadeAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [activeTab, tabFadeAnim]);
+
   // ─── Carica statistiche utente da Firebase ──────────────────────────────
   const loadUserStats = useCallback(async (uid: string) => {
     try {
@@ -461,11 +480,11 @@ function AppContent() {
   // Questo elimina lo scatto al cambio tab e mantiene lo stato di scroll
   return (
     <View style={styles.root}>
-      <View style={styles.content}>
+      <Animated.View style={[styles.content, { opacity: tabFadeAnim }]}>
         <View style={{ flex: 1, display: activeTab === 'Notizie' ? 'flex' : 'none' }}>
           <HomeScreen
             onOpenArticle={openArticle}
-            onGoToArchive={() => setActiveTab('Archivio')}
+            onGoToArchive={() => switchTab('Archivio')}
             readIds={readIds}
             isPremium={isPremium}
             userName={userName}
@@ -488,14 +507,14 @@ function AppContent() {
         <View style={{ flex: 1, display: activeTab === 'Profilo' ? 'flex' : 'none' }}>
           <ProfileScreen
             isPremium={isPremium}
-            onGoToPremium={() => setActiveTab('Premium')}
+            onGoToPremium={() => switchTab('Premium')}
             onLogout={handleLogout}
             onAccountDeleted={handleAccountDeleted}
             userName={userName}
             userStats={userStats}
           />
         </View>
-      </View>
+      </Animated.View>
 
       <View style={styles.tabBar}>
         {(Object.keys(TAB_EMOJIS) as Tab[]).map((name) => {
@@ -508,7 +527,7 @@ function AppContent() {
             <TouchableOpacity
               key={name}
               style={styles.tabItem}
-              onPress={() => setActiveTab(name)}
+              onPress={() => switchTab(name)}
               activeOpacity={0.7}
             >
               <Text style={styles.tabEmoji}>{TAB_EMOJIS[name]}</Text>
