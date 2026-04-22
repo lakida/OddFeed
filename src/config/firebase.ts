@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnkdcmTvNGyP1sXB0xS01Un70LKrnIa60",
@@ -14,7 +15,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Auth — persistenza con AsyncStorage aggiunta in fase successiva
-export const auth = getAuth(app);
+// Auth con persistenza AsyncStorage — mantiene il login tra una sessione e l'altra
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
 export const db = getFirestore(app);
 export default app;
