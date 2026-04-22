@@ -18,11 +18,12 @@ import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 interface ArchiveScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
   isPremium: boolean;
+  interests?: string[];
 }
 
 const FILTERS = ['Tutto', 'Questa settimana', 'Aprile 2026', 'Animali', 'Record', 'Leggi'];
 
-export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [] }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
   const [activeFilter, setActiveFilter] = useState(t.archive.filters[0]);
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
@@ -32,14 +33,14 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
   const loadArchive = useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
-    fetchArchive(language, isPremium)
+    fetchArchive(language, isPremium, interests)
       .then(news => { setArchiveNews(news.length > 0 ? news : MOCK_NEWS); })
       .catch(() => { setArchiveNews(MOCK_NEWS); })
       .finally(() => {
         setLoading(false);
         setRefreshing(false);
       });
-  }, [language, isPremium]);
+  }, [language, isPremium, interests]);
 
   useEffect(() => { loadArchive(); }, [loadArchive]);
 

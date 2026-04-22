@@ -64,9 +64,10 @@ interface HomeScreenProps {
   isPremium: boolean;
   userName: string;
   userStats: UserStats;
+  interests?: string[];
 }
 
-export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats }: HomeScreenProps) {
+export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats, interests = [] }: HomeScreenProps) {
   const { t, language } = useTranslation();
   const [todayNews, setTodayNews] = useState<NewsItem | null>(null);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
@@ -77,8 +78,8 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     Promise.all([
-      fetchTodayNews(language, isPremium).catch(() => []),
-      fetchRecentPastNews(language, isPremium, 2).catch(() => []),
+      fetchTodayNews(language, isPremium, interests).catch(() => []),
+      fetchRecentPastNews(language, isPremium, 2, interests).catch(() => []),
     ]).then(([todayArr, pastArr]) => {
       setTodayNews(todayArr[0] ?? MOCK_NEWS[0]);
       setPastNews(pastArr.length > 0 ? pastArr : MOCK_NEWS.slice(1, 3));

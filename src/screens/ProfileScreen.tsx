@@ -246,8 +246,8 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowDarkModeInfo(true)} activeOpacity={1}>
             <Text style={styles.settingsLabel}>{t.profile.darkMode}</Text>
             <Switch
-              value={darkMode}
-              onValueChange={(val) => { setDarkMode(val); setShowDarkModeInfo(true); }}
+              value={false}
+              onValueChange={() => setShowDarkModeInfo(true)}
               trackColor={{ false: Colors.border, true: Colors.text }}
               thumbColor="#fff"
             />

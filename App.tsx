@@ -234,6 +234,7 @@ function AppContent() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [isPremium, setIsPremium] = useState(false);
   const [userStats, setUserStats] = useState<UserStats>(EMPTY_STATS);
+  const [userInterests, setUserInterests] = useState<string[]>([]);
 
   // Flag per intercettare onAuthStateChanged dopo eliminazione account
   const accountJustDeleted = React.useRef(false);
@@ -364,6 +365,11 @@ function AppContent() {
             setUserName(profile.name);
           } else if (user.displayName) {
             setUserName(user.displayName);
+          }
+
+          // Carica interessi utente per filtrare le notizie
+          if (profile?.interests?.length > 0) {
+            setUserInterests(profile.interests);
           }
 
           // Verifica email solo per login email/password
@@ -504,10 +510,11 @@ function AppContent() {
             isPremium={isPremium}
             userName={userName}
             userStats={userStats}
+            interests={userInterests}
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Archivio' ? 'flex' : 'none' }}>
-          <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} />
+          <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} interests={userInterests} />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
           <PointsScreen userStats={userStats} userName={userName} />

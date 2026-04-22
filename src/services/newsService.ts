@@ -41,12 +41,30 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Carica la notizia di oggi (la prima, quella free).
-// Nota: orderBy rimosso per evitare la necessità di un indice composito Firestore.
-// L'ordinamento viene fatto lato client sul campo 'order'.
+// Ordina articoli mettendo quelli nelle categorie preferite dell'utente per primi.
+// Se interessi è vuoto, mantiene l'ordine originale.
+function sortByInterests<T extends { item: NewsItem; date?: string; order: number }>(
+  items: T[],
+  interests: string[]
+): T[] {
+  if (interests.length === 0) return items;
+  const interestSet = new Set(interests);
+  return [...items].sort((a, b) => {
+    const aMatch = interestSet.has(a.item.category) ? 0 : 1;
+    const bMatch = interestSet.has(b.item.category) ? 0 : 1;
+    if (aMatch !== bMatch) return aMatch - bMatch;
+    // A parità di interesse, ordina per data desc poi order asc
+    if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.order - b.order;
+  });
+}
+
+// Carica la notizia di oggi.
+// Se l'utente ha interessi, mostra la notizia gratuita che li soddisfa (se esiste).
 export async function fetchTodayNews(
   language: 'it' | 'en',
-  _isPremium: boolean
+  isPremium: boolean,
+  interests: string[] = []
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
@@ -57,20 +75,20 @@ export async function fetchTodayNews(
 
   const snap = await getDocs(q);
   const all = snap.docs
-    .filter(d => _isPremium || !d.data().isPremium)
-    .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }))
-    .sort((a, b) => a.order - b.order)
-    .map(x => x.item);
+    .filter(d => isPremium || !d.data().isPremium)
+    .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
-  // Home mostra sempre solo 1 notizia di oggi (la prima, free)
-  return all.slice(0, 1);
+  const sorted = sortByInterests(all, interests);
+  return sorted.slice(0, 1).map(x => x.item);
 }
 
-// Carica le 2 notizie più recenti dei giorni precedenti (per la Home).
+// Carica le notizie recenti dei giorni precedenti (per la Home).
+// Prioritizza le categorie preferite dall'utente.
 export async function fetchRecentPastNews(
   language: 'it' | 'en',
   isPremium: boolean,
-  count = 2
+  count = 2,
+  interests: string[] = []
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
@@ -80,19 +98,19 @@ export async function fetchRecentPastNews(
   );
 
   const snap = await getDocs(q);
-  return snap.docs
+  const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
-    .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }))
-    .sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order)
-    .slice(0, count)
-    .map(x => x.item);
+    .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
+
+  return sortByInterests(all, interests).slice(0, count).map(x => x.item);
 }
 
 // Carica l'archivio (ultimi 7 giorni free, tutto per premium).
-// Ordinamento lato client per evitare indici compositi.
+// Prioritizza categorie preferite dall'utente, con fallback a tutto se nessun match.
 export async function fetchArchive(
   language: 'it' | 'en',
-  isPremium: boolean
+  isPremium: boolean,
+  interests: string[] = []
 ): Promise<NewsItem[]> {
   const today = new Date();
   const cutoff = new Date(today);
@@ -105,11 +123,11 @@ export async function fetchArchive(
   );
 
   const snap = await getDocs(q);
-  return snap.docs
+  const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
-    .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }))
-    .sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order)
-    .map(x => x.item);
+    .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
+
+  return sortByInterests(all, interests).map(x => x.item);
 }
 
 // Aggiorna il conteggio di una reazione
