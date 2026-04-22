@@ -241,8 +241,23 @@ function AppContent() {
   // ─── Animazione fade tra tab ─────────────────────────────────────────────
   const tabFadeAnim = useRef(new Animated.Value(1)).current;
 
+  // Animazione scala per icone tab
+  const tabScales = useRef<Record<Tab, Animated.Value>>({
+    Notizie: new Animated.Value(1),
+    Archivio: new Animated.Value(1),
+    Punti: new Animated.Value(1),
+    Premium: new Animated.Value(1),
+    Profilo: new Animated.Value(1),
+  }).current;
+
   const switchTab = useCallback((tab: Tab) => {
     if (tab === activeTab) return;
+    // Rimbalzo sull'icona del nuovo tab
+    Animated.sequence([
+      Animated.timing(tabScales[tab], { toValue: 1.25, duration: 80, useNativeDriver: true }),
+      Animated.timing(tabScales[tab], { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+    // Fade del contenuto
     Animated.timing(tabFadeAnim, {
       toValue: 0,
       duration: 100,
@@ -255,7 +270,7 @@ function AppContent() {
         useNativeDriver: true,
       }).start();
     });
-  }, [activeTab, tabFadeAnim]);
+  }, [activeTab, tabFadeAnim, tabScales]);
 
   // ─── Carica statistiche utente da Firebase ──────────────────────────────
   const loadUserStats = useCallback(async (uid: string) => {
@@ -530,7 +545,9 @@ function AppContent() {
               onPress={() => switchTab(name)}
               activeOpacity={0.7}
             >
-              <Text style={styles.tabEmoji}>{TAB_EMOJIS[name]}</Text>
+              <Animated.Text style={[styles.tabEmoji, { transform: [{ scale: tabScales[name] }] }]}>
+                {TAB_EMOJIS[name]}
+              </Animated.Text>
               <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
             </TouchableOpacity>
           );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  RefreshControl,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS } from '../data/mockData';
@@ -26,14 +27,21 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
   const [activeFilter, setActiveFilter] = useState(t.archive.filters[0]);
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
+  const loadArchive = useCallback((isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     fetchArchive(language, isPremium)
       .then(news => { setArchiveNews(news.length > 0 ? news : MOCK_NEWS); })
       .catch(() => { setArchiveNews(MOCK_NEWS); })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   }, [language, isPremium]);
+
+  useEffect(() => { loadArchive(); }, [loadArchive]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -47,7 +55,16 @@ export default function ArchiveScreen({ onOpenArticle, isPremium }: ArchiveScree
         <Text style={styles.headerSubtitle}>Tutte le notizie passate, in un posto solo.</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadArchive(true)}
+            tintColor={Colors.textTertiary}
+          />
+        }
+      >
         {/* Banner premium per utenti free */}
         {!isPremium && (
           <View style={styles.premiumBanner}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  RefreshControl,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
@@ -70,19 +71,24 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   const [todayNews, setTodayNews] = useState<NewsItem | null>(null);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    // Fetch parallelo: notizia di oggi + 2 dai giorni precedenti
+  const loadNews = useCallback((isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     Promise.all([
       fetchTodayNews(language, isPremium).catch(() => []),
       fetchRecentPastNews(language, isPremium, 2).catch(() => []),
     ]).then(([todayArr, pastArr]) => {
-      // Fallback mock solo se Firestore non ha ancora niente
       setTodayNews(todayArr[0] ?? MOCK_NEWS[0]);
       setPastNews(pastArr.length > 0 ? pastArr : MOCK_NEWS.slice(1, 3));
-    }).finally(() => setLoading(false));
+    }).finally(() => {
+      setLoading(false);
+      setRefreshing(false);
+    });
   }, [language, isPremium]);
+
+  useEffect(() => { loadNews(); }, [loadNews]);
 
   // Livello e progresso reali
   const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
@@ -93,7 +99,16 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadNews(true)}
+            tintColor={Colors.textTertiary}
+          />
+        }
+      >
         {/* Header + Saluto unificati con sfondo colorato */}
         <View style={styles.heroArea}>
           {/* Cerchi decorativi di sfondo */}
