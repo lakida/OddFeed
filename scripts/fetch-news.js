@@ -76,13 +76,48 @@ const GUARDIAN_QUERIES = [
 ];
 
 // ─── Fonti RSS italiane ────────────────────────────────────────────
+// Solo sezioni già orientate a notizie bizzarre/virali/cronaca curiosa.
+// Evitare feed generali (homepage) che portano sport, politica, economia.
 const ITALIAN_RSS_FEEDS = [
-  { url: 'https://www.fanpage.it/feed/',                   source: 'Fanpage.it',  category: 'storie_assurde' },
-  { url: 'https://www.ansa.it/sito/ansait_rss.xml',        source: 'ANSA',        category: null },
-  { url: 'https://www.ilpost.it/feed/',                    source: 'Il Post',     category: null },
-  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',   source: 'TGcom24',     category: null },
-  { url: 'https://www.corriere.it/rss/homepage.xml',       source: 'Corriere',    category: null },
-  { url: 'https://www.repubblica.it/rss/homepage/rss2.0.xml', source: 'Repubblica', category: null },
+  // Cronaca curiosa e casi strani
+  { url: 'https://www.fanpage.it/feed/',                              source: 'Fanpage.it',  category: 'storie_assurde' },
+  { url: 'https://www.ansa.it/sito/notizie/cronaca/cronaca_rss.xml',  source: 'ANSA',        category: 'crimini_strani' },
+  { url: 'https://www.today.it/feed/',                                source: 'Today.it',    category: 'storie_assurde' },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',              source: 'TGcom24',     category: null },
+  // Sezioni "strane" di testate generaliste
+  { url: 'https://www.corriere.it/rss/cronache.xml',                  source: 'Corriere',    category: 'crimini_strani' },
+  { url: 'https://www.ilpost.it/feed/',                               source: 'Il Post',     category: null },
+];
+
+// ─── Parole chiave che indicano notizie NOIOSE da scartare pre-AI ──
+// Se titolo o sommario contengono uno di questi termini, l'articolo
+// viene eliminato prima ancora di arrivare allo scoring AI.
+const BORING_KEYWORDS = [
+  // Sport
+  'champions league', 'serie a', 'serie b', 'campionato', 'classifica', 'gol', 'partita',
+  'calciatore', 'calcio', 'pallone', 'allenatore', 'stadio', 'portiere', 'arbitro',
+  'motogp', 'formula 1', 'formula uno', 'giro d\'italia', 'olimpiadi', 'mondiali',
+  'nba', 'nfl', 'tennis', 'roland garros', 'wimbledon', 'us open',
+  'bayern', 'real madrid', 'barcellona', 'juventus', 'milan', 'inter', 'napoli', 'roma',
+  // Politica / Governo
+  'parlamento', 'senato', 'camera dei deputati', 'governo', 'premier', 'presidente della repubblica',
+  'ministro', 'opposizione', 'partito', 'elezioni', 'voto', 'referendum', 'coalizione',
+  'decreto legge', 'legge di bilancio', 'riforma', 'commissione europea',
+  'meloni', 'schlein', 'salvini', 'conte', 'renzi', 'berlusconi',
+  // Economia / Finanza
+  'pil', 'inflazione', 'spread', 'borsa', 'azioni', 'mercati', 'banca centrale',
+  'bce', 'fed', 'tasso di interesse', 'deflazione', 'recessione', 'deficit',
+  'manovra', 'finanziaria', 'pensioni', 'istat', 'bankitalia',
+  // Guerra / Geopolitica
+  'guerra', 'missile', 'bombardamento', 'attacco aereo', 'esercito', 'soldati',
+  'ucraina', 'russia', 'putin', 'zelensky', 'nato', 'tregua', 'cessate il fuoco',
+  'israele', 'gaza', 'hamas', 'hezbollah', 'iran', 'siria',
+  // Salute / Medicina (generici)
+  'vaccino', 'pandemia', 'covid', 'variante', 'ospedale', 'terapia intensiva',
+  'tumore', 'cancro', 'farmaco', 'trial clinico', 'oms', 'aifa',
+  // Ambiente / Clima
+  'cambiamento climatico', 'cop', 'emissioni', 'co2', 'siccità', 'alluvione',
+  'terremoto', 'eruzione', 'maremoto', 'emergenza meteo',
 ];
 
 const rssParser = new RSSParser({
@@ -94,6 +129,19 @@ const rssParser = new RSSParser({
     },
   },
 });
+
+// ─── Pre-filtro anti-noia ──────────────────────────────────────────
+// Elimina articoli che contengono parole chiave di argomenti noiosi.
+// Questo avviene PRIMA dello scoring AI per ridurre il rumore nel pool.
+function isBoringArticle(article) {
+  const text = [
+    article.webTitle ?? '',
+    article.fields?.headline ?? '',
+    article.fields?.trailText ?? '',
+  ].join(' ').toLowerCase();
+
+  return BORING_KEYWORDS.some(kw => text.includes(kw));
+}
 
 async function fetchItalianRSSNews(maxPerFeed = 8) {
   const results = [];
@@ -210,14 +258,21 @@ Rispondi SOLO con un JSON valido. Devi sempre selezionare almeno ${Math.min(3, c
     const indices = result.selected?.slice(0, count) ?? [];
     const selected = indices.map(i => candidates[i]).filter(Boolean);
     if (selected.length === 0) {
-      console.log(`   ⚠️  AI ha selezionato 0 articoli — uso fallback con i migliori disponibili.`);
-      return candidates.slice(0, count);
+      console.log(`   ⚠️  AI ha selezionato 0 articoli — uso fallback con articoli italiani o bizzarri disponibili.`);
+      // Fallback intelligente: priorità agli articoli italiani e a categorie bizzarre
+      const fallback = candidates
+        .filter(a => a._isItalian || ['storie_assurde','crimini_strani','animali','record','leggi','gossip'].includes(a._suggestedCategory))
+        .slice(0, count);
+      return fallback.length > 0 ? fallback : candidates.slice(0, count);
     }
     if (selected.length < 3) {
       console.log(`   ⚠️  Solo ${selected.length} articoli scelti dall'AI — integro con i successivi disponibili.`);
-      // Completa con articoli non già selezionati
+      // Completa con articoli non già selezionati, preferendo italiani
       const selectedIds = new Set(selected.map(a => a.id));
-      const extras = candidates.filter(a => !selectedIds.has(a.id)).slice(0, count - selected.length);
+      const extras = candidates
+        .filter(a => !selectedIds.has(a.id))
+        .sort((a, b) => (b._isItalian ? 1 : 0) - (a._isItalian ? 1 : 0))
+        .slice(0, count - selected.length);
       return [...selected, ...extras];
     }
     return selected;
@@ -380,12 +435,22 @@ async function main() {
     return true;
   });
 
-  console.log(`   → Trovati ${unique.length} articoli nuovi nel pool`);
+  // Pre-filtro anti-noia: rimuove sport, politica, economia, guerra prima dell'AI
+  const beforeFilter = unique.length;
+  const filtered = unique.filter(a => !isBoringArticle(a));
+  console.log(`   → Pool: ${beforeFilter} articoli totali → ${filtered.length} dopo pre-filtro anti-noia (${beforeFilter - filtered.length} scartati)`);
+
+  // Se il pre-filtro è troppo aggressivo e rimangono meno di 10 articoli,
+  // reintegra quelli scartati per non lasciare il pool vuoto
+  const pool = filtered.length >= 10 ? filtered : unique;
+  if (filtered.length < 10) {
+    console.log(`   ⚠️  Pre-filtro troppo aggressivo (${filtered.length} rimasti) — uso pool completo`);
+  }
 
   // ⭐ Scoring AI: seleziona le 5 storie più virali/bizzarre dal pool
   const MAX_ARTICLES = 5;
   console.log('\n⭐ Selezione AI delle storie più virali...');
-  const selected = await scoreAndSelectArticles(unique, MAX_ARTICLES);
+  const selected = await scoreAndSelectArticles(pool, MAX_ARTICLES);
 
   // Riordina: categorie non-premium prima, così il primo articolo (free) non è mai premium
   const PREMIUM_CATS = new Set(['sesso_relazioni', 'gossip', 'crimini_strani']);
