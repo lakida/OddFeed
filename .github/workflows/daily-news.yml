@@ -13,8 +13,8 @@ name: OddFeed — Notizie del giorno
 
 on:
   schedule:
-    # 06:00 UTC = 07:00 CET (inverno) / 08:00 CEST (estate)
-    - cron: '0 6 * * *'
+    # 05:30 UTC = 06:30 CET (inverno) / 07:30 CEST (estate) — fascia Colazione
+    - cron: '30 5 * * *'
 
   # Avvio manuale: utile per testare o per rigenerare le notizie di un giorno
   workflow_dispatch:

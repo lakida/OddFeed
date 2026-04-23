@@ -15,7 +15,6 @@ import { Alert } from 'react-native';
 const FEATURES_FREE = [
   '1 notizia al giorno',
   'Archivio ultimi 7 giorni',
-  'Reazioni alle notizie',
   'Punti e livelli',
 ];
 

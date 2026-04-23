@@ -136,6 +136,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteFinal, setShowDeleteFinal]     = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDarkModeLocked, setShowDarkModeLocked] = useState(false);
 
   // Helper: label categoria nella lingua corrente
   const getCatLabel = (config: typeof CATEGORY_CONFIG[0]) =>
@@ -245,7 +246,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
           <TouchableOpacity
             style={[styles.settingsItem, styles.itemBorder]}
-            onPress={() => setShowDarkModeInfo(true)}
+            onPress={() => (userStats?.level ?? 0) >= 1 ? setShowDarkModeInfo(true) : setShowDarkModeLocked(true)}
             activeOpacity={0.7}
           >
             <Text style={styles.settingsLabel}>{t.profile.darkMode}</Text>
@@ -258,7 +259,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
               />
             ) : (
               <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>🧭 Esploratore</Text>
+                <Text style={styles.comingSoonText}>🔒 Esploratore</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -461,9 +462,16 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
         ))}
       </BottomSheet>
 
-      {/* Modal dark mode */}
-      <BottomSheet visible={showDarkModeInfo} onClose={() => setShowDarkModeInfo(false)} title={t.profile.darkMode}>
+      {/* Modal dark mode — coming soon (per chi ha già Esploratore) */}
+      <BottomSheet visible={showDarkModeInfo} onClose={() => { setShowDarkModeInfo(false); setDarkMode(false); }} title={t.profile.darkMode}>
         <Text style={modalStyles.bodyText}>{t.profile.darkModeComingSoon}</Text>
+      </BottomSheet>
+
+      {/* Modal dark mode — bloccato (per chi non ha ancora Esploratore) */}
+      <BottomSheet visible={showDarkModeLocked} onClose={() => setShowDarkModeLocked(false)} title="🔒 Funzione bloccata">
+        <Text style={modalStyles.bodyText}>
+          La modalità scura si sblocca quando raggiungi il livello <Text style={{ fontWeight: '700', color: Colors.text }}>Esploratore 🧭</Text> (100 pt).{'\n\n'}Continua a leggere le notizie per accumulare punti!
+        </Text>
       </BottomSheet>
 
       {/* Modal logout */}

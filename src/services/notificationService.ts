@@ -23,14 +23,26 @@ Notifications.setNotificationHandler({
 
 // Orari di invio per fascia (ora locale dell'utente)
 export const NOTIFICATION_SLOT_HOURS: Record<string, number> = {
-  'Colazione':  8,
-  'Pranzo':    12,
-  'Pomeriggio': 16,
-  'Cena':      20,
-  'Breakfast':  8,
-  'Lunch':     12,
-  'Afternoon': 16,
-  'Dinner':    20,
+  'Colazione':   7,
+  'Pranzo':     14,
+  'Pomeriggio': 17,
+  'Cena':       21,
+  'Breakfast':   7,
+  'Lunch':      14,
+  'Afternoon':  17,
+  'Dinner':     21,
+};
+
+// Minuti per ogni fascia
+export const NOTIFICATION_SLOT_MINUTES: Record<string, number> = {
+  'Colazione':  30,
+  'Pranzo':      0,
+  'Pomeriggio':  0,
+  'Cena':        0,
+  'Breakfast':  30,
+  'Lunch':       0,
+  'Afternoon':   0,
+  'Dinner':      0,
 };
 
 // ─── COPY NOTIFICHE ───────────────────────────────────────────────────────────

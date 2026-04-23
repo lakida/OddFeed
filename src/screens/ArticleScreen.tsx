@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Share,
+  Platform,
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,10 +26,6 @@ interface ArticleScreenProps {
   onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
 }
 
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return n === 0 ? '' : String(n);
-}
 
 export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange }: ArticleScreenProps) {
   const { t } = useTranslation();
@@ -59,11 +56,13 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
 
   const handleShare = async () => {
     try {
-      await Share.share({
-        message: `${article.title}\n\n${articleUrl}`,
-        title: article.title,
-        url: articleUrl,
-      });
+      // Su iOS, `url` viene aggiunto automaticamente dopo `message`,
+      // quindi non va incluso nel testo per evitare il doppio link.
+      await Share.share(
+        Platform.OS === 'ios'
+          ? { message: article.title, url: articleUrl }
+          : { message: `${article.title}\n\n${articleUrl}` }
+      );
       if (userId) onPointsChange('share');
     } catch (e) {}
   };
@@ -103,23 +102,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           {paragraphs.map((para, i) => (
             <Text key={i} style={styles.articleText}>{para}</Text>
           ))}
-
-          {/* Reazioni — solo visualizzazione, non interattive */}
-          {article.reactions && article.reactions.some(r => r.count > 0) && (
-            <View style={styles.reactionsWrap}>
-              <Text style={styles.reactionsLabel}>Come l'hanno presa gli altri</Text>
-              <View style={styles.reactionsRow}>
-                {article.reactions.map((r) => (
-                  <View key={r.emoji} style={styles.reactionItem}>
-                    <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-                    {r.count > 0 && (
-                      <Text style={styles.reactionCount}>{formatCount(r.count)}</Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
 
           {/* Back — in fondo */}
           <TouchableOpacity style={styles.backBtnBottom} onPress={onBack}>
@@ -202,44 +184,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 28,
     marginBottom: Spacing.md,
-  },
-
-  // Reazioni read-only
-  reactionsWrap: {
-    marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  reactionsLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.textTertiary,
-    marginBottom: Spacing.md,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  reactionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  reactionItem: {
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.bg2,
-    minWidth: 52,
-  },
-  reactionEmoji: { fontSize: 22 },
-  reactionCount: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    color: Colors.textTertiary,
-    marginTop: 3,
   },
 
   // Back button in fondo
