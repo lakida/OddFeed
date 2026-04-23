@@ -15,6 +15,16 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   const d = docSnap.data();
   const isIt = language === 'it';
 
+  // Calcola isToday e daysAgo dinamicamente dalla data dell'articolo,
+  // così rimangono corretti ogni giorno senza dover aggiornare Firestore.
+  const todayStr = new Date().toISOString().split('T')[0];
+  const articleDate = d.date ?? todayStr;
+  const isToday = articleDate === todayStr;
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysAgo = Math.max(0, Math.floor(
+    (new Date(todayStr).getTime() - new Date(articleDate).getTime()) / msPerDay
+  ));
+
   return {
     id: docSnap.id,
     title: isIt ? d.titleIt : d.titleEn,
@@ -28,8 +38,8 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
     categoryLabel: isIt ? (d.categoryLabelIt ?? '🌍 Curiosità') : (d.categoryLabelEn ?? '🌍 Curiosity'),
     source: d.source ?? 'The Guardian',
     publishedAt: d.date ?? 'Oggi',
-    isToday: d.isToday ?? false,
-    daysAgo: d.daysAgo ?? 0,
+    isToday,
+    daysAgo,
     reactions: d.reactions ?? [
       { emoji: '🤯', count: 0, label: 'Sconvolto' },
       { emoji: '😮', count: 0, label: 'Sorpreso' },

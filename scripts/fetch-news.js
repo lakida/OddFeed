@@ -196,7 +196,9 @@ QUOTA ITALIA: se ci sono articoli 🇮🇹 che superano il test del bar, includi
 Lista articoli:
 ${summaries}
 
-Rispondi SOLO con un JSON valido. Devi sempre selezionare almeno ${Math.min(3, candidates.length)} articoli — se non ne trovi di perfetti, scegli comunque i meno peggio tra quelli disponibili:
+IMPORTANTE: è meglio salvare 2 notizie davvero buone che 5 mediocri. Se trovi solo 2-3 articoli che superano il test del bar, seleziona solo quelli. Non riempire i posti con notizie noiose.
+
+Rispondi SOLO con un JSON valido:
 {
   "selected": [indici dal più bizzarro al meno, es. [3, 7, 1]],
   "reasoning": "breve spiegazione"
