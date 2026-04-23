@@ -406,7 +406,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
       {/* Modal fonti */}
       <BottomSheet visible={showSources} onClose={() => setShowSources(false)} title={t.profile.sourcesTitle}>
-        {['The Guardian', 'BBC News', 'Reuters', 'Wired', 'National Geographic', 'Le Monde'].map((s, i) => (
+        {['The Guardian', 'ANSA', 'Fanpage.it', 'Il Post', 'TGcom24', 'BBC News', 'Reuters'].map((s, i) => (
           <View key={s} style={[modalStyles.sourceItem, i > 0 && modalStyles.sourceBorder]}>
             <View style={modalStyles.sourceDot} />
             <Text style={modalStyles.sourceText}>{s}</Text>

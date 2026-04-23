@@ -14,6 +14,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { OpenAI } = require('openai');
+const RSSParser = require('rss-parser');
 
 // ─── Configurazione ────────────────────────────────────────────────
 const GUARDIAN_KEY   = process.env.GUARDIAN_KEY;
@@ -73,6 +74,45 @@ const GUARDIAN_QUERIES = [
   { query: 'relationship breakup marriage unusual strange proposal divorce', category: 'sesso_relazioni' },
   { query: 'haunted abandoned strange mysterious place found discovered', category: 'luoghi' },
 ];
+
+// ─── Fonti RSS italiane ────────────────────────────────────────────
+const ITALIAN_RSS_FEEDS = [
+  { url: 'https://www.fanpage.it/feed/',                   source: 'Fanpage.it',  category: 'storie_assurde' },
+  { url: 'https://www.ansa.it/sito/ansait_rss.xml',        source: 'ANSA',        category: null },
+  { url: 'https://www.ilpost.it/feed/',                    source: 'Il Post',     category: null },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',   source: 'TGcom24',     category: null },
+];
+
+const rssParser = new RSSParser({ timeout: 8000 });
+
+async function fetchItalianRSSNews(maxPerFeed = 8) {
+  const results = [];
+  for (const feed of ITALIAN_RSS_FEEDS) {
+    try {
+      const parsed = await rssParser.parseURL(feed.url);
+      const items = (parsed.items ?? []).slice(0, maxPerFeed).map(item => ({
+        id: item.guid ?? item.link ?? item.title,
+        webTitle: item.title ?? '',
+        webUrl: item.link ?? '',
+        fields: {
+          headline: item.title ?? '',
+          trailText: item.contentSnippet ?? item.summary ?? '',
+          bodyText: item.content ?? item.contentSnippet ?? '',
+        },
+        _suggestedCategory: feed.category ?? 'storie_assurde',
+        _isItalian: true,
+        _source: feed.source,
+        sectionName: 'Italian',
+      }));
+      console.log(`   🇮🇹 ${feed.source}: ${items.length} articoli`);
+      results.push(...items);
+    } catch (e) {
+      console.log(`   ⚠️  ${feed.source} non raggiungibile: ${e.message}`);
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return results;
+}
 
 // ─── Funzione: cerca notizie su Guardian ──────────────────────────
 async function fetchGuardianNews(query, maxResults = 5, tag = null) {
@@ -240,7 +280,7 @@ Rispondi SOLO con un JSON valido:
 
 // ─── Mappa sezione Guardian → paese/fonte ─────────────────────────
 function guessCountry(article) {
-  // Se l'articolo viene da una query taggata Italia, è Italia di sicuro
+  // Fonti italiane → sempre Italia
   if (article._isItalian) return '🇮🇹 Italia';
 
   const text = (article.sectionName + ' ' + article.webTitle + ' ' + (article.fields?.trailText ?? '')).toLowerCase();
@@ -310,11 +350,16 @@ async function main() {
     const results = await fetchGuardianNews(query, 4, tag ?? null);
     results.forEach(r => {
       r._suggestedCategory = category;
-      r._isItalian = !!tag; // marca gli articoli che vengono da query Italia
+      r._isItalian = !!tag;
     });
     allArticles.push(...results);
-    await new Promise(r => setTimeout(r, 150)); // rate limiting
+    await new Promise(r => setTimeout(r, 150));
   }
+
+  // Aggiunge articoli da fonti RSS italiane
+  console.log('\n🇮🇹 Recupero notizie da fonti italiane...');
+  const italianArticles = await fetchItalianRSSNews(8);
+  allArticles.push(...italianArticles);
 
   // Deduplica per ID Guardian + escludi articoli già pubblicati in precedenza
   const seen = new Set();
@@ -373,7 +418,7 @@ async function main() {
         categoryLabelEn: ai.categoryLabelEn,
         engagementLevel: ai.engagementLevel ?? 'medium',
         country: guessCountry(article),
-        source: 'The Guardian',
+        source: article._source ?? 'The Guardian',
         sourceUrl: article.webUrl,
         date: today,
         isToday: true,

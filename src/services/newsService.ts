@@ -41,28 +41,28 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Filtro strict per interessi (con fallback se nessun match),
-// poi ordinamento morbido: italiano prima se language='it', poi data desc, order asc.
-// Usato per Home e Archivio.
+// Ordinamento per priorità: interessi > italiano > data > order.
+// Non filtra mai — mostra sempre tutti gli articoli accessibili,
+// ma quelli delle categorie preferite e in italiano vengono prima.
 function filterAndSort<T extends { item: NewsItem; date?: string; order: number }>(
   items: T[],
   interests: string[],
   language: 'it' | 'en'
 ): T[] {
-  // Strict filter per interessi — fallback a tutto se nessun match
-  let pool = items;
-  if (interests.length > 0) {
-    const matched = items.filter(x => interests.includes(x.item.category));
-    if (matched.length > 0) pool = matched;
-  }
+  return [...items].sort((a, b) => {
+    // 1. Categorie di interesse prima
+    const aI = interests.length === 0 || interests.includes(a.item.category) ? 0 : 1;
+    const bI = interests.length === 0 || interests.includes(b.item.category) ? 0 : 1;
+    if (aI !== bI) return aI - bI;
 
-  // Sort morbido: italiano prima, poi data desc, poi order asc
-  return [...pool].sort((a, b) => {
+    // 2. Italiano prima se lingua italiana
     if (language === 'it') {
       const aIt = a.item.country.includes('Italia') ? 0 : 1;
       const bIt = b.item.country.includes('Italia') ? 0 : 1;
       if (aIt !== bIt) return aIt - bIt;
     }
+
+    // 3. Data più recente prima, poi order
     if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
     return a.order - b.order;
   });
