@@ -17,12 +17,11 @@ const { OpenAI } = require('openai');
 const RSSParser = require('rss-parser');
 
 // ─── Configurazione ────────────────────────────────────────────────
-const GUARDIAN_KEY   = process.env.GUARDIAN_KEY;
-const OPENAI_KEY     = process.env.OPENAI_KEY;
-const FIREBASE_SA    = process.env.FIREBASE_SERVICE_ACCOUNT;
+const OPENAI_KEY  = process.env.OPENAI_KEY;
+const FIREBASE_SA = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-if (!GUARDIAN_KEY || !OPENAI_KEY) {
-  console.error('❌ Mancano GUARDIAN_KEY o OPENAI_KEY nel file .env');
+if (!OPENAI_KEY) {
+  console.error('❌ Manca OPENAI_KEY nel file .env');
   process.exit(1);
 }
 
@@ -41,52 +40,27 @@ const db = getFirestore();
 // ─── Inizializza OpenAI ────────────────────────────────────────────
 const openai = new OpenAI({ apiKey: OPENAI_KEY });
 
-// ─── Query Guardian per categoria ─────────────────────────────────
-// Le query con tag:'world/italy' pescano articoli taggati Italia dal Guardian.
-// Queste hanno priorità nella selezione finale.
-const GUARDIAN_QUERIES = [
-  // 🇮🇹 ITALIA FIRST — almeno 2-3 notizie italiane per ogni giornata
-  { query: 'italy bizarre crime unusual strange absurd', category: 'crimini_strani', tag: 'world/italy' },
-  { query: 'italy court law sentence judge unusual verdict', category: 'leggi', tag: 'world/italy' },
-  { query: 'italy scandal gossip celebrity politician embarrassing', category: 'gossip', tag: 'world/italy' },
-  { query: 'italy discovery found unusual treasure ancient surprising', category: 'storie_assurde', tag: 'world/italy' },
-  { query: 'italy food restaurant tradition record bizarre', category: 'gastronomia', tag: 'world/italy' },
-  { query: 'italy protest demonstration unusual funny absurd', category: 'storie_assurde', tag: 'world/italy' },
-  // GOLD TIER — storie assurde garantite (mondo)
-  { query: 'man woman arrested bizarre absurd toilet OR shower OR drunk OR naked OR costume', category: 'crimini_strani' },
-  { query: 'weird law banned illegal absurd country fined', category: 'leggi' },
-  { query: 'alligator snake python found house toilet car surprise', category: 'animali' },
-  { query: 'world record longest fastest biggest smallest unusual attempt', category: 'record' },
-  { query: 'accidental discovered mistake unusual found buried treasure odd', category: 'storie_assurde' },
-  // HIGH — persone assurde (mondo)
-  { query: 'man OR woman OR couple bizarre obsession collection unusual hobby extreme', category: 'storie_assurde' },
-  { query: 'scam fraud bizarre trick unusual theft comedy mistake', category: 'crimini_strani' },
-  { query: 'millionaire eccentric spending bizarre luxury unusual purchase', category: 'soldi_folli' },
-  { query: 'celebrity bizarre behaviour odd scandal embarrassing moment', category: 'gossip' },
-  { query: 'lawsuit strange sue bizarre legal case unusual court', category: 'leggi' },
-  // MEDIUM — storie virali (mondo)
-  { query: 'study reveals surprising shocking humans prefer secret desire', category: 'psicologia_strana' },
-  { query: 'animal intelligence surprising behavior first time science discovery', category: 'animali' },
-  { query: 'food challenge eating contest bizarre menu strange restaurant', category: 'gastronomia' },
-  { query: 'town village bizarre tradition ritual festival weird celebration', category: 'cultura' },
-  { query: 'coincidence incredible reunion twins separated same mistake', category: 'coincidenze' },
-  { query: 'invention gadget bizarre unusual robot AI funny useless', category: 'tecnologia' },
-  { query: 'relationship breakup marriage unusual strange proposal divorce', category: 'sesso_relazioni' },
-  { query: 'haunted abandoned strange mysterious place found discovered', category: 'luoghi' },
+// ─── Fonti RSS specializzate in notizie bizzarre/virali ───────────
+// Queste fonti pubblicano GIÀ solo notizie strane/virali/assurde.
+// Non serve cercare il bizzarro: ogni articolo è già pre-selezionato.
+const BIZARRE_RSS_FEEDS = [
+  { url: 'https://rss.upi.com/news/Odd_News.rss',                    source: 'UPI Odd News',   category: 'storie_assurde', isItalian: false },
+  { url: 'https://nypost.com/weird-but-true/feed/',                   source: 'NY Post',        category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.odditycentral.com/feed',                        source: 'Oddity Central', category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.thesun.co.uk/news/weird/feed/',                 source: 'The Sun',        category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.mirror.co.uk/weird-news/rss.xml',               source: 'Mirror',         category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.ladbible.com/rss',                              source: 'LADbible',       category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.boredpanda.com/feed/',                          source: 'Bored Panda',    category: 'storie_assurde', isItalian: false },
 ];
 
 // ─── Fonti RSS italiane ────────────────────────────────────────────
-// Solo sezioni già orientate a notizie bizzarre/virali/cronaca curiosa.
-// Evitare feed generali (homepage) che portano sport, politica, economia.
+// Sezioni cronaca/virale per dare sapore locale italiano.
 const ITALIAN_RSS_FEEDS = [
-  // Cronaca curiosa e casi strani
-  { url: 'https://www.fanpage.it/feed/',                              source: 'Fanpage.it',  category: 'storie_assurde' },
-  { url: 'https://www.ansa.it/sito/notizie/cronaca/cronaca_rss.xml',  source: 'ANSA',        category: 'crimini_strani' },
-  { url: 'https://www.today.it/feed/',                                source: 'Today.it',    category: 'storie_assurde' },
-  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',              source: 'TGcom24',     category: null },
-  // Sezioni "strane" di testate generaliste
-  { url: 'https://www.corriere.it/rss/cronache.xml',                  source: 'Corriere',    category: 'crimini_strani' },
-  { url: 'https://www.ilpost.it/feed/',                               source: 'Il Post',     category: null },
+  { url: 'https://www.fanpage.it/feed/',                              source: 'Fanpage.it',  category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.ansa.it/sito/notizie/cronaca/cronaca_rss.xml',  source: 'ANSA',        category: 'crimini_strani', isItalian: true },
+  { url: 'https://www.today.it/feed/',                                source: 'Today.it',    category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',              source: 'TGcom24',     category: null,             isItalian: true },
+  { url: 'https://www.corriere.it/rss/cronache.xml',                  source: 'Corriere',    category: 'crimini_strani', isItalian: true },
 ];
 
 // ─── Parole chiave che indicano notizie NOIOSE da scartare pre-AI ──
@@ -143,9 +117,10 @@ function isBoringArticle(article) {
   return BORING_KEYWORDS.some(kw => text.includes(kw));
 }
 
-async function fetchItalianRSSNews(maxPerFeed = 8) {
+// ─── Fetch RSS da una lista di feed ───────────────────────────────
+async function fetchFromFeeds(feeds, maxPerFeed = 10) {
   const results = [];
-  for (const feed of ITALIAN_RSS_FEEDS) {
+  for (const feed of feeds) {
     try {
       const parsed = await rssParser.parseURL(feed.url);
       const items = (parsed.items ?? []).slice(0, maxPerFeed).map(item => ({
@@ -158,36 +133,19 @@ async function fetchItalianRSSNews(maxPerFeed = 8) {
           bodyText: item.content ?? item.contentSnippet ?? '',
         },
         _suggestedCategory: feed.category ?? 'storie_assurde',
-        _isItalian: true,
+        _isItalian: feed.isItalian ?? false,
         _source: feed.source,
-        sectionName: 'Italian',
+        sectionName: feed.isItalian ? 'Italian' : 'World',
       }));
-      console.log(`   🇮🇹 ${feed.source}: ${items.length} articoli`);
+      const flag = feed.isItalian ? '🇮🇹' : '🌍';
+      console.log(`   ${flag} ${feed.source}: ${items.length} articoli`);
       results.push(...items);
     } catch (e) {
-      console.log(`   ⚠️  ${feed.source} non raggiungibile: ${e.message}`);
+      console.log(`   ⚠️  ${feed.source} non raggiungibile: ${e.message.substring(0, 60)}`);
     }
     await new Promise(r => setTimeout(r, 200));
   }
   return results;
-}
-
-// ─── Funzione: cerca notizie su Guardian ──────────────────────────
-async function fetchGuardianNews(query, maxResults = 5, tag = null) {
-  const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  let url = `https://content.guardianapis.com/search?` +
-    `q=${encodeURIComponent(query)}&` +
-    `show-fields=headline,trailText,thumbnail,bodyText&` +
-    `order-by=relevance&` +
-    `from-date=${fromDate}&` +
-    `page-size=${maxResults}&` +
-    `api-key=${GUARDIAN_KEY}`;
-
-  if (tag) url += `&tag=${encodeURIComponent(tag)}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.response?.results ?? [];
 }
 
 // ─── Funzione: scoring AI per selezionare solo storie davvero bizzarre ───
@@ -408,23 +366,15 @@ async function main() {
   );
   console.log(`   → ${usedSourceUrls.size} articoli già pubblicati negli ultimi 30 giorni (esclusi dal pool)`);
 
-  // Raccoglie articoli da Guardian (pool ampio per poi selezionare i migliori)
-  console.log('📰 Recupero notizie da Guardian API...');
-  const allArticles = [];
-  for (const { query, category, tag } of GUARDIAN_QUERIES) {
-    const results = await fetchGuardianNews(query, 4, tag ?? null);
-    results.forEach(r => {
-      r._suggestedCategory = category;
-      r._isItalian = !!tag;
-    });
-    allArticles.push(...results);
-    await new Promise(r => setTimeout(r, 150));
-  }
+  // Recupera da fonti internazionali specializzate in notizie bizzarre
+  console.log('🌍 Recupero notizie bizzarre internazionali...');
+  const worldArticles = await fetchFromFeeds(BIZARRE_RSS_FEEDS, 10);
 
-  // Aggiunge articoli da fonti RSS italiane
-  console.log('\n🇮🇹 Recupero notizie da fonti italiane...');
-  const italianArticles = await fetchItalianRSSNews(8);
-  allArticles.push(...italianArticles);
+  // Recupera da fonti italiane per contenuto locale
+  console.log('\n🇮🇹 Recupero notizie italiane...');
+  const italianArticles = await fetchFromFeeds(ITALIAN_RSS_FEEDS, 10);
+
+  const allArticles = [...worldArticles, ...italianArticles];
 
   // Deduplica per ID Guardian + escludi articoli già pubblicati in precedenza
   const seen = new Set();
