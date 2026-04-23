@@ -15,6 +15,8 @@ const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { OpenAI } = require('openai');
 const RSSParser = require('rss-parser');
+const { Readability } = require('@mozilla/readability');
+const { JSDOM } = require('jsdom');
 
 // ─── Configurazione ────────────────────────────────────────────────
 const OPENAI_KEY  = process.env.OPENAI_KEY;
@@ -62,6 +64,32 @@ const ITALIAN_RSS_FEEDS = [
   { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',              source: 'TGcom24',     category: null,             isItalian: true },
   { url: 'https://www.corriere.it/rss/cronache.xml',                  source: 'Corriere',    category: 'crimini_strani', isItalian: true },
 ];
+
+// ─── Fetch testo completo dell'articolo ───────────────────────────
+// Scarica la pagina HTML e usa Mozilla Readability per estrarre
+// solo il testo dell'articolo, pulito da ads/nav/sidebar.
+// Senza testo completo l'AI riscrive solo dal titolo — risultato piatto.
+async function fetchFullText(url, maxChars = 3000) {
+  if (!url) return '';
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,*/*',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return '';
+    const html = await res.text();
+    const dom = new JSDOM(html, { url });
+    const reader = new Readability(dom.window.document);
+    const parsed = reader.parse();
+    const text = parsed?.textContent ?? '';
+    return text.replace(/\s+/g, ' ').trim().substring(0, maxChars);
+  } catch (e) {
+    return '';
+  }
+}
 
 // ─── Parole chiave che indicano notizie NOIOSE da scartare pre-AI ──
 // Se titolo o sommario contengono uno di questi termini, l'articolo
@@ -247,15 +275,16 @@ Rispondi SOLO con un JSON valido:
 async function rewriteWithAI(article) {
   const headline = article.fields?.headline ?? article.webTitle ?? '';
   const trail = article.fields?.trailText ?? '';
-  // Passa fino a 1000 caratteri di corpo — più contesto = meno invenzioni
-  const bodyPreview = (article.fields?.bodyText ?? '').substring(0, 1000);
+  // _fullText viene popolato dal fetch completo prima di chiamare questa funzione
+  const fullText = article._fullText ?? article.fields?.bodyText ?? '';
+  const bodyPreview = fullText.substring(0, 2500);
 
   const prompt = `Sei il redattore di OddFeed, un'app italiana di notizie bizzarre dal mondo.
 
 ARTICOLO ORIGINALE:
 Titolo originale: ${headline}
 Sommario: ${trail}
-${bodyPreview ? `Testo originale: ${bodyPreview}` : ''}
+${bodyPreview ? `Testo completo: ${bodyPreview}` : ''}
 
 ═══ REGOLA N.1 — NON INVENTARE MAI ═══
 Il titolo e il testo devono contenere SOLO fatti presenti nell'articolo originale.
@@ -413,6 +442,18 @@ async function main() {
   });
 
   // Processa con AI e salva su Firestore
+  // Scarica il testo completo di ogni articolo selezionato
+  console.log('\n📄 Download testo completo degli articoli...');
+  for (let i = 0; i < selected.length; i++) {
+    const article = selected[i];
+    const url = article.webUrl;
+    process.stdout.write(`   [${i + 1}/${selected.length}] ${(article.webTitle ?? '').substring(0, 50)}... `);
+    const fullText = await fetchFullText(url);
+    article._fullText = fullText;
+    process.stdout.write(fullText ? `✓ (${fullText.length} chars)\n` : '⚠️  nessun testo\n');
+    await new Promise(r => setTimeout(r, 300));
+  }
+
   console.log('\n🤖 Rielaborazione con GPT-4o mini...');
   const batch = db.batch();
   const savedArticles = []; // Per le notifiche personalizzate
