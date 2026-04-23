@@ -81,9 +81,19 @@ const ITALIAN_RSS_FEEDS = [
   { url: 'https://www.ansa.it/sito/ansait_rss.xml',        source: 'ANSA',        category: null },
   { url: 'https://www.ilpost.it/feed/',                    source: 'Il Post',     category: null },
   { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',   source: 'TGcom24',     category: null },
+  { url: 'https://www.corriere.it/rss/homepage.xml',       source: 'Corriere',    category: null },
+  { url: 'https://www.repubblica.it/rss/homepage/rss2.0.xml', source: 'Repubblica', category: null },
 ];
 
-const rssParser = new RSSParser({ timeout: 8000 });
+const rssParser = new RSSParser({
+  timeout: 10000,
+  requestOptions: {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+    },
+  },
+});
 
 async function fetchItalianRSSNews(maxPerFeed = 8) {
   const results = [];
