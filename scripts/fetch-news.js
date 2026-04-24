@@ -298,6 +298,7 @@ async function rewriteWithAI(article) {
   const bodyPreview = fullText.substring(0, 2500);
 
   const prompt = `Sei il redattore di OddFeed, un'app italiana di notizie bizzarre dal mondo.
+Il tuo obiettivo è scrivere un articolo che il lettore voglia davvero leggere fino in fondo.
 
 ARTICOLO ORIGINALE:
 Titolo originale: ${headline}
@@ -305,24 +306,23 @@ Sommario: ${trail}
 ${bodyPreview ? `Testo completo: ${bodyPreview}` : ''}
 
 ═══ REGOLA N.1 — NON INVENTARE MAI ═══
-Il titolo e il testo devono contenere SOLO fatti presenti nell'articolo originale.
-Se nell'originale non c'è nulla di davvero bizzarro, scrivi un titolo onesto e diretto — non aggiungere dettagli inventati per renderlo più strano.
-ESEMPIO VIETATO: l'articolo parla di astronauti vicino alla luna → NON scrivere "il bagno è rotto" se non è scritto nell'originale.
-ESEMPIO CORRETTO: se l'unica cosa strana è X, il titolo parla di X e basta.
+Usa SOLO fatti presenti nell'articolo originale. Non aggiungere dettagli inventati.
+Se il testo originale ha dettagli specifici (nomi, numeri, luoghi, citazioni), usali — rendono l'articolo credibile e interessante.
 
 ═══ TITOLO ═══
-- Max 65 caratteri, emoji iniziale obbligatoria
-- Riassumi il fatto più insolito CHE ESISTE DAVVERO nell'articolo
-- Usa numeri reali se ci sono nell'originale
-- Tono ironico ma onesto
+- Max 70 caratteri, emoji iniziale obbligatoria
+- Cattura il fatto più assurdo/curioso con tono ironico
+- Usa numeri reali se presenti ("47 gatti", "3 anni di prigione", ecc.)
 
 ═══ TESTO ═══
-- Paragrafo 1: chi, cosa, dove, quando — solo dati reali dall'articolo
-- Paragrafo 2: contesto o sviluppo presente nell'articolo
-- Paragrafo 3: solo se c'è materiale reale; altrimenti ometti e lascia 2 paragrafi
+Scrivi 3-4 paragrafi sostanziosi (non liste, non bullet). Ogni paragrafo almeno 3-4 frasi.
+- Paragrafo 1: apri con il fatto più assurdo per agganciare il lettore. Chi, cosa, dove, quando.
+- Paragrafo 2: approfondisci con dettagli, contesto, background. Usa tutti i dettagli disponibili nell'originale.
+- Paragrafo 3: sviluppi, reazioni, conseguenze o aspetti secondari interessanti presenti nell'articolo.
+- Paragrafo 4 (opzionale): curiosità finale, dato sorprendente, o chiusura ironica se c'è materiale.
 
 ═══ DESCRIZIONE ═══
-- 1-2 frasi sul fatto più insolito dell'articolo (max 160 caratteri)
+- 2 frasi che catturano l'essenza bizzarra (max 180 caratteri)
 
 Rispondi SOLO con un JSON valido:
 {
@@ -330,8 +330,8 @@ Rispondi SOLO con un JSON valido:
   "titleEn": "...",
   "descriptionIt": "...",
   "descriptionEn": "...",
-  "fullTextIt": "paragrafo 1\\n\\nparagrafo 2\\n\\nparagrafo 3",
-  "fullTextEn": "paragraph 1\\n\\nparagraph 2\\n\\nparagraph 3",
+  "fullTextIt": "paragrafo 1\\n\\nparagrafo 2\\n\\nparagrafo 3\\n\\nparagrafo 4",
+  "fullTextEn": "paragraph 1\\n\\nparagraph 2\\n\\nparagraph 3\\n\\nparagraph 4",
   "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
   "categoryLabelIt": "es. 🐾 Animali",
   "categoryLabelEn": "es. 🐾 Animals",
@@ -342,7 +342,7 @@ Rispondi SOLO con un JSON valido:
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.6,
-    max_tokens: 1400,
+    max_tokens: 2500,
   });
 
   const raw = completion.choices[0].message.content ?? '{}';
