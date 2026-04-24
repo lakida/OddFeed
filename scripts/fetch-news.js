@@ -347,7 +347,32 @@ Rispondi SOLO con un JSON valido:
 
   const raw = completion.choices[0].message.content ?? '{}';
   const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(clean);
+
+  // Primo tentativo: parse diretto
+  try {
+    return JSON.parse(clean);
+  } catch (e1) {
+    // Secondo tentativo: estrai solo il blocco JSON con regex
+    try {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+    } catch (e2) {}
+    // Terzo tentativo: chiedi all'AI di riscrivere solo il JSON
+    try {
+      const fix = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'user', content: `Il seguente testo non è un JSON valido. Riscrivilo come JSON valido mantenendo tutti i valori ma correggendo la sintassi. Rispondi SOLO con il JSON:\n\n${clean}` },
+        ],
+        temperature: 0,
+        max_tokens: 2500,
+      });
+      const fixed = (fix.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(fixed);
+    } catch (e3) {
+      throw new Error(`JSON non parsabile dopo 3 tentativi: ${e1.message}`);
+    }
+  }
 }
 
 // ─── Mappa sezione Guardian → paese/fonte ─────────────────────────
