@@ -86,6 +86,12 @@ async function fetchFullText(url, maxChars = 3000) {
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
+      // Rimuovi metadata tipici dei siti italiani (date, aggiornamenti, copyright)
+      .replace(/\b(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)\s+\d+\s+\w+\s+\d{4}[^.|\n]*/gi, '')
+      .replace(/aggiornato\s+il\s+[\d/]+[^.|\n]*/gi, '')
+      .replace(/aggiornato alle?[\s\d:]+/gi, '')
+      .replace(/pubblicato\s+il\s+[\d/]+[^.|\n]*/gi, '')
+      .replace(/©\s*\d{4}[^.|\n]*/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
     return text.substring(0, maxChars);
@@ -117,9 +123,11 @@ const BORING_KEYWORDS = [
   'guerra', 'missile', 'bombardamento', 'attacco aereo', 'esercito', 'soldati',
   'ucraina', 'russia', 'putin', 'zelensky', 'nato', 'tregua', 'cessate il fuoco',
   'israele', 'gaza', 'hamas', 'hezbollah', 'iran', 'siria',
-  // Salute / Medicina (generici)
+  // Salute / Medicina / Benessere (generici)
   'vaccino', 'pandemia', 'covid', 'variante', 'ospedale', 'terapia intensiva',
   'tumore', 'cancro', 'farmaco', 'trial clinico', 'oms', 'aifa',
+  'dieta', 'dimagrire', 'dimagramento', 'obesità', 'calorie', 'nutrizion',
+  'bellezza', 'skincare', 'rughe', 'invecchiamento', 'chirurgia estetica',
   // Ambiente / Clima
   'cambiamento climatico', 'cop', 'emissioni', 'co2', 'siccità', 'alluvione',
   'terremoto', 'eruzione', 'maremoto', 'emergenza meteo',

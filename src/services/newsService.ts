@@ -132,6 +132,7 @@ export async function fetchArchive(
   interests: string[] = []
 ): Promise<NewsItem[]> {
   const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() - (isPremium ? 365 : 7));
   const cutoffStr = cutoff.toISOString().split('T')[0];
@@ -139,6 +140,7 @@ export async function fetchArchive(
   const q = query(
     collection(db, 'articles'),
     where('date', '>=', cutoffStr),
+    where('date', '<', todayStr), // Escludi oggi — l'archivio mostra solo il passato
   );
 
   const snap = await getDocs(q);
