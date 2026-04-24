@@ -7,8 +7,8 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
-  Vibration,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
@@ -97,7 +97,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
       setTodayNews(today);
       setPastNews(past);
       if (isRefresh) {
-        Vibration.vibrate(80);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }).finally(() => {
       setLoading(false);

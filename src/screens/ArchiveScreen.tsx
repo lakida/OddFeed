@@ -7,8 +7,8 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
-  Vibration,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
@@ -46,8 +46,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
       .then(news => {
         setArchiveNews(news.length > 0 ? news : MOCK_NEWS);
         if (isRefresh) {
-          // Vibrazione breve al completamento del refresh
-          Vibration.vibrate(80);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       })
       .catch(() => { setArchiveNews(MOCK_NEWS); })
