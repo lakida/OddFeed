@@ -36,7 +36,7 @@ jobs:
   fetch-and-publish:
     name: Genera e pubblica le notizie
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       # ── 1. Checkout ────────────────────────────────────────────────────────
