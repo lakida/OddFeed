@@ -44,6 +44,51 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
 
   useEffect(() => { loadArchive(); }, [loadArchive]);
 
+  // Filtra gli articoli in base al filtro attivo
+  const filteredNews = React.useMemo(() => {
+    const f = activeFilter;
+    if (!f || f === t.archive.filters[0]) return archiveNews; // "Tutto"
+
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoStr = weekAgo.toISOString().split('T')[0];
+
+    // Filtri temporali
+    if (f === 'Questa settimana' || f === 'This week') {
+      return archiveNews.filter(n => n.publishedAt >= weekAgoStr);
+    }
+    // Filtro per mese (es. "Aprile 2026")
+    const monthMatch = f.match(/(\w+)\s+(\d{4})/);
+    if (monthMatch) {
+      const monthNames: Record<string, string> = {
+        'gennaio': '01', 'febbraio': '02', 'marzo': '03', 'aprile': '04',
+        'maggio': '05', 'giugno': '06', 'luglio': '07', 'agosto': '08',
+        'settembre': '09', 'ottobre': '10', 'novembre': '11', 'dicembre': '12',
+        'january': '01', 'february': '02', 'march': '03', 'april': '04',
+        'may': '05', 'june': '06', 'july': '07', 'august': '08',
+        'september': '09', 'october': '10', 'november': '11', 'december': '12',
+      };
+      const month = monthNames[monthMatch[1].toLowerCase()];
+      const year = monthMatch[2];
+      if (month) return archiveNews.filter(n => n.publishedAt?.startsWith(`${year}-${month}`));
+    }
+    // Filtri per categoria (es. "Animali", "Record", "Leggi")
+    const categoryMap: Record<string, string> = {
+      'animali': 'animali', 'animals': 'animali',
+      'record': 'record',
+      'leggi': 'leggi', 'laws': 'leggi',
+      'gossip': 'gossip',
+      'tecnologia': 'tecnologia', 'technology': 'tecnologia',
+      'cultura': 'cultura', 'culture': 'cultura',
+      'crimini': 'crimini_strani', 'crimes': 'crimini_strani',
+    };
+    const cat = categoryMap[f.toLowerCase()];
+    if (cat) return archiveNews.filter(n => n.category === cat);
+
+    return archiveNews;
+  }, [archiveNews, activeFilter, t.archive.filters]);
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.heroArea}>
@@ -96,7 +141,12 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         {loading && <SkeletonNewsList count={5} />}
 
         {/* Lista notizie */}
-        {!loading && archiveNews.map((item) => (
+        {!loading && filteredNews.length === 0 && (
+          <Text style={{ textAlign: 'center', color: Colors.textTertiary, marginTop: 40, fontSize: FontSize.base }}>
+            Nessuna notizia per questo filtro.
+          </Text>
+        )}
+        {!loading && filteredNews.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.item}
