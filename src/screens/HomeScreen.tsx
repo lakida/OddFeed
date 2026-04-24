@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
+  Vibration,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
@@ -83,6 +84,9 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
     ]).then(([todayArr, pastArr]) => {
       setTodayNews(todayArr[0] ?? MOCK_NEWS[0]);
       setPastNews(pastArr.length > 0 ? pastArr : MOCK_NEWS.slice(1, 3));
+      if (isRefresh) {
+        Vibration.vibrate(80);
+      }
     }).finally(() => {
       setLoading(false);
       setRefreshing(false);

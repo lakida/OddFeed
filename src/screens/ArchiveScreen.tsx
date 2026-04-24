@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
+  Vibration,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS } from '../data/mockData';
@@ -21,11 +22,9 @@ interface ArchiveScreenProps {
   interests?: string[];
 }
 
-const FILTERS = ['Tutto', 'Questa settimana', 'Aprile 2026', 'Animali', 'Record', 'Leggi'];
-
 export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [] }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
-  const [activeFilter, setActiveFilter] = useState(t.archive.filters[0]);
+  const [activeFilter, setActiveFilter] = useState('tutto');
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,7 +33,13 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     fetchArchive(language, isPremium, interests)
-      .then(news => { setArchiveNews(news.length > 0 ? news : MOCK_NEWS); })
+      .then(news => {
+        setArchiveNews(news.length > 0 ? news : MOCK_NEWS);
+        if (isRefresh) {
+          // Vibrazione breve al completamento del refresh
+          Vibration.vibrate(80);
+        }
+      })
       .catch(() => { setArchiveNews(MOCK_NEWS); })
       .finally(() => {
         setLoading(false);
@@ -44,50 +49,58 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
 
   useEffect(() => { loadArchive(); }, [loadArchive]);
 
-  // Filtra gli articoli in base al filtro attivo
-  const filteredNews = React.useMemo(() => {
-    const f = activeFilter;
-    if (!f || f === t.archive.filters[0]) return archiveNews; // "Tutto"
-
+  // Filtri dinamici: "Tutto" + mese corrente + categorie presenti negli articoli
+  const dynamicFilters = React.useMemo(() => {
     const now = new Date();
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoStr = weekAgo.toISOString().split('T')[0];
+    const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const currentMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
-    // Filtri temporali
-    if (f === 'Questa settimana' || f === 'This week') {
-      return archiveNews.filter(n => n.publishedAt >= weekAgoStr);
+    // Categorie uniche presenti negli articoli, con la label localizzata
+    const seen = new Set<string>();
+    const cats: { key: string; label: string }[] = [];
+    archiveNews.forEach(n => {
+      if (!seen.has(n.category)) {
+        seen.add(n.category);
+        cats.push({ key: n.category, label: n.categoryLabel ?? n.category });
+      }
+    });
+
+    return [
+      { key: 'tutto', label: 'Tutto' },
+      { key: 'settimana', label: 'Questa settimana' },
+      { key: currentMonth, label: currentMonth },
+      ...cats,
+    ];
+  }, [archiveNews]);
+
+  // Applica il filtro attivo agli articoli
+  const filteredNews = React.useMemo(() => {
+    if (activeFilter === 'tutto') return archiveNews;
+
+    if (activeFilter === 'settimana') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const cutoff = weekAgo.toISOString().split('T')[0];
+      return archiveNews.filter(n => (n.publishedAt ?? '') >= cutoff);
     }
+
     // Filtro per mese (es. "Aprile 2026")
-    const monthMatch = f.match(/(\w+)\s+(\d{4})/);
-    if (monthMatch) {
-      const monthNames: Record<string, string> = {
-        'gennaio': '01', 'febbraio': '02', 'marzo': '03', 'aprile': '04',
-        'maggio': '05', 'giugno': '06', 'luglio': '07', 'agosto': '08',
-        'settembre': '09', 'ottobre': '10', 'novembre': '11', 'dicembre': '12',
-        'january': '01', 'february': '02', 'march': '03', 'april': '04',
-        'may': '05', 'june': '06', 'july': '07', 'august': '08',
-        'september': '09', 'october': '10', 'november': '11', 'december': '12',
-      };
-      const month = monthNames[monthMatch[1].toLowerCase()];
-      const year = monthMatch[2];
-      if (month) return archiveNews.filter(n => n.publishedAt?.startsWith(`${year}-${month}`));
-    }
-    // Filtri per categoria (es. "Animali", "Record", "Leggi")
-    const categoryMap: Record<string, string> = {
-      'animali': 'animali', 'animals': 'animali',
-      'record': 'record',
-      'leggi': 'leggi', 'laws': 'leggi',
-      'gossip': 'gossip',
-      'tecnologia': 'tecnologia', 'technology': 'tecnologia',
-      'cultura': 'cultura', 'culture': 'cultura',
-      'crimini': 'crimini_strani', 'crimes': 'crimini_strani',
+    const monthNames: Record<string, string> = {
+      'gennaio':'01','febbraio':'02','marzo':'03','aprile':'04',
+      'maggio':'05','giugno':'06','luglio':'07','agosto':'08',
+      'settembre':'09','ottobre':'10','novembre':'11','dicembre':'12',
     };
-    const cat = categoryMap[f.toLowerCase()];
-    if (cat) return archiveNews.filter(n => n.category === cat);
+    const monthMatch = activeFilter.match(/^(\w+)\s+(\d{4})$/);
+    if (monthMatch) {
+      const m = monthNames[monthMatch[1].toLowerCase()];
+      const y = monthMatch[2];
+      if (m) return archiveNews.filter(n => n.publishedAt?.startsWith(`${y}-${m}`));
+    }
 
-    return archiveNews;
-  }, [archiveNews, activeFilter, t.archive.filters]);
+    // Filtro per categoria
+    return archiveNews.filter(n => n.category === activeFilter);
+  }, [archiveNews, activeFilter]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -124,14 +137,14 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersRow}
         >
-          {t.archive.filters.map((f) => (
+          {dynamicFilters.map((f) => (
             <TouchableOpacity
-              key={f}
-              style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
-              onPress={() => setActiveFilter(f)}
+              key={f.key}
+              style={[styles.filterPill, activeFilter === f.key && styles.filterPillActive]}
+              onPress={() => setActiveFilter(f.key)}
             >
-              <Text style={[styles.filterPillText, activeFilter === f && styles.filterPillTextActive]}>
-                {f}
+              <Text style={[styles.filterPillText, activeFilter === f.key && styles.filterPillTextActive]}>
+                {f.label}
               </Text>
             </TouchableOpacity>
           ))}
