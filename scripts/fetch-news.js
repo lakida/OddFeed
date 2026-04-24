@@ -15,8 +15,6 @@ const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { OpenAI } = require('openai');
 const RSSParser = require('rss-parser');
-const { Readability } = require('@mozilla/readability');
-const { JSDOM } = require('jsdom');
 
 // ─── Configurazione ────────────────────────────────────────────────
 const OPENAI_KEY  = process.env.OPENAI_KEY;
@@ -66,9 +64,8 @@ const ITALIAN_RSS_FEEDS = [
 ];
 
 // ─── Fetch testo completo dell'articolo ───────────────────────────
-// Scarica la pagina HTML e usa Mozilla Readability per estrarre
-// solo il testo dell'articolo, pulito da ads/nav/sidebar.
-// Senza testo completo l'AI riscrive solo dal titolo — risultato piatto.
+// Scarica la pagina HTML e rimuove tag, script e stili con regex.
+// Nessuna dipendenza nativa — funziona su qualsiasi ambiente.
 async function fetchFullText(url, maxChars = 3000) {
   if (!url) return '';
   try {
@@ -81,11 +78,17 @@ async function fetchFullText(url, maxChars = 3000) {
     });
     if (!res.ok) return '';
     const html = await res.text();
-    const dom = new JSDOM(html, { url });
-    const reader = new Readability(dom.window.document);
-    const parsed = reader.parse();
-    const text = parsed?.textContent ?? '';
-    return text.replace(/\s+/g, ' ').trim().substring(0, maxChars);
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return text.substring(0, maxChars);
   } catch (e) {
     return '';
   }
