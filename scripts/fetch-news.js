@@ -54,13 +54,13 @@ const BIZARRE_RSS_FEEDS = [
 ];
 
 // ─── Fonti RSS italiane ────────────────────────────────────────────
-// Sezioni cronaca/virale per dare sapore locale italiano.
+// Solo fonti orientate al virale/bizzarro/curioso.
+// RIMOSSI: ANSA cronaca e Corriere cronache — portano omicidi, femminicidi,
+// violenze politiche e crimini seri, incompatibili con OddFeed.
 const ITALIAN_RSS_FEEDS = [
-  { url: 'https://www.fanpage.it/feed/',                              source: 'Fanpage.it',  category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.ansa.it/sito/notizie/cronaca/cronaca_rss.xml',  source: 'ANSA',        category: 'crimini_strani', isItalian: true },
-  { url: 'https://www.today.it/feed/',                                source: 'Today.it',    category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',              source: 'TGcom24',     category: null,             isItalian: true },
-  { url: 'https://www.corriere.it/rss/cronache.xml',                  source: 'Corriere',    category: 'crimini_strani', isItalian: true },
+  { url: 'https://www.fanpage.it/feed/',              source: 'Fanpage.it',  category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.today.it/feed/',                source: 'Today.it',    category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml', source: 'TGcom24', category: null,             isItalian: true },
 ];
 
 // ─── Fetch testo completo dell'articolo ───────────────────────────
@@ -131,6 +131,13 @@ const BORING_KEYWORDS = [
   // Ambiente / Clima
   'cambiamento climatico', 'cop', 'emissioni', 'co2', 'siccità', 'alluvione',
   'terremoto', 'eruzione', 'maremoto', 'emergenza meteo',
+  // Crimine serio / Violenza / Tragedia — MAI su OddFeed
+  'omicidio', 'femminicidio', 'stupro', 'violenza sessuale', 'abuso', 'pedofil',
+  'uccide', 'ucciso', 'uccisa', 'assassin', 'sparatoria', 'accoltell',
+  'morto', 'morti', 'vittima', 'cadavere', 'corpo', 'strage', 'tragedia',
+  'incidente mortale', 'suicid', 'aggressione', 'rapina', 'sequestro',
+  'carcere', 'condanna', 'ergastolo', 'arresti domiciliari',
+  'droga', 'cocaina', 'eroina', 'smercio', 'narcotraffico',
 ];
 
 const rssParser = new RSSParser({
