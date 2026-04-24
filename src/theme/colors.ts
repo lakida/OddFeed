@@ -39,6 +39,48 @@ export const Colors = {
   tagCulture: '#1e3a5f',
 };
 
+// Palette dinamica in base alla modalità scura/chiara
+export function getColors(isDark: boolean) {
+  return {
+    bg:             isDark ? '#1C1C1E' : '#FFFFFF',
+    bg2:            isDark ? '#2C2C2E' : '#F7F7F8',
+    bg3:            isDark ? '#3A3A3C' : '#EFEFEF',
+    text:           isDark ? '#F5F5F7' : '#1A1A1A',
+    textSecondary:  isDark ? '#8E8E93' : '#666666',
+    textTertiary:   isDark ? '#636366' : '#999999',
+    border:         isDark ? '#3A3A3C' : '#E5E5E5',
+    hero:           isDark ? '#1E1B4B' : '#EEF2FF',
+    heroText:       isDark ? '#E0E7FF' : '#1E1B4B',
+    heroSubtext:    isDark ? '#818CF8' : '#4338CA',
+    heroCircle1:    isDark ? '#3730A3' : '#C7D2FE',
+    heroCircle2:    isDark ? '#4338CA' : '#A5B4FC',
+    logoMain:       isDark ? '#818CF8' : '#3730A3',
+    logoLight:      isDark ? '#C7D2FE' : '#6366F1',
+    // Accenti invarianti
+    green:          '#2D9E5F',
+    greenBg:        isDark ? '#0D2E1C' : '#F0FAF4',
+    greenBorder:    isDark ? '#1D5C38' : '#B7E4C7',
+    gold:           '#C9A227',
+    red:            '#E63946',
+    violet:         '#6366F1',
+    violetBg:       isDark ? '#1E1B4B' : '#EEF2FF',
+    // Banner premium
+    premiumBannerBg:     isDark ? '#2C2510' : '#FFFCF0',
+    premiumBannerBorder: isDark ? '#6B5A10' : '#F0D98A',
+    premiumBannerText:   isDark ? '#D4A820' : '#7A6010',
+    // Tag (per ArticleScreen)
+    tagAnimal:  '#1a472a',
+    tagTech:    '#1a1a2e',
+    tagRecord:  '#7f1d1d',
+    tagLaw:     '#1e3a5f',
+    tagScience: '#2c1654',
+    tagFood:    '#7c2d12',
+    tagCulture: '#1e3a5f',
+  };
+}
+
+export type AppColors = ReturnType<typeof getColors>;
+
 export const FontSize = {
   xs: 11,
   sm: 12,

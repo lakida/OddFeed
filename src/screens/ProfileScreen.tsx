@@ -14,7 +14,8 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { USER_LEVELS } from '../data/mockData';
 import { useTranslation, Language } from '../context/LanguageContext';
 import { CATEGORY_CONFIG } from '../data/categoryConfig';
@@ -105,13 +106,14 @@ interface ProfileScreenProps {
 
 export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAccountDeleted, userName = '', userStats }: ProfileScreenProps) {
   const { t, language, setLanguage } = useTranslation();
+  const { isDark, setIsDark } = useTheme();
+  const C = getColors(isDark);
 
   // Livello dal profilo reale (fallback al livello 0 se non ancora caricato)
   const levelIndex = userStats?.level ?? 0;
   const userLevel = USER_LEVELS[levelIndex] ?? USER_LEVELS[0];
 
-  // Stati impostazioni
-  const [darkMode, setDarkMode] = useState(false);
+  // isDark viene da ThemeContext, non più da stato locale
   const [showDarkModeInfo, setShowDarkModeInfo] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -185,55 +187,55 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profilo</Text>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
+      <View style={[styles.header, { borderBottomColor: C.border }]}>
+        <Text style={[styles.headerTitle, { color: C.text }]}>Profilo</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header profilo */}
         <View style={styles.profileHeader}>
-          <Text style={styles.profileName}>{userName || '—'}</Text>
+          <Text style={[styles.profileName, { color: C.text }]}>{userName || '—'}</Text>
           <View style={styles.profileMeta}>
-            <View style={styles.levelBadge}>
+            <View style={[styles.levelBadge, { backgroundColor: C.bg2, borderColor: C.border }]}>
               <Text style={styles.levelBadgeEmoji}>{userLevel.emoji}</Text>
-              <Text style={styles.levelBadgeText}>{t.levels[userLevel.level] ?? userLevel.name}</Text>
+              <Text style={[styles.levelBadgeText, { color: C.textSecondary }]}>{t.levels[userLevel.level] ?? userLevel.name}</Text>
             </View>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.profilePoints}><Text style={styles.bold}>{userStats?.points ?? 0}</Text> pt</Text>
+            <Text style={[styles.metaDot, { color: C.textTertiary }]}>·</Text>
+            <Text style={[styles.profilePoints, { color: C.textSecondary }]}><Text style={[styles.bold, { color: C.text }]}>{userStats?.points ?? 0}</Text> pt</Text>
             {isPremium && (
               <>
-                <Text style={styles.metaDot}>·</Text>
+                <Text style={[styles.metaDot, { color: C.textTertiary }]}>·</Text>
                 <View style={styles.premiumBadge}>
                   <Text style={styles.premiumBadgeText}>⭐ Premium</Text>
                 </View>
               </>
             )}
           </View>
-          <Text style={styles.profileStreak}>
+          <Text style={[styles.profileStreak, { color: C.textSecondary }]}>
             {t.profile.streak}
           </Text>
         </View>
 
         {/* Preferenze */}
         <Text style={styles.sectionTitle}>{t.profile.preferences}</Text>
-        <View style={styles.settingsGroup}>
+        <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
 
           <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSlot(true)}>
-            <Text style={styles.settingsLabel}>{t.profile.notificationSlot}</Text>
-            <Text style={styles.settingsValue}>{notifSlot}</Text>
-            <Text style={styles.arrow}>›</Text>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notificationSlot}</Text>
+            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{notifSlot}</Text>
+            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowLanguage(true)}>
-            <Text style={styles.settingsLabel}>{t.profile.language}</Text>
-            <Text style={styles.settingsValue}>{language === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}</Text>
-            <Text style={styles.arrow}>›</Text>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowLanguage(true)}>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.language}</Text>
+            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{language === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}</Text>
+            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowInterests(true)}>
-            <Text style={styles.settingsLabel}>{t.profile.interests}</Text>
-            <Text style={styles.settingsValue} numberOfLines={1}>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowInterests(true)}>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.interests}</Text>
+            <Text style={[styles.settingsValue, { color: C.textTertiary }]} numberOfLines={1}>
               {interests.length > 0
                 ? interests.map(id => {
                     const config = CATEGORY_CONFIG.find(c => c.id === id);
@@ -241,25 +243,25 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
                   }).join(' ')
                 : (language === 'it' ? 'Nessuno' : 'None')}
             </Text>
-            <Text style={styles.arrow}>›</Text>
+            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.settingsItem, styles.itemBorder]}
-            onPress={() => (userStats?.level ?? 0) >= 1 ? setShowDarkModeInfo(true) : setShowDarkModeLocked(true)}
-            activeOpacity={0.7}
+            style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}
+            onPress={() => (userStats?.level ?? 0) < 1 && setShowDarkModeLocked(true)}
+            activeOpacity={(userStats?.level ?? 0) >= 1 ? 1 : 0.7}
           >
-            <Text style={styles.settingsLabel}>{t.profile.darkMode}</Text>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
             {(userStats?.level ?? 0) >= 1 ? (
               <Switch
-                value={darkMode}
-                onValueChange={(val) => { setDarkMode(val); if (val) setShowDarkModeInfo(true); }}
-                trackColor={{ false: Colors.border, true: Colors.text }}
+                value={isDark}
+                onValueChange={(val) => setIsDark(val)}
+                trackColor={{ false: C.border, true: C.violet }}
                 thumbColor="#fff"
               />
             ) : (
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>🔒 Esploratore</Text>
+              <View style={[styles.comingSoonBadge, { backgroundColor: C.bg2, borderColor: C.border }]}>
+                <Text style={[styles.comingSoonText, { color: C.textTertiary }]}>🔒 Esploratore</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -267,47 +269,47 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
         </View>
 
         <Text style={styles.sectionTitle}>{t.profile.account}</Text>
-        <View style={styles.settingsGroup}>
+        <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
 
           <TouchableOpacity style={[styles.settingsItem, styles.premiumItem]} onPress={onGoToPremium}>
-            <Text style={[styles.settingsLabel, { fontWeight: '600' }]}>{t.profile.premium}</Text>
+            <Text style={[styles.settingsLabel, { fontWeight: '600', color: C.text }]}>{t.profile.premium}</Text>
             <View style={styles.premiumBadge}>
               <Text style={styles.premiumBadgeText}>1,99 €/mese</Text>
             </View>
-            <Text style={styles.arrow}>›</Text>
+            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowSources(true)}>
-            <Text style={styles.settingsLabel}>{t.profile.sources}</Text>
-            <Text style={styles.arrow}>›</Text>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowSources(true)}>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.sources}</Text>
+            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
-          <View style={[styles.settingsItem, styles.itemBorder]}>
-            <Text style={styles.settingsLabel}>{t.profile.notifications}</Text>
+          <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
             <Switch
               value={notifications}
               onValueChange={setNotifications}
-              trackColor={{ false: Colors.border, true: Colors.text }}
+              trackColor={{ false: C.border, true: C.violet }}
               thumbColor="#fff"
             />
           </View>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowPrivacy(true)}>
-            <Text style={styles.settingsLabel}>{t.profile.privacyTerms}</Text>
-            <Text style={styles.arrow}>›</Text>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowPrivacy(true)}>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.privacyTerms}</Text>
+            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowLogoutConfirm(true)}>
-            <Text style={styles.settingsLabel}>{t.profile.logout}</Text>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowLogoutConfirm(true)}>
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.logout}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder]} onPress={() => setShowDeleteConfirm(true)}>
+          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowDeleteConfirm(true)}>
             <Text style={[styles.settingsLabel, { color: Colors.red }]}>{t.profile.deleteAccount}</Text>
           </TouchableOpacity>
 
         </View>
 
-        <Text style={styles.footer}>{t.profile.version}</Text>
+        <Text style={[styles.footer, { color: C.textTertiary }]}>{t.profile.version}</Text>
         <View style={{ height: 24 }} />
       </ScrollView>
 
@@ -462,10 +464,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
         ))}
       </BottomSheet>
 
-      {/* Modal dark mode — coming soon (per chi ha già Esploratore) */}
-      <BottomSheet visible={showDarkModeInfo} onClose={() => { setShowDarkModeInfo(false); setDarkMode(false); }} title={t.profile.darkMode}>
-        <Text style={modalStyles.bodyText}>{t.profile.darkModeComingSoon}</Text>
-      </BottomSheet>
+      {/* Modal dark mode — rimosso (il toggle funziona direttamente) */}
 
       {/* Modal dark mode — bloccato (per chi non ha ancora Esploratore) */}
       <BottomSheet visible={showDarkModeLocked} onClose={() => setShowDarkModeLocked(false)} title="🔒 Funzione bloccata">

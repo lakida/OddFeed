@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated } from 'react-native';
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { getColors } from './src/theme/colors';
 import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail, ensureSocialUserProfile, updateUserPreferences } from './src/services/authService';
 import { verifyOTP } from './src/services/emailService';
 import { registerForPushNotifications } from './src/services/notificationService';
@@ -222,8 +224,14 @@ const successStyles = StyleSheet.create({
   btnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
 
+// Numero massimo di notizie al giorno per livello (indice = livello)
+export const DAILY_NEWS_LIMITS = [1, 1, 2, 3, 4, 5];
+export const PREMIUM_NEWS_LIMIT = 10;
+
 function AppContent() {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
 
   const [appScreen, setAppScreen] = useState<AppScreen>('Loading');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -509,7 +517,7 @@ function AppContent() {
   // Tutti i tab rimangono montati — display:none nasconde senza rimontare
   // Questo elimina lo scatto al cambio tab e mantiene lo stato di scroll
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: C.bg }]}>
       <Animated.View style={[styles.content, { opacity: tabFadeAnim }]}>
         <View style={{ flex: 1, display: activeTab === 'Notizie' ? 'flex' : 'none' }}>
           <HomeScreen
@@ -523,7 +531,7 @@ function AppContent() {
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Archivio' ? 'flex' : 'none' }}>
-          <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} interests={userInterests} />
+          <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} interests={userInterests} userStats={userStats} />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
           <PointsScreen userStats={userStats} userName={userName} />
@@ -547,7 +555,7 @@ function AppContent() {
         </View>
       </Animated.View>
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: C.bg2, borderTopColor: C.border }]}>
         {(Object.keys(TAB_EMOJIS) as Tab[]).map((name) => {
           const focused = activeTab === name;
           const TAB_KEYS: Record<Tab, keyof typeof t.tabs> = {
@@ -564,7 +572,9 @@ function AppContent() {
               <Animated.Text style={[styles.tabEmoji, { transform: [{ scale: tabScales[name] }] }]}>
                 {TAB_EMOJIS[name]}
               </Animated.Text>
-              <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
+              <Text style={[styles.tabLabel, { color: focused ? C.text : C.textTertiary }, focused && styles.tabLabelActive]}>
+                {label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -608,8 +618,10 @@ const styles = StyleSheet.create({
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AppContent />
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

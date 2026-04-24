@@ -78,12 +78,13 @@ function filterAndSort<T extends { item: NewsItem; date?: string; order: number 
   });
 }
 
-// Carica la notizia di oggi.
-// Se l'utente ha interessi, mostra la notizia gratuita che li soddisfa (se esiste).
+// Carica le notizie di oggi.
+// Restituisce fino a `limit` articoli, ordinati per interessi/lingua.
 export async function fetchTodayNews(
   language: 'it' | 'en',
   isPremium: boolean,
-  interests: string[] = []
+  interests: string[] = [],
+  limit = 1
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
@@ -98,7 +99,7 @@ export async function fetchTodayNews(
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
   const sorted = filterAndSort(all, interests, language);
-  return sorted.slice(0, 1).map(x => x.item);
+  return sorted.slice(0, limit).map(x => x.item);
 }
 
 // Carica le notizie recenti dei giorni precedenti (per la Home).
@@ -125,11 +126,12 @@ export async function fetchRecentPastNews(
 }
 
 // Carica l'archivio (ultimi 7 giorni free, tutto per premium).
-// Prioritizza categorie preferite dall'utente, con fallback a tutto se nessun match.
+// Per utenti free limita il totale a `newsLimit` articoli.
 export async function fetchArchive(
   language: 'it' | 'en',
   isPremium: boolean,
-  interests: string[] = []
+  interests: string[] = [],
+  newsLimit = 1
 ): Promise<NewsItem[]> {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
@@ -148,7 +150,11 @@ export async function fetchArchive(
     .filter(d => isPremium || !d.data().isPremium)
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
-  return filterAndSort(all, interests, language).map(x => x.item);
+  const sorted = filterAndSort(all, interests, language);
+  // Premium: tutto senza limite. Free: max `newsLimit` articoli per giorno × giorni
+  // (in pratica limitiamo il totale a newsLimit * 7 per evitare liste infinite)
+  const totalLimit = isPremium ? Infinity : newsLimit * 7;
+  return sorted.slice(0, totalLimit).map(x => x.item);
 }
 
 // Aggiorna il conteggio di una reazione

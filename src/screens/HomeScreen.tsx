@@ -9,10 +9,12 @@ import {
   RefreshControl,
   Vibration,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { fetchTodayNews, fetchRecentPastNews } from '../services/newsService';
+import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { UserStats } from '../../App';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
@@ -70,20 +72,30 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats, interests = [] }: HomeScreenProps) {
   const { t, language } = useTranslation();
-  const [todayNews, setTodayNews] = useState<NewsItem | null>(null);
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
+  const [todayNews, setTodayNews] = useState<NewsItem[]>([]);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Limite notizie basato su livello + premium
+  const newsLimit = isPremium
+    ? PREMIUM_NEWS_LIMIT
+    : (DAILY_NEWS_LIMITS[userStats?.level ?? 0] ?? 1);
 
   const loadNews = useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     Promise.all([
-      fetchTodayNews(language, isPremium, interests).catch(() => []),
-      fetchRecentPastNews(language, isPremium, 2, interests).catch(() => []),
+      fetchTodayNews(language, isPremium, interests, newsLimit).catch(() => []),
+      fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
     ]).then(([todayArr, pastArr]) => {
-      setTodayNews(todayArr[0] ?? MOCK_NEWS[0]);
-      setPastNews(pastArr.length > 0 ? pastArr : MOCK_NEWS.slice(1, 3));
+      const today = todayArr.length > 0 ? todayArr : [MOCK_NEWS[0]];
+      const remaining = Math.max(0, newsLimit - today.length);
+      const past = pastArr.length > 0 ? pastArr.slice(0, remaining) : MOCK_NEWS.slice(1, 1 + remaining);
+      setTodayNews(today);
+      setPastNews(past);
       if (isRefresh) {
         Vibration.vibrate(80);
       }
@@ -91,7 +103,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
       setLoading(false);
       setRefreshing(false);
     });
-  }, [language, isPremium]);
+  }, [language, isPremium, newsLimit]);
 
   useEffect(() => { loadNews(); }, [loadNews]);
 
@@ -103,32 +115,32 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
     : 1;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadNews(true)}
-            tintColor={Colors.textTertiary}
+            tintColor={C.textTertiary}
           />
         }
       >
         {/* Header + Saluto unificati con sfondo colorato */}
-        <View style={styles.heroArea}>
+        <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
           {/* Cerchi decorativi di sfondo */}
-          <View style={styles.circle1} />
-          <View style={styles.circle2} />
+          <View style={[styles.circle1, { backgroundColor: C.heroCircle1 }]} />
+          <View style={[styles.circle2, { backgroundColor: C.heroCircle2 }]} />
           <View style={styles.circle3} />
 
           {/* Logo */}
-          <Text style={styles.logo}>
-            Odd<Text style={styles.logoLight}>Feed</Text>
+          <Text style={[styles.logo, { color: C.logoMain }]}>
+            Odd<Text style={[styles.logoLight, { color: C.logoLight }]}>Feed</Text>
           </Text>
 
           {/* Saluto */}
-          <Text style={styles.greetingText}>{t.home.greeting(userName)}</Text>
-          <Text style={styles.greetingSubtitle}>
+          <Text style={[styles.greetingText, { color: C.heroText }]}>{t.home.greeting(userName)}</Text>
+          <Text style={[styles.greetingSubtitle, { color: C.heroSubtext }]}>
             {isPremium ? t.home.todayNewsPlural : t.home.todayNews}
           </Text>
         </View>
@@ -136,49 +148,50 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {/* Skeleton mentre carica */}
         {loading && <SkeletonNewsList count={3} />}
 
-        {/* Notizia di oggi */}
-        {!loading && todayNews && (
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => onOpenArticle(todayNews.id, todayNews)}
-            activeOpacity={0.7}
-          >
-            <StatusBadge read={readIds.has(todayNews.id)} t={t} />
-            <Text style={styles.itemMeta}>{todayNews.country} · {todayNews.categoryLabel}</Text>
-            <Text style={styles.itemTitle}>{todayNews.title}</Text>
-            <View style={styles.itemFooter}>
-              <View style={styles.sourceDot} />
-              <Text style={styles.itemSource}>{todayNews.source}</Text>
-              <Text style={styles.itemDot}>·</Text>
-              <Text style={styles.itemTime}>{todayNews.publishedAt}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {/* 2 notizie dai giorni precedenti — visibili a tutti */}
-        {!loading && pastNews.map((item) => (
+        {/* Notizie di oggi (multiple per livelli alti / premium) */}
+        {!loading && todayNews.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={styles.item}
+            style={[styles.item, { borderBottomColor: C.border }]}
             onPress={() => onOpenArticle(item.id, item)}
             activeOpacity={0.7}
           >
             <StatusBadge read={readIds.has(item.id)} t={t} />
-            <Text style={styles.itemMeta}>{item.country} · {item.categoryLabel}</Text>
-            <Text style={styles.itemTitle}>{item.title}</Text>
+            <Text style={[styles.itemMeta, { color: C.textTertiary }]}>{item.country} · {item.categoryLabel}</Text>
+            <Text style={[styles.itemTitle, { color: C.text }]}>{item.title}</Text>
             <View style={styles.itemFooter}>
               <View style={styles.sourceDot} />
-              <Text style={styles.itemSource}>{item.source}</Text>
-              <Text style={styles.itemDot}>·</Text>
-              <Text style={styles.itemTime}>{item.publishedAt}</Text>
+              <Text style={[styles.itemSource, { color: C.textSecondary }]}>{item.source}</Text>
+              <Text style={[styles.itemDot, { color: C.textTertiary }]}>·</Text>
+              <Text style={[styles.itemTime, { color: C.textTertiary }]}>{item.publishedAt}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        {/* Notizie dai giorni precedenti */}
+        {!loading && pastNews.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[styles.item, { borderBottomColor: C.border }]}
+            onPress={() => onOpenArticle(item.id, item)}
+            activeOpacity={0.7}
+          >
+            <StatusBadge read={readIds.has(item.id)} t={t} />
+            <Text style={[styles.itemMeta, { color: C.textTertiary }]}>{item.country} · {item.categoryLabel}</Text>
+            <Text style={[styles.itemTitle, { color: C.text }]}>{item.title}</Text>
+            <View style={styles.itemFooter}>
+              <View style={styles.sourceDot} />
+              <Text style={[styles.itemSource, { color: C.textSecondary }]}>{item.source}</Text>
+              <Text style={[styles.itemDot, { color: C.textTertiary }]}>·</Text>
+              <Text style={[styles.itemTime, { color: C.textTertiary }]}>{item.publishedAt}</Text>
             </View>
           </TouchableOpacity>
         ))}
 
         {/* Banner premium per utenti free */}
         {!loading && !isPremium && (
-          <View style={styles.premiumBanner}>
-            <Text style={styles.premiumBannerText}>
+          <View style={[styles.premiumBanner, { backgroundColor: C.premiumBannerBg, borderColor: C.premiumBannerBorder }]}>
+            <Text style={[styles.premiumBannerText, { color: C.premiumBannerText }]}>
               {t.home.premiumBanner}
             </Text>
           </View>
@@ -186,22 +199,22 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
 
         {/* CTA archivio */}
         {!loading && (
-          <TouchableOpacity style={styles.ctaArchive} onPress={onGoToArchive} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.ctaArchive, { backgroundColor: C.text }]} onPress={onGoToArchive} activeOpacity={0.7}>
             <Text style={styles.ctaText}>{t.common.allNews}</Text>
           </TouchableOpacity>
         )}
 
         {/* Widget punti */}
-        <View style={styles.pointsWidget}>
+        <View style={[styles.pointsWidget, { backgroundColor: C.bg2, borderColor: C.border }]}>
           <View style={styles.pwTop}>
-            <Text style={styles.pwTitle}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
+            <Text style={[styles.pwTitle, { color: C.textSecondary }]}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
             <Text style={styles.pwStreak}>🔥 {userStats.streak}gg</Text>
           </View>
-          <View style={styles.pwBarBg}>
+          <View style={[styles.pwBarBg, { backgroundColor: C.border }]}>
             <View style={[styles.pwBarFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
             <View style={{ flex: Math.max(1 - progress, 0) }} />
           </View>
-          <Text style={styles.pwHint}>
+          <Text style={[styles.pwHint, { color: C.textTertiary }]}>
             {nextLevel
               ? `${nextLevel.minPoints - userStats.points} pt per diventare ${nextLevel.name} ${nextLevel.emoji}`
               : 'Hai raggiunto il livello massimo! 🏆'}
