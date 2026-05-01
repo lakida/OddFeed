@@ -51,29 +51,34 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   };
 }
 
-// Ordinamento per priorità: interessi > italiano > data > order.
-// Non filtra mai — mostra sempre tutti gli articoli accessibili,
-// ma quelli delle categorie preferite e in italiano vengono prima.
+// Ordinamento: data più recente prima (priorità assoluta),
+// poi interessi e italiano come spareggio all'interno dello stesso giorno.
+// Questo garantisce che le notizie di ieri appaiono sempre prima
+// di quelle di una settimana fa, indipendentemente dalla categoria.
 function filterAndSort<T extends { item: NewsItem; date?: string; order: number }>(
   items: T[],
   interests: string[],
   language: 'it' | 'en'
 ): T[] {
   return [...items].sort((a, b) => {
-    // 1. Categorie di interesse prima
+    // 1. Data più recente prima (priorità assoluta)
+    const aDate = a.date ?? a.item.publishedAt ?? '';
+    const bDate = b.date ?? b.item.publishedAt ?? '';
+    if (aDate !== bDate) return bDate.localeCompare(aDate);
+
+    // 2. Stesso giorno: categorie di interesse prima
     const aI = interests.length === 0 || interests.includes(a.item.category) ? 0 : 1;
     const bI = interests.length === 0 || interests.includes(b.item.category) ? 0 : 1;
     if (aI !== bI) return aI - bI;
 
-    // 2. Italiano prima se lingua italiana
+    // 3. Stesso giorno + stessi interessi: italiano prima
     if (language === 'it') {
       const aIt = a.item.country.includes('Italia') ? 0 : 1;
       const bIt = b.item.country.includes('Italia') ? 0 : 1;
       if (aIt !== bIt) return aIt - bIt;
     }
 
-    // 3. Data più recente prima, poi order
-    if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
+    // 4. Stesso giorno: order (posizione nell'articolo del giorno)
     return a.order - b.order;
   });
 }
