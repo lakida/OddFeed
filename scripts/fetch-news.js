@@ -59,11 +59,14 @@ const BIZARRE_RSS_FEEDS = [
 // RIMOSSI: ANSA cronaca e Corriere cronache — portano omicidi e crimini seri.
 // AGGIUNTO: ANSA "Strani ma veri" — sezione dedicata alle notizie bizzarre.
 const ITALIAN_RSS_FEEDS = [
-  { url: 'https://www.ansa.it/sito/notizie/mondo/strani_ma_veri/rss.xml', source: 'ANSA Strani',  category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.fanpage.it/feed/',                                   source: 'Fanpage.it',   category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.today.it/feed/',                                     source: 'Today.it',     category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',                   source: 'TGcom24',      category: null,             isItalian: true },
-  { url: 'https://www.wired.it/feed/',                                     source: 'Wired Italia', category: 'tecnologia',     isItalian: true },
+  { url: 'https://www.ansa.it/sito/notizie/mondo/strani_ma_veri/rss.xml',               source: 'ANSA Strani ma veri', category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.ansa.it/sito/notizie/cultura_e_spettacoli/curiosita/rss.xml',     source: 'ANSA Curiosità',      category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.fanpage.it/feed/',                                                 source: 'Fanpage.it',          category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.today.it/feed/',                                                   source: 'Today.it',            category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',                                source: 'TGcom24',             category: null,             isItalian: true },
+  { url: 'https://www.wired.it/feed/',                                                   source: 'Wired Italia',        category: 'tecnologia',     isItalian: true },
+  { url: 'https://www.leggo.it/feed/',                                                   source: 'Leggo.it',            category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.ilfattoquotidiano.it/category/societa/feed/',                      source: 'Il Fatto Quotidiano', category: 'storie_assurde', isItalian: true },
 ];
 
 // ─── Fetch testo completo dell'articolo ───────────────────────────
