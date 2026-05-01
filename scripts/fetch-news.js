@@ -54,6 +54,19 @@ const BIZARRE_RSS_FEEDS = [
   { url: 'https://www.unilad.com/rss',                                  source: 'UNILAD',          category: 'storie_assurde', isItalian: false },
 ];
 
+// ─── Fonti RSS attualità (notizie del giorno + gossip) ────────────
+// Usate per la sezione "In primo piano" in Home — visibile a tutti.
+const CURRENT_NEWS_FEEDS = [
+  // Attualità italiana
+  { url: 'https://www.ansa.it/sito/notizie/mondo/rss.xml',            source: 'ANSA',        category: 'attualita' },
+  { url: 'https://www.corriere.it/rss/homepage.xml',                  source: 'Corriere',    category: 'attualita' },
+  { url: 'https://www.repubblica.it/rss/homepage/rss2.0.xml',         source: 'Repubblica',  category: 'attualita' },
+  // Gossip / Spettacolo
+  { url: 'https://www.tgcom24.mediaset.it/spettacolo/rss.xml',        source: 'TGcom24 TV',  category: 'gossip_spettacolo' },
+  { url: 'https://www.tvblog.it/feed/',                               source: 'TvBlog',      category: 'gossip_spettacolo' },
+  { url: 'https://www.gossip.it/feed/',                               source: 'Gossip.it',   category: 'gossip_spettacolo' },
+];
+
 // ─── Fonti RSS italiane ed europee ────────────────────────────────
 // Priorità a fonti orientate al virale/bizzarro/curioso.
 // RIMOSSI: ANSA cronaca e Corriere cronache — portano omicidi e crimini seri.
@@ -396,6 +409,144 @@ function guessCountry(article) {
   return '🌍 Mondo';
 }
 
+// ─── Notizie di attualità: selezione + rewrite breve ─────────────
+async function fetchAndSaveCurrentNews(today, db) {
+  console.log('\n📰 Recupero notizie di attualità...');
+
+  // Controlla se esistono già
+  const existing = await db.collection('articles')
+    .where('date', '==', today)
+    .where('articleType', '==', 'current')
+    .get();
+
+  if (!existing.empty && !process.argv.includes('--force')) {
+    console.log(`   ℹ️  Notizie di attualità già presenti per ${today}, skip.`);
+    return;
+  }
+  if (!existing.empty) {
+    const del = db.batch();
+    existing.docs.forEach(d => del.delete(d.ref));
+    await del.commit();
+  }
+
+  const articles = await fetchFromFeeds(CURRENT_NEWS_FEEDS, 8);
+  if (articles.length === 0) {
+    console.log('   ⚠️  Nessun articolo di attualità trovato.');
+    return;
+  }
+
+  // Selezione AI: top 3 notizie più importanti/rilevanti del giorno
+  const summaries = articles.map((a, i) => {
+    const cat = a._suggestedCategory === 'gossip_spettacolo' ? ' 🌟 gossip' : ' 📰 news';
+    return `[${i}]${cat} ${a.webTitle} | ${(a.fields?.trailText ?? '').substring(0, 100)}`;
+  }).join('\n');
+
+  const selPrompt = `Sei il curatore di OddFeed. Seleziona le 3 notizie più importanti e rilevanti per un pubblico italiano tra queste.
+Metti al primo posto la notizia più importante del giorno (news), poi puoi mescolare news e gossip.
+Se ci sono notizie di gossip rilevanti (scandali, notizie inaspettate su VIP), includile.
+Scarta notizie tecniche, comunicati stampa, articoli di opinione.
+
+Lista:
+${summaries}
+
+Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
+
+  let selectedArticles = [];
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: selPrompt }],
+      temperature: 0.2,
+      max_tokens: 150,
+    });
+    const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(raw);
+    console.log(`   Selezione AI: ${result.reasoning}`);
+    selectedArticles = (result.selected ?? []).slice(0, 3).map(i => articles[i]).filter(Boolean);
+  } catch (e) {
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 3`);
+    selectedArticles = articles.slice(0, 3);
+  }
+
+  // Rewrite breve per ogni articolo selezionato
+  const batch = db.batch();
+  for (let i = 0; i < selectedArticles.length; i++) {
+    const article = selectedArticles[i];
+    process.stdout.write(`   [${i + 1}/${selectedArticles.length}] ${(article.webTitle ?? '').substring(0, 55)}... `);
+
+    const rewritePrompt = `Sei un giornalista di OddFeed. Riscrivi questa notizia in italiano in modo chiaro e coinvolgente.
+
+Titolo originale: ${article.webTitle}
+Sommario: ${article.fields?.trailText ?? ''}
+
+Scrivi:
+- Un titolo accattivante (max 70 caratteri, emoji iniziale appropriata)
+- Una descrizione di 2 frasi (max 160 caratteri)
+- 2 paragrafi sostanziosi che spiegano la notizia con contesto e dettagli
+
+Rispondi SOLO con JSON:
+{
+  "titleIt": "...", "titleEn": "...",
+  "descriptionIt": "...", "descriptionEn": "...",
+  "fullTextIt": "paragrafo 1\\n\\nparagrafo 2",
+  "fullTextEn": "paragraph 1\\n\\nparagraph 2",
+  "category": "attualita o gossip_spettacolo",
+  "categoryLabelIt": "es. 📰 Attualità",
+  "categoryLabelEn": "es. 📰 News",
+  "imageEmoji": "emoji rilevante"
+}`;
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: rewritePrompt }],
+        temperature: 0.5,
+        max_tokens: 800,
+      });
+      const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const ai = JSON.parse(raw);
+      const isGossip = (ai.category ?? '') === 'gossip_spettacolo';
+
+      const docRef = db.collection('articles').doc();
+      batch.set(docRef, {
+        articleType: 'current',
+        titleIt: ai.titleIt,
+        titleEn: ai.titleEn,
+        descriptionIt: ai.descriptionIt,
+        descriptionEn: ai.descriptionEn,
+        fullTextIt: ai.fullTextIt,
+        fullTextEn: ai.fullTextEn,
+        category: ai.category ?? 'attualita',
+        categoryLabelIt: ai.categoryLabelIt ?? (isGossip ? '🌟 Gossip' : '📰 Attualità'),
+        categoryLabelEn: ai.categoryLabelEn ?? (isGossip ? '🌟 Gossip' : '📰 News'),
+        imageEmoji: ai.imageEmoji ?? (isGossip ? '🌟' : '📰'),
+        imageColor: isGossip ? ['#7c3aed', '#a855f7'] : ['#1e3a5f', '#2563eb'],
+        country: '🇮🇹 Italia',
+        countryCode: 'IT',
+        source: article._source ?? 'ANSA',
+        sourceUrl: article.webUrl ?? '',
+        date: today,
+        order: i,
+        isPremium: false,
+        reactions: [
+          { emoji: '🤯', count: 0, label: 'Sconvolto' },
+          { emoji: '😮', count: 0, label: 'Sorpreso' },
+          { emoji: '😂', count: 0, label: 'Divertente' },
+          { emoji: '🤔', count: 0, label: 'Interessante' },
+          { emoji: '❤️', count: 0, label: 'Adoro' },
+        ],
+        createdAt: new Date(),
+      });
+      process.stdout.write('✓\n');
+    } catch (e) {
+      process.stdout.write(`✗ (${e.message})\n`);
+    }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  await batch.commit();
+  console.log(`   ✅ ${selectedArticles.length} notizie di attualità salvate.`);
+}
+
 // ─── Funzione principale ───────────────────────────────────────────
 async function main() {
   console.log('🚀 OddFeed — Generazione notizie del giorno\n');
@@ -559,6 +710,9 @@ async function main() {
 
   await batch.commit();
   console.log(`\n✅ ${selected.length} notizie salvate su Firestore per il ${today}!`);
+
+  // Genera le notizie di attualità ("In primo piano")
+  await fetchAndSaveCurrentNews(today, db);
 
   // Invia notifica push personalizzata per categoria
   console.log('\n🔔 Invio notifiche push personalizzate...');

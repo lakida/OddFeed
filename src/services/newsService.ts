@@ -27,6 +27,7 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
 
   return {
     id: docSnap.id,
+    articleType: d.articleType ?? 'bizarre',
     title: isIt ? d.titleIt : d.titleEn,
     description: isIt ? d.descriptionIt : d.descriptionEn,
     fullText: isIt ? d.fullTextIt : d.fullTextEn,
@@ -160,6 +161,20 @@ export async function fetchArchive(
   // (in pratica limitiamo il totale a newsLimit * 7 per evitare liste infinite)
   const totalLimit = isPremium ? Infinity : newsLimit * 7;
   return sorted.slice(0, totalLimit).map(x => x.item);
+}
+
+// Carica le 3 notizie di attualità di oggi (visibili a tutti).
+export async function fetchCurrentNews(language: 'it' | 'en'): Promise<NewsItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const q = query(
+    collection(db, 'articles'),
+    where('date', '==', today),
+    where('articleType', '==', 'current'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+    .map(d => docToNewsItem(d, language));
 }
 
 // Aggiorna il conteggio di una reazione

@@ -13,7 +13,7 @@ import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchTodayNews, fetchRecentPastNews } from '../services/newsService';
+import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews } from '../services/newsService';
 import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { UserStats } from '../../App';
@@ -76,6 +76,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   const C = getColors(isDark);
   const [todayNews, setTodayNews] = useState<NewsItem[]>([]);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
+  const [currentNews, setCurrentNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -90,12 +91,14 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
     Promise.all([
       fetchTodayNews(language, isPremium, interests, newsLimit).catch(() => []),
       fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
-    ]).then(([todayArr, pastArr]) => {
+      fetchCurrentNews(language).catch(() => []),
+    ]).then(([todayArr, pastArr, currentArr]) => {
       const today = todayArr.length > 0 ? todayArr : [MOCK_NEWS[0]];
       const remaining = Math.max(0, newsLimit - today.length);
       const past = pastArr.length > 0 ? pastArr.slice(0, remaining) : MOCK_NEWS.slice(1, 1 + remaining);
       setTodayNews(today);
       setPastNews(past);
+      setCurrentNews(currentArr);
       if (isRefresh) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
@@ -144,6 +147,37 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
             {isPremium ? t.home.todayNewsPlural : t.home.todayNews}
           </Text>
         </View>
+
+        {/* ── Sezione Attualità ── */}
+        {!loading && currentNews.length > 0 && (
+          <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
+            <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>📰 IN PRIMO PIANO</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={currentStyles.row}
+            >
+              {currentNews.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[currentStyles.card, { backgroundColor: C.bg2, borderColor: C.border }]}
+                  onPress={() => onOpenArticle(item.id, item)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[currentStyles.cardCategory, { color: C.violet }]}>
+                    {item.categoryLabel}
+                  </Text>
+                  <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={3}>
+                    {item.title}
+                  </Text>
+                  <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
+                    {item.source}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Skeleton mentre carica */}
         {loading && <SkeletonNewsList count={3} />}
@@ -422,5 +456,48 @@ const styles = StyleSheet.create({
   pwHint: {
     fontSize: FontSize.xs,
     color: Colors.textTertiary,
+  },
+});
+
+// Stili sezione attualità
+const currentStyles = StyleSheet.create({
+  section: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+  },
+  sectionTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  row: {
+    paddingHorizontal: Spacing.lg,
+    gap: 10,
+  },
+  card: {
+    width: 200,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    gap: 6,
+  },
+  cardCategory: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  cardTitle: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    lineHeight: 21,
+  },
+  cardSource: {
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+    marginTop: 2,
   },
 });

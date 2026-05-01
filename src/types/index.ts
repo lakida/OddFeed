@@ -17,7 +17,10 @@ export type Category =
   | 'storie_assurde'
   | 'psicologia_strana'
   | 'soldi_folli'
-  | 'coincidenze';
+  | 'coincidenze'
+  // Attualità
+  | 'attualita'
+  | 'gossip_spettacolo';
 
 export type CategoryWeight = 'high' | 'medium' | 'low';
 
@@ -56,6 +59,7 @@ export interface NewsItem {
   daysAgo: number;
   reactions: Reaction[];
   userReaction: ReactionType | null;
+  articleType?: 'bizarre' | 'current'; // tipo di articolo
 }
 
 export interface UserLevel {
