@@ -44,23 +44,26 @@ const openai = new OpenAI({ apiKey: OPENAI_KEY });
 // Queste fonti pubblicano GIÀ solo notizie strane/virali/assurde.
 // Non serve cercare il bizzarro: ogni articolo è già pre-selezionato.
 const BIZARRE_RSS_FEEDS = [
-  { url: 'https://rss.upi.com/news/Odd_News.rss',                    source: 'UPI Odd News',   category: 'storie_assurde', isItalian: false },
-  { url: 'https://nypost.com/weird-but-true/feed/',                   source: 'NY Post',        category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.odditycentral.com/feed',                        source: 'Oddity Central', category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.thesun.co.uk/news/weird/feed/',                 source: 'The Sun',        category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.mirror.co.uk/weird-news/rss.xml',               source: 'Mirror',         category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.ladbible.com/rss',                              source: 'LADbible',       category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.boredpanda.com/feed/',                          source: 'Bored Panda',    category: 'storie_assurde', isItalian: false },
+  { url: 'https://rss.upi.com/news/Odd_News.rss',                      source: 'UPI Odd News',    category: 'storie_assurde', isItalian: false },
+  { url: 'https://nypost.com/weird-but-true/feed/',                     source: 'NY Post',         category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.odditycentral.com/feed',                          source: 'Oddity Central',  category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.thesun.co.uk/news/weird/feed/',                   source: 'The Sun',         category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.dailystar.co.uk/weird-news/rss.xml',              source: 'Daily Star',      category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',     category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.huffpost.com/section/weird-news/feed',            source: 'HuffPost Weird',  category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.unilad.com/rss',                                  source: 'UNILAD',          category: 'storie_assurde', isItalian: false },
 ];
 
-// ─── Fonti RSS italiane ────────────────────────────────────────────
-// Solo fonti orientate al virale/bizzarro/curioso.
-// RIMOSSI: ANSA cronaca e Corriere cronache — portano omicidi, femminicidi,
-// violenze politiche e crimini seri, incompatibili con OddFeed.
+// ─── Fonti RSS italiane ed europee ────────────────────────────────
+// Priorità a fonti orientate al virale/bizzarro/curioso.
+// RIMOSSI: ANSA cronaca e Corriere cronache — portano omicidi e crimini seri.
+// AGGIUNTO: ANSA "Strani ma veri" — sezione dedicata alle notizie bizzarre.
 const ITALIAN_RSS_FEEDS = [
-  { url: 'https://www.fanpage.it/feed/',              source: 'Fanpage.it',  category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.today.it/feed/',                source: 'Today.it',    category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml', source: 'TGcom24', category: null,             isItalian: true },
+  { url: 'https://www.ansa.it/sito/notizie/mondo/strani_ma_veri/rss.xml', source: 'ANSA Strani',  category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.fanpage.it/feed/',                                   source: 'Fanpage.it',   category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.today.it/feed/',                                     source: 'Today.it',     category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',                   source: 'TGcom24',      category: null,             isItalian: true },
+  { url: 'https://www.wired.it/feed/',                                     source: 'Wired Italia', category: 'tecnologia',     isItalian: true },
 ];
 
 // ─── Fetch testo completo dell'articolo ───────────────────────────
@@ -200,8 +203,8 @@ async function scoreAndSelectArticles(candidates, count = 5) {
   const italianCandidates = candidates.filter(a => a._isItalian);
   const worldCandidates = candidates.filter(a => !a._isItalian);
 
-  // Garantisce almeno 2 notizie italiane se disponibili
-  const MIN_ITALIAN = Math.min(2, italianCandidates.length);
+  // Garantisce almeno 3 notizie italiane se disponibili
+  const MIN_ITALIAN = Math.min(3, italianCandidates.length);
   const needed = count - MIN_ITALIAN;
 
   // Crea la lista con gli italiani etichettati
@@ -237,7 +240,7 @@ DOMANDA DA FARTI per ogni articolo: "Se racconto questa storia a un amico al bar
 - Clima, ambiente, disastri naturali
 - Qualsiasi notizia "seria" travestita da bizzarra
 
-QUOTA ITALIA: se ci sono articoli 🇮🇹 che superano il test del bar, includi almeno ${MIN_ITALIAN}.
+QUOTA ITALIA: il pubblico è italiano — se ci sono articoli 🇮🇹 che superano il test del bar, includi almeno ${MIN_ITALIAN} su ${count}. Se ne trovi di più buoni, includili tutti.
 
 Lista articoli:
 ${summaries}
@@ -265,22 +268,14 @@ Rispondi SOLO con un JSON valido:
     const selected = indices.map(i => candidates[i]).filter(Boolean);
     if (selected.length === 0) {
       console.log(`   ⚠️  AI ha selezionato 0 articoli — uso fallback con articoli italiani o bizzarri disponibili.`);
-      // Fallback intelligente: priorità agli articoli italiani e a categorie bizzarre
       const fallback = candidates
         .filter(a => a._isItalian || ['storie_assurde','crimini_strani','animali','record','leggi','gossip'].includes(a._suggestedCategory))
         .slice(0, count);
       return fallback.length > 0 ? fallback : candidates.slice(0, count);
     }
-    if (selected.length < 3) {
-      console.log(`   ⚠️  Solo ${selected.length} articoli scelti dall'AI — integro con i successivi disponibili.`);
-      // Completa con articoli non già selezionati, preferendo italiani
-      const selectedIds = new Set(selected.map(a => a.id));
-      const extras = candidates
-        .filter(a => !selectedIds.has(a.id))
-        .sort((a, b) => (b._isItalian ? 1 : 0) - (a._isItalian ? 1 : 0))
-        .slice(0, count - selected.length);
-      return [...selected, ...extras];
-    }
+    // NON completare con articoli extra se l'AI ne sceglie pochi:
+    // meglio 2 notizie davvero buone che 5 mediocri.
+    console.log(`   → ${selected.length} articoli selezionati dall'AI.`);
     return selected;
   } catch (e) {
     console.log(`   ⚠️ Scoring fallito, uso selezione casuale: ${e.message}`);
