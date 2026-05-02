@@ -246,25 +246,29 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}
-            onPress={() => (userStats?.level ?? 0) < 1 && setShowDarkModeLocked(true)}
-            activeOpacity={(userStats?.level ?? 0) >= 1 ? 1 : 0.7}
-          >
-            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
-            {(userStats?.level ?? 0) >= 1 ? (
+          {(userStats?.level ?? 0) >= 1 ? (
+            // Switch libero in un View: nessun TouchableOpacity che intercetta i touch
+            <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
+              <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
               <Switch
                 value={isDark}
                 onValueChange={(val) => setIsDark(val)}
                 trackColor={{ false: C.border, true: C.violet }}
                 thumbColor="#fff"
               />
-            ) : (
+            </View>
+          ) : (
+            // Bloccato: tutta la riga è tappabile per mostrare il modal
+            <TouchableOpacity
+              style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}
+              onPress={() => setShowDarkModeLocked(true)}
+            >
+              <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
               <View style={[styles.comingSoonBadge, { backgroundColor: C.bg2, borderColor: C.border }]}>
                 <Text style={[styles.comingSoonText, { color: C.textTertiary }]}>🔒 Esploratore</Text>
               </View>
-            )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
         </View>
 
