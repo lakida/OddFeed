@@ -102,6 +102,7 @@ export async function fetchTodayNews(
   const snap = await getDocs(q);
   const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
+    .filter(d => (d.data().articleType ?? 'bizarre') !== 'current') // Escludi attualità
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
   const sorted = filterAndSort(all, interests, language);
@@ -126,6 +127,7 @@ export async function fetchRecentPastNews(
   const snap = await getDocs(q);
   const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
+    .filter(d => (d.data().articleType ?? 'bizarre') !== 'current') // Escludi attualità
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
   return filterAndSort(all, interests, language).slice(0, count).map(x => x.item);
@@ -141,6 +143,13 @@ export async function fetchArchive(
 ): Promise<NewsItem[]> {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
+
+  // L'archivio parte da 2 giorni fa: oggi e ieri sono visibili solo in Home,
+  // così l'utente non vede le stesse notizie scorrendo tra le due sezioni.
+  const archiveEnd = new Date(today);
+  archiveEnd.setDate(archiveEnd.getDate() - 1);
+  const archiveEndStr = archiveEnd.toISOString().split('T')[0];
+
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() - (isPremium ? 365 : 7));
   const cutoffStr = cutoff.toISOString().split('T')[0];
@@ -148,12 +157,13 @@ export async function fetchArchive(
   const q = query(
     collection(db, 'articles'),
     where('date', '>=', cutoffStr),
-    where('date', '<', todayStr), // Escludi oggi — l'archivio mostra solo il passato
+    where('date', '<', archiveEndStr), // Escludi oggi e ieri — già visibili in Home
   );
 
   const snap = await getDocs(q);
   const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
+    .filter(d => (d.data().articleType ?? 'bizarre') !== 'current') // Escludi attualità
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
   const sorted = filterAndSort(all, interests, language);

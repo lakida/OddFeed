@@ -435,13 +435,13 @@ async function fetchAndSaveCurrentNews(today, db) {
     return;
   }
 
-  // Selezione AI: top 3 notizie più importanti/rilevanti del giorno
+  // Selezione AI: top 6 notizie più importanti/rilevanti del giorno
   const summaries = articles.map((a, i) => {
     const cat = a._suggestedCategory === 'gossip_spettacolo' ? ' 🌟 gossip' : ' 📰 news';
     return `[${i}]${cat} ${a.webTitle} | ${(a.fields?.trailText ?? '').substring(0, 100)}`;
   }).join('\n');
 
-  const selPrompt = `Sei il curatore di OddFeed. Seleziona le 3 notizie più importanti e rilevanti per un pubblico italiano tra queste.
+  const selPrompt = `Sei il curatore di OddFeed. Seleziona le 6 notizie più importanti e rilevanti per un pubblico italiano tra queste.
 Metti al primo posto la notizia più importante del giorno (news), poi puoi mescolare news e gossip.
 Se ci sono notizie di gossip rilevanti (scandali, notizie inaspettate su VIP), includile.
 Scarta notizie tecniche, comunicati stampa, articoli di opinione.
@@ -449,7 +449,7 @@ Scarta notizie tecniche, comunicati stampa, articoli di opinione.
 Lista:
 ${summaries}
 
-Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
+Rispondi SOLO con JSON: {"selected": [i1, i2, i3, i4, i5, i6], "reasoning": "..."}`;
 
   let selectedArticles = [];
   try {
@@ -457,15 +457,15 @@ Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: selPrompt }],
       temperature: 0.2,
-      max_tokens: 150,
+      max_tokens: 200,
     });
     const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const result = JSON.parse(raw);
     console.log(`   Selezione AI: ${result.reasoning}`);
-    selectedArticles = (result.selected ?? []).slice(0, 3).map(i => articles[i]).filter(Boolean);
+    selectedArticles = (result.selected ?? []).slice(0, 6).map(i => articles[i]).filter(Boolean);
   } catch (e) {
-    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 3`);
-    selectedArticles = articles.slice(0, 3);
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 6`);
+    selectedArticles = articles.slice(0, 6);
   }
 
   // Rewrite breve per ogni articolo selezionato
