@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated, Easing, Dimensions } from 'react-native';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { getColors } from './src/theme/colors';
@@ -250,6 +252,9 @@ function AppContent() {
   // ─── Animazione fade tra tab ─────────────────────────────────────────────
   const tabFadeAnim = useRef(new Animated.Value(1)).current;
 
+  // ─── Animazione slide per ArticleScreen (overlay da destra) ─────────────
+  const articleSlideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
   // Animazione scala per icone tab
   const tabScales = useRef<Record<Tab, Animated.Value>>({
     Notizie: new Animated.Value(1),
@@ -418,8 +423,24 @@ function AppContent() {
     setReadIds((prev) => new Set(prev).add(id));
     setArticleId(id);
     setCurrentArticle(article ?? null);
+    articleSlideAnim.setValue(SCREEN_WIDTH);
     setAppScreen('Article');
+    Animated.timing(articleSlideAnim, {
+      toValue: 0,
+      duration: 320,
+      easing: Easing.out(Easing.poly(4)),
+      useNativeDriver: true,
+    }).start();
   };
+
+  const handleBack = useCallback(() => {
+    Animated.timing(articleSlideAnim, {
+      toValue: SCREEN_WIDTH,
+      duration: 280,
+      easing: Easing.in(Easing.poly(4)),
+      useNativeDriver: true,
+    }).start(() => setAppScreen('Tabs'));
+  }, [articleSlideAnim]);
 
   const handleLogin = (name: string, isNew: boolean) => {
     setUserName(name);
@@ -489,27 +510,7 @@ function AppContent() {
   if (appScreen === 'Onboarding') {
     return <OnboardingScreen userName={userName} onComplete={handleOnboardingComplete} />;
   }
-  if (appScreen === 'Article') {
-    const handleBack = () => {
-      tabFadeAnim.setValue(0);
-      setAppScreen('Tabs');
-      Animated.timing(tabFadeAnim, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    };
-    return (
-      <ArticleScreen
-        newsId={articleId}
-        article={currentArticle}
-        onBack={handleBack}
-        userId={currentUser?.uid ?? ''}
-        userStats={userStats}
-        onPointsChange={handlePointsChange}
-      />
-    );
-  }
+  // ArticleScreen viene renderizzato come overlay animato nel blocco principale (sotto)
   if (appScreen === 'AccountDeleted') {
     return <AccountDeletedScreen onRestart={() => setAppScreen('Register')} />;
   }
@@ -579,6 +580,23 @@ function AppContent() {
           );
         })}
       </View>
+
+      {/* ArticleScreen: overlay che scorre da destra, copre tab e tab bar */}
+      {appScreen === 'Article' && (
+        <Animated.View style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ translateX: articleSlideAnim }] },
+        ]}>
+          <ArticleScreen
+            newsId={articleId}
+            article={currentArticle}
+            onBack={handleBack}
+            userId={currentUser?.uid ?? ''}
+            userStats={userStats}
+            onPointsChange={handlePointsChange}
+          />
+        </Animated.View>
+      )}
     </View>
   );
 }

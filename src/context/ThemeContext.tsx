@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Abilita LayoutAnimation su Android
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 interface ThemeContextType {
   isDark: boolean;
@@ -21,6 +27,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setIsDark = (v: boolean) => {
+    // Anima il cambio di colori su tutta l'app senza scatti
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsDarkState(v);
     AsyncStorage.setItem('oddFeedDarkMode', String(v)).catch(() => {});
   };
