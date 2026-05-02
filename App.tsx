@@ -425,12 +425,15 @@ function AppContent() {
     setCurrentArticle(article ?? null);
     articleSlideAnim.setValue(SCREEN_WIDTH);
     setAppScreen('Article');
-    Animated.timing(articleSlideAnim, {
-      toValue: 0,
-      duration: 320,
-      easing: Easing.out(Easing.poly(4)),
-      useNativeDriver: true,
-    }).start();
+    // requestAnimationFrame garantisce che il componente sia montato prima che l'animazione parta
+    requestAnimationFrame(() => {
+      Animated.timing(articleSlideAnim, {
+        toValue: 0,
+        duration: 320,
+        easing: Easing.out(Easing.poly(4)),
+        useNativeDriver: true,
+      }).start();
+    });
   };
 
   const handleBack = useCallback(() => {
@@ -515,11 +518,18 @@ function AppContent() {
     return <AccountDeletedScreen onRestart={() => setAppScreen('Register')} />;
   }
 
+  // Parallasse: i tab si spostano leggermente a sx mentre l'articolo entra (stile iOS nativo)
+  const tabParallax = articleSlideAnim.interpolate({
+    inputRange: [0, SCREEN_WIDTH],
+    outputRange: [-SCREEN_WIDTH * 0.08, 0],
+    extrapolate: 'clamp',
+  });
+
   // Tutti i tab rimangono montati — display:none nasconde senza rimontare
   // Questo elimina lo scatto al cambio tab e mantiene lo stato di scroll
   return (
     <View style={[styles.root, { backgroundColor: C.bg }]}>
-      <Animated.View style={[styles.content, { opacity: tabFadeAnim }]}>
+      <Animated.View style={[styles.content, { opacity: tabFadeAnim, transform: [{ translateX: tabParallax }] }]}>
         <View style={{ flex: 1, display: activeTab === 'Notizie' ? 'flex' : 'none' }}>
           <HomeScreen
             onOpenArticle={openArticle}

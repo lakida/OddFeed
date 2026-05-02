@@ -9,7 +9,12 @@ import {
   Share,
   Platform,
   PanResponder,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
+
+const SCREEN_W = Dimensions.get('window').width;
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS } from '../data/mockData';
@@ -32,7 +37,10 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
   const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
 
-  // Swipe da sinistra per tornare indietro (standard iOS)
+  // Animazione per il tracciamento del dito durante lo swipe
+  const swipePan = useRef(new Animated.Value(0)).current;
+
+  // Swipe da sinistra per tornare indietro — il contenuto segue il dito in tempo reale
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -43,8 +51,30 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           Math.abs(gestureState.dy) < Math.abs(gestureState.dx)
         );
       },
+      onPanResponderMove: (_, gestureState) => {
+        // Muovi il contenuto insieme al dito (solo verso destra)
+        if (gestureState.dx > 0) swipePan.setValue(gestureState.dx);
+      },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx > 60) onBack();
+        if (gestureState.dx > 80 || gestureState.vx > 0.5) {
+          // Swipe sufficiente: completa l'uscita poi chiama onBack
+          Animated.timing(swipePan, {
+            toValue: SCREEN_W,
+            duration: 200,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }).start(() => {
+            swipePan.setValue(0); // reset per la prossima apertura
+            onBack();
+          });
+        } else {
+          // Swipe troppo corto: torna alla posizione originale
+          Animated.spring(swipePan, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        }
       },
     })
   ).current;
@@ -70,6 +100,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
   const paragraphs = article.fullText.split('\n\n').slice(0, 2);
 
   return (
+    <Animated.View style={[styles.swipeContainer, { transform: [{ translateX: swipePan }] }]}>
     <SafeAreaView style={styles.safe} {...panResponder.panHandlers}>
       {/* Back — in alto */}
       <TouchableOpacity style={styles.backBtn} onPress={onBack}>
@@ -122,10 +153,12 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
         <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
       </View>
     </SafeAreaView>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeContainer: { flex: 1, backgroundColor: Colors.bg },
   safe: { flex: 1, backgroundColor: Colors.bg },
   backBtn: {
     flexDirection: 'row',
