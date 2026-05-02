@@ -718,6 +718,10 @@ async function main() {
   console.log('\n🔔 Invio notifiche push personalizzate...');
   await sendPersonalizedNotifications(savedArticles);
   console.log('   L\'app mostrerà automaticamente i nuovi contenuti.');
+
+  // Chiude esplicitamente il processo: Firebase Admin SDK tiene aperte le connessioni
+  // e Node.js non esce da solo, causando un timeout di 30 minuti su GitHub Actions.
+  process.exit(0);
 }
 
 // ─── Notifiche personalizzate per categoria ───────────────────────
