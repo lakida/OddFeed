@@ -10,6 +10,46 @@ import {
 import { db } from '../config/firebase';
 import { NewsItem } from '../types';
 
+// Mappe di fallback per le label delle categorie (usate quando il valore salvato è grezzo o mancante)
+const FALLBACK_LABELS_IT: Record<string, string> = {
+  attualita: '📰 Attualità',
+  gossip_spettacolo: '🌟 Gossip & Spettacolo',
+  animali: '🐾 Animali',
+  tecnologia: '💻 Tecnologia',
+  record: '🏆 Record',
+  leggi: '⚖️ Leggi Assurde',
+  scienza: '🔬 Scienza',
+  gastronomia: '🍽️ Gastronomia',
+  cultura: '🌍 Cultura',
+  luoghi: '📍 Luoghi',
+  sesso_relazioni: '💋 Sesso & Relazioni',
+  gossip: '🌟 Gossip',
+  crimini_strani: '🔪 Crimini Strani',
+  storie_assurde: '🤪 Storie Assurde',
+  psicologia_strana: '🧠 Psicologia Strana',
+  soldi_folli: '💸 Soldi Folli',
+  coincidenze: '🌀 Coincidenze',
+};
+const FALLBACK_LABELS_EN: Record<string, string> = {
+  attualita: '📰 Current Affairs',
+  gossip_spettacolo: '🌟 Gossip & Entertainment',
+  animali: '🐾 Animals',
+  tecnologia: '💻 Technology',
+  record: '🏆 Records',
+  leggi: '⚖️ Weird Laws',
+  scienza: '🔬 Science',
+  gastronomia: '🍽️ Food',
+  cultura: '🌍 Culture',
+  luoghi: '📍 Places',
+  sesso_relazioni: '💋 Sex & Relationships',
+  gossip: '🌟 Gossip',
+  crimini_strani: '🔪 Strange Crimes',
+  storie_assurde: '🤪 Absurd Stories',
+  psicologia_strana: '🧠 Strange Psychology',
+  soldi_folli: '💸 Crazy Money',
+  coincidenze: '🌀 Coincidences',
+};
+
 // Converte un documento Firestore in NewsItem compatibile con l'app
 function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
   const d = docSnap.data();
@@ -36,7 +76,13 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
     country: d.country ?? '🌍 Mondo',
     countryCode: d.countryCode ?? 'WD',
     category: d.category ?? 'curiosità',
-    categoryLabel: isIt ? (d.categoryLabelIt ?? '🌍 Curiosità') : (d.categoryLabelEn ?? '🌍 Curiosity'),
+    categoryLabel: isIt
+      ? (d.categoryLabelIt && d.categoryLabelIt.trim().length > 3 && !['attualita','gossip_spettacolo'].includes(d.categoryLabelIt)
+          ? d.categoryLabelIt
+          : FALLBACK_LABELS_IT[d.category] ?? d.categoryLabelIt ?? '🌍 Curiosità')
+      : (d.categoryLabelEn && d.categoryLabelEn.trim().length > 3 && !['attualita','gossip_spettacolo'].includes(d.categoryLabelEn)
+          ? d.categoryLabelEn
+          : FALLBACK_LABELS_EN[d.category] ?? d.categoryLabelEn ?? '🌍 Curiosity'),
     source: d.source ?? 'The Guardian',
     publishedAt: d.date ?? 'Oggi',
     isToday,

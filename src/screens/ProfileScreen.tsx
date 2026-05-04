@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Switch,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -15,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
+import CustomSwitch from '../components/CustomSwitch';
 import { useTheme } from '../context/ThemeContext';
 import { USER_LEVELS } from '../data/mockData';
 import { useTranslation, Language } from '../context/LanguageContext';
@@ -250,11 +250,11 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             // Switch libero in un View: nessun TouchableOpacity che intercetta i touch
             <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
               <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
-              <Switch
+              <CustomSwitch
                 value={isDark}
                 onValueChange={(val) => setIsDark(val)}
-                trackColor={{ false: C.border, true: C.violet }}
-                thumbColor="#fff"
+                activeColor={C.violet}
+                inactiveColor={C.border}
               />
             </View>
           ) : (
@@ -290,11 +290,11 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
           <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
-            <Switch
+            <CustomSwitch
               value={notifications}
               onValueChange={setNotifications}
-              trackColor={{ false: C.border, true: C.violet }}
-              thumbColor="#fff"
+              activeColor={C.violet}
+              inactiveColor={C.border}
             />
           </View>
 

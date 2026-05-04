@@ -567,7 +567,12 @@ async function main() {
   if (!existing.empty) {
     if (!process.argv.includes('--force')) {
       console.log(`ℹ️  Le notizie per oggi (${today}) esistono già su Firestore.`);
-      console.log('   Usa --force per sovrascriverle.');
+      console.log('   Invio comunque le notifiche push...');
+      // Non rigeneriamo gli articoli, ma inviamo le notifiche (potrebbero non essere state mandate)
+      const existingArticles = existing.docs
+        .filter(d => (d.data().articleType ?? 'bizarre') !== 'current')
+        .map(d => ({ id: d.id, ...d.data() }));
+      await sendPersonalizedNotifications(existingArticles);
       process.exit(0);
     }
     // --force: cancella prima le notizie esistenti per oggi
