@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -120,22 +120,6 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
 
   useEffect(() => { loadNews(); }, [loadNews]);
 
-  // Auto-scroll "In primo piano"
-  const currentScrollRef = useRef<ScrollView>(null);
-  const currentIndexRef = useRef(0);
-  const CARD_WIDTH = 210; // card 200 + gap 10
-
-  useEffect(() => {
-    if (currentNews.length < 2) return;
-    const interval = setInterval(() => {
-      currentIndexRef.current = (currentIndexRef.current + 1) % currentNews.length;
-      currentScrollRef.current?.scrollTo({
-        x: currentIndexRef.current * CARD_WIDTH,
-        animated: true,
-      });
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [currentNews]);
 
   // Livello e progresso reali
   const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
@@ -180,14 +164,9 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
             <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>📰 ATTUALITÀ</Text>
             <ScrollView
-              ref={currentScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={currentStyles.row}
-              onMomentumScrollEnd={(e) => {
-                const x = e.nativeEvent.contentOffset.x;
-                currentIndexRef.current = Math.round(x / CARD_WIDTH);
-              }}
             >
               {currentNews.map((item) => (
                 <TouchableOpacity
@@ -196,9 +175,6 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[currentStyles.cardLabel, { color: C.violet }]}>
-                    📰 {item.categoryLabel}
-                  </Text>
                   <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={2}>
                     {item.title}
                   </Text>
@@ -220,7 +196,6 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {!loading && topOddNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
             <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🔥 TOP ODD NEWS</Text>
-            <Text style={[currentStyles.sectionSubtitle, { color: C.textTertiary }]}>Le 3 più assurde di oggi.</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -265,8 +240,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {/* ── Non dovresti leggerla ── */}
         {!loading && (forbiddenNews.length > 0 || !isPremium) && (
           <View style={[forbiddenStyles.section, { borderBottomColor: C.border }]}>
-            <Text style={forbiddenStyles.sectionTitle}>🚫 NON DOVRESTI LEGGERLA</Text>
-            <Text style={forbiddenStyles.sectionSubtitle}>Le storie che non ti aspetti. Solo per chi ha coraggio.</Text>
+            <Text style={forbiddenStyles.sectionTitle}>NON DOVRESTI LEGGERLA</Text>
 
             {/* PREMIUM: articoli sempre visibili, nessun lock */}
             {isPremium && forbiddenNews.map((item) => (
@@ -630,7 +604,7 @@ const currentStyles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.8,
     paddingHorizontal: Spacing.lg,
-    marginBottom: 2,
+    marginBottom: Spacing.md,
   },
   sectionSubtitle: {
     fontSize: FontSize.xs,
@@ -753,13 +727,7 @@ const forbiddenStyles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: '#a78bfa',
-    paddingHorizontal: Spacing.lg,
-    marginBottom: 2,
-  },
-  sectionSubtitle: {
-    fontSize: FontSize.xs,
-    color: '#6b7280',
+    color: '#9ca3af',
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
   },
@@ -790,10 +758,10 @@ const forbiddenStyles = StyleSheet.create({
   },
   badgeGift: { backgroundColor: '#059669' },
   titlePremium: {
-    fontSize: FontSize.base,
+    fontSize: FontSize.lg,
     fontWeight: '700',
     color: '#f3f4f6',
-    lineHeight: 22,
+    lineHeight: 24,
   },
   subtitlePremium: {
     fontSize: FontSize.xs,
