@@ -68,9 +68,11 @@ interface HomeScreenProps {
   userName: string;
   userStats: UserStats;
   interests?: string[];
+  /** Sblocco one-time regalo onboarding: mostra banner nella sezione forbidden */
+  freeUnlockActive?: boolean;
 }
 
-export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats, interests = [] }: HomeScreenProps) {
+export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats, interests = [], freeUnlockActive = false }: HomeScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -290,7 +292,31 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
               </TouchableOpacity>
             ))}
 
-            {!isPremium && (
+            {!isPremium && freeUnlockActive && forbiddenNews.length > 0 && (
+              // Regalo onboarding: mostra il primo articolo forbidden con banner regalo
+              <View>
+                <View style={forbiddenStyles.giftBanner}>
+                  <Text style={forbiddenStyles.giftBannerText}>🎁 Il tuo articolo regalo è sbloccato!</Text>
+                </View>
+                <TouchableOpacity
+                  style={[forbiddenStyles.item, { borderBottomColor: C.border }]}
+                  onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
+                  activeOpacity={0.75}
+                >
+                  <View style={forbiddenStyles.badgeRow}>
+                    <View style={[forbiddenStyles.badge, forbiddenStyles.badgeGift]}>
+                      <Text style={forbiddenStyles.badgeText}>🔓 SBLOCCATO PER TE</Text>
+                    </View>
+                  </View>
+                  <Text style={[forbiddenStyles.title, { color: C.text }]} numberOfLines={2}>
+                    {forbiddenNews[0].title}
+                  </Text>
+                  <Text style={[forbiddenStyles.source, { color: C.textTertiary }]}>{forbiddenNews[0].source}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!isPremium && !freeUnlockActive && (
               <View style={forbiddenStyles.lockedContainer}>
                 <View style={[forbiddenStyles.lockedCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
                   <View style={forbiddenStyles.badgeRow}>
@@ -769,5 +795,25 @@ const forbiddenStyles = StyleSheet.create({
   lockedHint: {
     fontSize: FontSize.xs,
     fontWeight: '500',
+  },
+  giftBanner: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: 8,
+    marginTop: 4,
+    backgroundColor: '#ede9fe',
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#c4b5fd',
+  },
+  giftBannerText: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: '#4f46e5',
+    textAlign: 'center',
+  },
+  badgeGift: {
+    backgroundColor: '#059669',
   },
 });

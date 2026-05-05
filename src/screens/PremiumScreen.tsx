@@ -6,26 +6,25 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { purchasePackage, restorePurchases, openManageSubscriptions, PRODUCT_IDS } from '../services/purchaseService';
-import { Alert } from 'react-native';
 
-const FEATURES_FREE = [
-  '1 notizia al giorno',
-  'Archivio ultimi 7 giorni',
-  'Punti e livelli',
+// Teaser cards per la sezione FOMO — hardcoded, non vengono da Firestore
+const FOMO_TOP_ODD = [
+  { emoji: '🧠', title: 'Neurologo abbandona carriera per diventare spiaggia umana in Sardegna', country: '🇮🇹 Italia' },
+  { emoji: '🐊', title: 'Coccodrillo di 4 metri arrestato dalla polizia thailandese per disturbo della quiete', country: '🇹🇭 Tailandia' },
+  { emoji: '💸', title: 'Uomo trova 2 milioni in contanti in un divano comprato su Facebook Marketplace', country: '🇺🇸 USA' },
 ];
-
-const FEATURES_PREMIUM = [
-  'Fino a 10 notizie al giorno',
-  'Archivio illimitato',
-  'Filtra le notizie per categoria, paese o fonte',
-  'Notizie disponibili 2 ore prima degli utenti gratuiti',
-  'Nessuna pubblicità futura',
-  'Badge Premium nel profilo',
+const FOMO_TOP_ODD_EN = [
+  { emoji: '🧠', title: 'Neurologist quits career to become "human beach" in Sardinia', country: '🇮🇹 Italy' },
+  { emoji: '🐊', title: '4-metre crocodile arrested by Thai police for disturbing the peace', country: '🇹🇭 Thailand' },
+  { emoji: '💸', title: 'Man finds $2 million in cash inside a sofa bought on Facebook Marketplace', country: '🇺🇸 USA' },
 ];
+const FOMO_FORBIDDEN_IT = { emoji: '🚫', title: 'Non dovresti leggerla. Ma tutti vogliono.' };
+const FOMO_FORBIDDEN_EN = { emoji: '🚫', title: "You shouldn't read this. But everyone wants to." };
 
 interface PremiumScreenProps {
   isPremium: boolean;
@@ -34,8 +33,11 @@ interface PremiumScreenProps {
 }
 
 export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: PremiumScreenProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [selected, setSelected] = useState<'monthly' | 'yearly'>('yearly');
+
+  const fomoCards = language === 'it' ? FOMO_TOP_ODD : FOMO_TOP_ODD_EN;
+  const fomoForbidden = language === 'it' ? FOMO_FORBIDDEN_IT : FOMO_FORBIDDEN_EN;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -47,69 +49,131 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
 
         {/* Hero */}
         <View style={styles.hero}>
-          {isPremium && <Text style={styles.heroEmoji}>👑</Text>}
-          <Text style={styles.heroTitle}>
-            {isPremium ? t.premium.heroTitleActive : t.premium.heroTitle}
-          </Text>
-          <Text style={styles.heroSub}>
-            {isPremium ? t.premium.heroSubActive : t.premium.heroSub}
-          </Text>
-          {isPremium && (
-            <TouchableOpacity style={styles.activeTag}>
-              <Text style={styles.activeTagText}>{t.premium.activeTag}</Text>
-            </TouchableOpacity>
+          {isPremium ? (
+            <>
+              <Text style={styles.heroEmoji}>👑</Text>
+              <Text style={styles.heroTitle}>{t.premium.heroTitleActive}</Text>
+              <Text style={styles.heroSub}>{t.premium.heroSubActive}</Text>
+              <View style={styles.activeTag}>
+                <Text style={styles.activeTagText}>{t.premium.activeTag}</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.heroTitle}>{t.premium.heroTitle}</Text>
+              <Text style={styles.heroSub}>{t.premium.heroSub}</Text>
+            </>
           )}
         </View>
 
-        {/* Piani */}
-        <View style={styles.plansRow}>
-          <TouchableOpacity
-            style={[styles.planCard, selected === 'monthly' && styles.planCardActive]}
-            onPress={() => setSelected('monthly')}
-          >
-            <Text style={[styles.planName, selected === 'monthly' && styles.planNameActive]}>
-              {t.premium.monthly}
-            </Text>
-            <Text style={[styles.planPrice, selected === 'monthly' && styles.planPriceActive]}>
-              1,99 €
-            </Text>
-            <Text style={[styles.planPeriod, selected === 'monthly' && styles.planPeriodActive]}>
-              {t.premium.perMonth}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.planCard, selected === 'yearly' && styles.planCardActive]}
-            onPress={() => setSelected('yearly')}
-          >
-            <View style={styles.bestValueBadge}>
-              <Text style={styles.bestValueText}>{t.premium.bestOffer}</Text>
+        {/* ─── SEZIONE FOMO (solo per free) ─── */}
+        {!isPremium && (
+          <View style={styles.fomoSection}>
+            {/* Top Odd News teaser */}
+            <View style={styles.fomoHeader}>
+              <Text style={styles.fomoSectionLabel}>🔥 TOP ODD NEWS</Text>
+              <View style={styles.fomoLockBadge}>
+                <Text style={styles.fomoLockBadgeText}>Solo Premium</Text>
+              </View>
             </View>
-            <Text style={[styles.planName, selected === 'yearly' && styles.planNameActive]}>
-              {t.premium.yearly}
+            <Text style={styles.fomoSectionSub}>
+              {language === 'it'
+                ? 'Le 3 storie più assurde del giorno. Bloccate.'
+                : 'The 3 most absurd stories of the day. Locked.'}
             </Text>
-            <Text style={[styles.planPrice, selected === 'yearly' && styles.planPriceActive]}>
-              14,99 €
-            </Text>
-            <Text style={[styles.planPeriod, selected === 'yearly' && styles.planPeriodActive]}>
-              {t.premium.perYear}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* CTA */}
-        {isPremium ? (
-          <TouchableOpacity
-            style={styles.ctaBtnCancel}
-            onPress={async () => {
-              await openManageSubscriptions();
-              onDowngrade();
-            }}
-          >
-            <Text style={styles.ctaBtnCancelText}>{t.premium.cancelSubscription}</Text>
-          </TouchableOpacity>
-        ) : (
+            {fomoCards.map((card, i) => (
+              <View key={i} style={styles.fomoCard}>
+                <View style={styles.fomoCardLeft}>
+                  <Text style={styles.fomoCardEmoji}>{card.emoji}</Text>
+                </View>
+                <View style={styles.fomoCardBody}>
+                  <Text style={styles.fomoCardCountry}>{card.country}</Text>
+                  <Text style={styles.fomoCardTitle} numberOfLines={2}>{card.title}</Text>
+                </View>
+                <View style={styles.fomoCardLock}>
+                  <Text style={styles.fomoCardLockIcon}>🔒</Text>
+                </View>
+              </View>
+            ))}
+
+            {/* Non dovresti leggerla teaser */}
+            <View style={[styles.fomoHeader, { marginTop: Spacing.lg }]}>
+              <Text style={styles.fomoSectionLabel}>🚫 NON DOVRESTI LEGGERLA</Text>
+              <View style={[styles.fomoLockBadge, styles.fomoLockBadgeDark]}>
+                <Text style={styles.fomoLockBadgeText}>Solo Premium</Text>
+              </View>
+            </View>
+            <Text style={styles.fomoSectionSub}>
+              {language === 'it'
+                ? 'Contenuti al limite. Quelli che non tutti hanno il coraggio di pubblicare.'
+                : 'Edge content. The kind most publishers don\'t dare to run.'}
+            </Text>
+
+            <View style={[styles.fomoCard, styles.fomoForbiddenCard]}>
+              <View style={[styles.fomoCardLeft, styles.fomoForbiddenLeft]}>
+                <Text style={styles.fomoCardEmoji}>{fomoForbidden.emoji}</Text>
+              </View>
+              <View style={styles.fomoCardBody}>
+                <Text style={[styles.fomoCardCountry, { color: '#a78bfa' }]}>
+                  {language === 'it' ? '🌍 Esclusiva Premium' : '🌍 Premium Exclusive'}
+                </Text>
+                <Text style={[styles.fomoCardTitle, { color: '#1e1b4b' }]} numberOfLines={2}>
+                  {fomoForbidden.title}
+                </Text>
+              </View>
+              <View style={styles.fomoCardLock}>
+                <Text style={styles.fomoCardLockIcon}>🔒</Text>
+              </View>
+            </View>
+
+            <Text style={styles.fomoHint}>
+              {language === 'it'
+                ? '↑ Ogni giorno ci sono nuove storie come queste. Solo per te.'
+                : '↑ Every day there are new stories like these. Just for you.'}
+            </Text>
+          </View>
+        )}
+
+        {/* ─── PIANI PRICING ─── */}
+        {!isPremium && (
           <>
+            <View style={styles.plansRow}>
+              <TouchableOpacity
+                style={[styles.planCard, selected === 'monthly' && styles.planCardActive]}
+                onPress={() => setSelected('monthly')}
+              >
+                <Text style={[styles.planName, selected === 'monthly' && styles.planNameActive]}>
+                  {t.premium.monthly}
+                </Text>
+                <Text style={[styles.planPrice, selected === 'monthly' && styles.planPriceActive]}>
+                  1,99 €
+                </Text>
+                <Text style={[styles.planPeriod, selected === 'monthly' && styles.planPeriodActive]}>
+                  {t.premium.perMonth}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.planCard, selected === 'yearly' && styles.planCardActive]}
+                onPress={() => setSelected('yearly')}
+              >
+                <View style={styles.bestValueBadge}>
+                  <Text style={styles.bestValueText}>{t.premium.bestOffer}</Text>
+                </View>
+                <Text style={[styles.planName, selected === 'yearly' && styles.planNameActive]}>
+                  {t.premium.yearly}
+                </Text>
+                <Text style={[styles.planPrice, selected === 'yearly' && styles.planPriceActive]}>
+                  14,99 €
+                </Text>
+                <Text style={[styles.planPeriod, selected === 'yearly' && styles.planPeriodActive]}>
+                  {t.premium.perYear}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* CTA */}
             <TouchableOpacity
               style={styles.ctaBtn}
               onPress={async () => {
@@ -129,10 +193,28 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
               </Text>
             </TouchableOpacity>
             <Text style={styles.ctaNote}>{t.premium.noCommitment}</Text>
+            <Text style={styles.coffeeHint}>
+              {language === 'it'
+                ? 'Meno di un caffè al mese. Le storie più assurde del mondo, ogni giorno.'
+                : 'Less than a coffee a month. The world\'s most absurd stories, every day.'}
+            </Text>
           </>
         )}
 
-        {/* Confronto */}
+        {/* Cancel per Premium */}
+        {isPremium && (
+          <TouchableOpacity
+            style={styles.ctaBtnCancel}
+            onPress={async () => {
+              await openManageSubscriptions();
+              onDowngrade();
+            }}
+          >
+            <Text style={styles.ctaBtnCancelText}>{t.premium.cancelSubscription}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ─── COSA OTTIENI ─── */}
         <Text style={styles.sectionTitle}>{t.premium.whatsIncluded}</Text>
 
         <View style={styles.compareBlock}>
@@ -148,7 +230,7 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
         <View style={[styles.compareBlock, styles.compareBlockPremium]}>
           <Text style={styles.compareHeaderPremium}>⭐ Premium</Text>
           {t.premium.featuresPremium.map((f, i) => (
-            <View key={i} style={[styles.featureRow, i > 0 && styles.featureBorder]}>
+            <View key={i} style={[styles.featureRow, i > 0 && styles.featureBorderPremium]}>
               <Text style={styles.featureCheckPremium}>✓</Text>
               <Text style={styles.featureTextPremium}>{f}</Text>
             </View>
@@ -157,7 +239,34 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
 
         <Text style={styles.legalNote}>{t.premium.legalNote}</Text>
 
-        <View style={{ height: 32 }} />
+        {/* Restore */}
+        {!isPremium && (
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={async () => {
+              try {
+                const restored = await restorePurchases();
+                if (restored) {
+                  onUpgrade();
+                  Alert.alert('✓', language === 'it' ? 'Abbonamento ripristinato!' : 'Subscription restored!');
+                } else {
+                  Alert.alert(
+                    language === 'it' ? 'Nessun abbonamento trovato' : 'No subscription found',
+                    language === 'it' ? 'Non abbiamo trovato abbonamenti attivi per questo account.' : 'We didn\'t find any active subscriptions for this account.',
+                  );
+                }
+              } catch (e: any) {
+                Alert.alert(language === 'it' ? 'Errore' : 'Error', e?.message ?? 'Riprova');
+              }
+            }}
+          >
+            <Text style={styles.restoreBtnText}>
+              {language === 'it' ? 'Ripristina acquisti' : 'Restore purchases'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -181,16 +290,19 @@ const styles = StyleSheet.create({
   // Hero
   hero: {
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
   },
   heroEmoji: { fontSize: 40 },
   heroTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: Colors.text,
     textAlign: 'center',
+    lineHeight: 30,
+    letterSpacing: -0.3,
   },
   heroSub: {
     fontSize: FontSize.base,
@@ -198,8 +310,118 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  activeTag: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 5,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: Radius.full,
+  },
+  activeTagText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
 
-  // Piani
+  // ─── FOMO ───
+  fomoSection: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  fomoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: 4,
+  },
+  fomoSectionLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: 0.3,
+  },
+  fomoLockBadge: {
+    backgroundColor: '#6366F1',
+    borderRadius: Radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  fomoLockBadgeDark: {
+    backgroundColor: '#1e1b4b',
+  },
+  fomoLockBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  fomoSectionSub: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    marginBottom: Spacing.sm,
+    lineHeight: 18,
+  },
+  fomoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.bg2,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  fomoForbiddenCard: {
+    backgroundColor: '#f5f3ff',
+    borderColor: '#ddd6fe',
+  },
+  fomoCardLeft: {
+    width: 52,
+    height: 52,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fomoForbiddenLeft: {
+    backgroundColor: '#ede9fe',
+  },
+  fomoCardEmoji: { fontSize: 22 },
+  fomoCardBody: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  fomoCardCountry: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
+  },
+  fomoCardTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.text,
+    lineHeight: 18,
+  },
+  fomoCardLock: {
+    paddingRight: 12,
+  },
+  fomoCardLockIcon: { fontSize: 16 },
+  fomoHint: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+
+  // ─── PIANI ───
   plansRow: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -208,7 +430,7 @@ const styles = StyleSheet.create({
   },
   planCard: {
     flex: 1,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     borderRadius: Radius.lg,
     borderWidth: 2,
     borderColor: Colors.border,
@@ -238,6 +460,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textTertiary,
     textAlign: 'center',
+    lineHeight: 14,
   },
   planPeriodActive: { color: '#6366F1' },
   bestValueBadge: {
@@ -253,114 +476,43 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  activeTag: {
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 5,
-    backgroundColor: '#EEF2FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: Radius.full,
-  },
-  activeTagText: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: '#6366F1',
-  },
-  // CTA
+  // ─── CTA ───
   ctaBtn: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingVertical: 16,
     borderRadius: Radius.md,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#4f46e5',
     alignItems: 'center',
+    shadowColor: '#4f46e5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   ctaBtnText: {
     fontSize: FontSize.base,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#fff',
+    letterSpacing: 0.2,
   },
   ctaNote: {
     textAlign: 'center',
     fontSize: FontSize.sm,
     color: Colors.textTertiary,
-    marginTop: Spacing.sm,
+    marginTop: 8,
   },
-
-  // Confronto
-  sectionTitle: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.sm,
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-    color: '#6366F1',
-  },
-  compareBlock: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.bg2,
-  },
-  compareBlockPremium: {
-    backgroundColor: '#FFFCF0',
-    borderColor: '#F0D98A',
-    borderWidth: 1,
-  },
-  compareHeader: {
-    fontSize: FontSize.sm,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingVertical: Spacing.md,
-  },
-  compareHeaderPremium: {
-    fontSize: FontSize.sm,
-    fontWeight: '700',
-    color: Colors.text,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingVertical: Spacing.md,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.md,
-  },
-  featureBorder: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  featureCheck: {
-    fontSize: FontSize.base,
+  coffeeHint: {
+    textAlign: 'center',
+    fontSize: FontSize.xs,
     color: Colors.textTertiary,
-    fontWeight: '700',
-    width: 20,
-  },
-  featureCheckPremium: {
-    fontSize: FontSize.base,
-    color: '#6366F1',
-    fontWeight: '700',
-    width: 20,
-  },
-  featureText: {
-    fontSize: FontSize.base,
-    color: Colors.textSecondary,
-    flex: 1,
-  },
-  featureTextPremium: {
-    fontSize: FontSize.base,
-    color: Colors.text,
-    flex: 1,
+    marginTop: 4,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    lineHeight: 16,
   },
 
-  // Note legali
+  // ─── GESTIONE / CANCEL ───
   ctaBtnCancel: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
@@ -376,6 +528,88 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.red,
   },
+
+  // ─── SEZIONE CONFRONTO ───
+  sectionTitle: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.sm,
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  compareBlock: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.bg2,
+  },
+  compareBlockPremium: {
+    backgroundColor: '#f5f3ff',
+    borderColor: '#ddd6fe',
+    borderWidth: 1.5,
+  },
+  compareHeader: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingVertical: Spacing.md,
+  },
+  compareHeaderPremium: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: '#4f46e5',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingVertical: Spacing.md,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  featureBorder: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  featureBorderPremium: {
+    borderTopWidth: 1,
+    borderTopColor: '#ede9fe',
+  },
+  featureCheck: {
+    fontSize: FontSize.base,
+    color: Colors.textTertiary,
+    fontWeight: '700',
+    width: 20,
+    marginTop: 1,
+  },
+  featureCheckPremium: {
+    fontSize: FontSize.base,
+    color: '#6366F1',
+    fontWeight: '700',
+    width: 20,
+    marginTop: 1,
+  },
+  featureText: {
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    flex: 1,
+    lineHeight: 22,
+  },
+  featureTextPremium: {
+    fontSize: FontSize.base,
+    color: Colors.text,
+    flex: 1,
+    lineHeight: 22,
+  },
+
+  // Legal & Restore
   legalNote: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
@@ -383,5 +617,15 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  restoreBtn: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    marginTop: 4,
+  },
+  restoreBtnText: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    textDecorationLine: 'underline',
   },
 });

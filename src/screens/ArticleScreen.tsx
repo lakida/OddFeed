@@ -29,18 +29,22 @@ interface ArticleScreenProps {
   userId: string;
   userStats: UserStats;
   isPremium: boolean;
+  /** Sblocco gratuito one-time per regalo onboarding */
+  oneTimeFreeAccess?: boolean;
+  onUseFreeAccess?: () => void;
   onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
   onUpgradePremium?: () => void;
 }
 
 
-export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange, isPremium, onUpgradePremium }: ArticleScreenProps) {
+export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange, isPremium, oneTimeFreeAccess, onUseFreeAccess, onUpgradePremium }: ArticleScreenProps) {
   const { t } = useTranslation();
   const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
 
   // Paywall: articolo premium e utente non abbonato
-  const showPaywall = (article.isPremium ?? false) && !isPremium;
+  // Bypass: oneTimeFreeAccess = regalo onboarding (una volta sola)
+  const showPaywall = (article.isPremium ?? false) && !isPremium && !oneTimeFreeAccess;
 
   // Contatore social proof: viewSeed + incremento basato sull'ora del giorno
   const viewCount = useMemo(() => {
@@ -96,6 +100,8 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
 
   useEffect(() => {
     if (userId) onPointsChange('read', article.id);
+    // Consuma il free unlock one-time se attivo
+    if (oneTimeFreeAccess && onUseFreeAccess) onUseFreeAccess();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article.id, userId]);
 

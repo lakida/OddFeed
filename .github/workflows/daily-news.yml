@@ -1,20 +1,24 @@
 name: OddFeed — Notizie del giorno
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Genera le notizie quotidiane di OddFeed:
-#   1. Recupera da Guardian API le notizie più curiose/strane
-#   2. Le riscrive in IT+EN con GPT-4o mini
-#   3. Salva tutto su Firestore
-#   4. Invia notifiche push personalizzate agli utenti
+# Genera le notizie quotidiane di OddFeed e invia le notifiche push.
 #
-# Gira automaticamente ogni mattina alle 7:00 (ora italiana).
+# Tre esecuzioni giornaliere:
+#   07:30 CEST (05:30 UTC) — Colazione: genera notizie + notifiche mattina
+#   13:00 CEST (11:00 UTC) — Pranzo: notifiche solo per utenti slot Pranzo + Premium
+#   20:00 CEST (18:00 UTC) — Cena: notifiche per slot Pomeriggio/Cena + Premium
+#
 # Si può anche avviare manualmente dal tab "Actions" su GitHub.
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
   schedule:
-    # 05:30 UTC = 06:30 CET (inverno) / 07:30 CEST (estate) — fascia Colazione
+    # 05:30 UTC = 07:30 CEST — fascia Colazione (genera articoli + notifica mattina)
     - cron: '30 5 * * *'
+    # 11:00 UTC = 13:00 CEST — fascia Pranzo (solo notifiche)
+    - cron: '0 11 * * *'
+    # 18:00 UTC = 20:00 CEST — fascia Cena (solo notifiche)
+    - cron: '0 18 * * *'
 
   # Avvio manuale: utile per testare o per rigenerare le notizie di un giorno
   workflow_dispatch:
@@ -31,51 +35,131 @@ on:
         description: 'Data da rigenerare in formato YYYY-MM-DD (vuoto = oggi)'
         required: false
         default: ''
+      slot:
+        description: 'Fascia notifiche (morning/lunch/evening). Vuoto = morning.'
+        required: false
+        default: 'morning'
+        type: choice
+        options:
+          - 'morning'
+          - 'lunch'
+          - 'evening'
+      notify_only:
+        description: 'Solo notifiche, senza rigenerare gli articoli'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
-  fetch-and-publish:
-    name: Genera e pubblica le notizie
+  # ── Job mattina: genera articoli + notifiche Colazione ──────────────────────
+  morning-news:
+    name: Genera notizie + Notifiche Colazione
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 5 * * *'
 
     steps:
-      # ── 1. Checkout ────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Node.js ─────────────────────────────────────────────────────────
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # ── 3. Dipendenze dello script ─────────────────────────────────────────
       - name: Installa dipendenze
         working-directory: scripts
         run: npm install
 
-      # ── 4. Genera le notizie ───────────────────────────────────────────────
       - name: Genera notizie del giorno
         working-directory: scripts
         env:
           GUARDIAN_KEY: ${{ secrets.GUARDIAN_KEY }}
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-          # Il service account viene passato come stringa JSON
-          # (mai salvare il file firebase-service-account.json nel repo)
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
-          ARGS=""
+          ARGS="--slot=morning"
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
             ARGS="$ARGS --force"
           fi
           if [ -n "${{ github.event.inputs.date }}" ]; then
             ARGS="$ARGS --date=${{ github.event.inputs.date }}"
           fi
+          if [ "${{ github.event.inputs.notify_only }}" = "true" ]; then
+            ARGS="$ARGS --notify-only"
+          fi
+          if [ -n "${{ github.event.inputs.slot }}" ] && [ "${{ github.event.inputs.slot }}" != "morning" ]; then
+            ARGS="--slot=${{ github.event.inputs.slot }} --notify-only"
+          fi
           node fetch-news.js $ARGS
 
-      # ── 5. Notifica in caso di errore ──────────────────────────────────────
       - name: Notifica fallimento
         if: failure()
         run: |
-          echo "::error::La generazione delle notizie è fallita. Controlla i log qui sopra."
+          echo "::error::Generazione notizie mattina fallita. Controlla i log."
           echo "Il workflow ha fallito il $(date '+%Y-%m-%d') alle $(date '+%H:%M') UTC"
+
+  # ── Job pranzo: notifiche fascia Pranzo ─────────────────────────────────────
+  lunch-notifications:
+    name: Notifiche Pranzo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.schedule == '0 11 * * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installa dipendenze
+        working-directory: scripts
+        run: npm install
+
+      - name: Invia notifiche pranzo
+        working-directory: scripts
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node fetch-news.js --notify-only --slot=lunch
+
+      - name: Notifica fallimento
+        if: failure()
+        run: echo "::error::Notifiche pranzo fallite."
+
+  # ── Job cena: notifiche fascia Cena/Pomeriggio ──────────────────────────────
+  evening-notifications:
+    name: Notifiche Cena
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.schedule == '0 18 * * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installa dipendenze
+        working-directory: scripts
+        run: npm install
+
+      - name: Invia notifiche cena
+        working-directory: scripts
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node fetch-news.js --notify-only --slot=evening
+
+      - name: Notifica fallimento
+        if: failure()
+        run: echo "::error::Notifiche cena fallite."

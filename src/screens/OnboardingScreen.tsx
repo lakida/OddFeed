@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { auth, db } from '../config/firebase';
@@ -16,7 +17,7 @@ interface OnboardingScreenProps {
   onComplete: (interests: Category[], slot: string) => void;
 }
 
-const STEPS = ['benvenuto', 'interessi', 'notifiche', 'pronto'] as const;
+const STEPS = ['benvenuto', 'interessi', 'notifiche', 'pronto', 'sblocco'] as const;
 type Step = typeof STEPS[number];
 
 export default function OnboardingScreen({
@@ -237,18 +238,87 @@ export default function OnboardingScreen({
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={async () => {
+              // Salva le preferenze su Firestore
               const user = auth.currentUser;
               if (user) {
                 await setDoc(doc(db, 'users', user.uid), {
-                  interests,           // Array di Category IDs
+                  interests,
                   notificationSlot: slot,
                   onboardingDone: true,
                 }, { merge: true });
               }
-              onComplete(interests, slot);
+              // Mostra la schermata di sblocco regalo prima di entrare nell'app
+              setStep('sblocco');
             }}
           >
             <Text style={styles.primaryBtnText}>{ob.readyBtn}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Step: Sblocco regalo — "Te ne sblocco una. Ma solo questa volta." */}
+      {step === 'sblocco' && (
+        <View style={styles.stepContainer}>
+          <Text style={styles.sbloccoBadge}>
+            {language === 'it' ? '🎁 Regalo di benvenuto' : '🎁 Welcome gift'}
+          </Text>
+          <Text style={styles.sbloccoTitle}>
+            {language === 'it'
+              ? 'Te ne sblocco una.\nMa solo questa volta.'
+              : 'I\'ll unlock one for you.\nJust this once.'}
+          </Text>
+          <Text style={styles.sbloccoSub}>
+            {language === 'it'
+              ? 'Tra le notizie di oggi c\'è un articolo che normalmente è riservato agli abbonati Premium. È tuo, gratis, una volta sola.'
+              : 'Among today\'s stories there\'s one normally reserved for Premium subscribers. It\'s yours, free, one time only.'}
+          </Text>
+
+          {/* Preview card bloccata */}
+          <View style={styles.sbloccoCard}>
+            <View style={styles.sbloccoCardTop}>
+              <Text style={styles.sbloccoCardEmoji}>🚫</Text>
+              <View style={styles.sbloccoCardBadge}>
+                <Text style={styles.sbloccoCardBadgeText}>
+                  {language === 'it' ? 'Non dovresti leggerla' : 'You shouldn\'t read this'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.sbloccoCardTitle}>
+              {language === 'it'
+                ? 'Una storia che nessuno ha il coraggio di pubblicare.'
+                : 'A story no one has the courage to publish.'}
+            </Text>
+            <View style={styles.sbloccoUnlockRow}>
+              <Text style={styles.sbloccoUnlockIcon}>🔓</Text>
+              <Text style={styles.sbloccoUnlockText}>
+                {language === 'it' ? 'Sbloccata per te' : 'Unlocked for you'}
+              </Text>
+            </View>
+          </View>
+
+          {/* CTA principale */}
+          <TouchableOpacity
+            style={styles.sbloccoCta}
+            onPress={async () => {
+              // Setta il flag: l'utente ha diritto a 1 articolo forbidden gratuito
+              await AsyncStorage.setItem('oddFeedFreeUnlock', 'true');
+              onComplete(interests, slot);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.sbloccoCtaText}>
+              {language === 'it' ? '✦ Mostrami l\'articolo →' : '✦ Show me the article →'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Skip */}
+          <TouchableOpacity
+            style={styles.sbloccoSkip}
+            onPress={() => onComplete(interests, slot)}
+          >
+            <Text style={styles.sbloccoSkipText}>
+              {language === 'it' ? 'Inizia a leggere senza regalo' : 'Start reading without the gift'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -415,4 +485,100 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.35 },
   primaryBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },
+
+  // ─── Sblocco regalo ───
+  sbloccoBadge: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: '#6366F1',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
+  },
+  sbloccoTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.text,
+    lineHeight: 34,
+    marginBottom: Spacing.md,
+    letterSpacing: -0.3,
+  },
+  sbloccoSub: {
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  sbloccoCard: {
+    backgroundColor: '#f5f3ff',
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: '#c4b5fd',
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  sbloccoCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  sbloccoCardEmoji: { fontSize: 24 },
+  sbloccoCardBadge: {
+    backgroundColor: '#1e1b4b',
+    borderRadius: Radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  sbloccoCardBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#a5b4fc',
+    letterSpacing: 0.2,
+  },
+  sbloccoCardTitle: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: '#1e1b4b',
+    lineHeight: 22,
+  },
+  sbloccoUnlockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  sbloccoUnlockIcon: { fontSize: 14 },
+  sbloccoUnlockText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  sbloccoCta: {
+    backgroundColor: '#4f46e5',
+    borderRadius: Radius.md,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#4f46e5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  sbloccoCtaText: {
+    fontSize: FontSize.base,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  sbloccoSkip: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  sbloccoSkipText: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    textDecorationLine: 'underline',
+  },
 });

@@ -738,6 +738,26 @@ async function main() {
     ? dateArg.replace('--date=', '')
     : new Date().toISOString().split('T')[0];
 
+  // Supporta --notify-only per inviare solo notifiche senza rigenerare articoli
+  // Supporta --slot=morning|lunch|evening per specificare la fascia oraria
+  const notifyOnly = process.argv.includes('--notify-only');
+  const slotArg = process.argv.find(a => a.startsWith('--slot='));
+  const currentSlot = slotArg ? slotArg.replace('--slot=', '') : 'morning'; // morning|lunch|evening
+
+  if (notifyOnly) {
+    console.log(`🔔 Modalità notifiche-only — fascia: ${currentSlot}`);
+    const snap = await db.collection('articles').where('date', '==', today).get();
+    if (snap.empty) {
+      console.log('   ℹ️  Nessun articolo per oggi — notifiche non inviate.');
+      process.exit(0);
+    }
+    const articles = snap.docs
+      .filter(d => (d.data().articleType ?? 'bizarre') !== 'current')
+      .map(d => ({ id: d.id, ...d.data() }));
+    await sendPersonalizedNotifications(articles, currentSlot);
+    process.exit(0);
+  }
+
   console.log(`📅 Data target: ${today}\n`);
 
   // Controlla se le notizie di oggi esistono già
@@ -753,7 +773,7 @@ async function main() {
       const existingArticles = existing.docs
         .filter(d => (d.data().articleType ?? 'bizarre') !== 'current')
         .map(d => ({ id: d.id, ...d.data() }));
-      await sendPersonalizedNotifications(existingArticles);
+      await sendPersonalizedNotifications(existingArticles, 'morning');
       process.exit(0);
     }
     // --force: cancella prima le notizie esistenti per oggi
@@ -907,9 +927,9 @@ async function main() {
   // Genera gli articoli "Non dovresti leggerla" dal pool già scaricato
   await fetchAndSaveForbiddenNews(today, db, selected);
 
-  // Invia notifica push personalizzata per categoria
-  console.log('\n🔔 Invio notifiche push personalizzate...');
-  await sendPersonalizedNotifications(savedArticles);
+  // Invia notifica push personalizzata per categoria (fascia mattina)
+  console.log('\n🔔 Invio notifiche push personalizzate (fascia Colazione)...');
+  await sendPersonalizedNotifications(savedArticles, 'morning');
   console.log('   L\'app mostrerà automaticamente i nuovi contenuti.');
 
   // Chiude esplicitamente il processo: Firebase Admin SDK tiene aperte le connessioni
@@ -918,9 +938,38 @@ async function main() {
 }
 
 // ─── Notifiche personalizzate per categoria ───────────────────────
-// Per ogni utente, invia la notizia più rilevante in base ai suoi interessi
+// Per ogni utente, invia la notizia più rilevante in base ai suoi interessi.
+//
+// slot: 'morning' | 'lunch' | 'evening'
+//   morning  → utenti con fascia "Colazione" / "Breakfast" + utenti Premium (1a notifica)
+//   lunch    → utenti con fascia "Pranzo" / "Lunch" + utenti Premium (2a notifica)
+//   evening  → utenti con fascia "Pomeriggio" / "Afternoon" / "Cena" / "Dinner" + Premium (3a)
+//
+// Free:    1 notifica/giorno nella loro fascia scelta. Tracking: lastNotifDate (per slot)
+// Premium: fino a 3 notifiche/giorno. Tracking: lastNotifMorning, lastNotifLunch, lastNotifEvening
 
-async function sendPersonalizedNotifications(articles) {
+// Mappa slot → label fascia utente (IT + EN)
+const SLOT_LABELS = {
+  morning: ['Colazione', 'Breakfast'],
+  lunch:   ['Pranzo', 'Lunch'],
+  evening: ['Pomeriggio', 'Afternoon', 'Cena', 'Dinner'],
+};
+
+// Campo Firestore aggiornato dopo l'invio per ogni slot
+const SLOT_FIELD = {
+  morning: 'lastNotifMorning',
+  lunch:   'lastNotifLunch',
+  evening: 'lastNotifEvening',
+};
+
+// Indice articolo da usare per slot (premium riceve articoli diversi in ogni fascia)
+const SLOT_ARTICLE_INDEX = {
+  morning: 0,
+  lunch:   1,
+  evening: 2,
+};
+
+async function sendPersonalizedNotifications(articles, slot = 'morning') {
   const usersSnap = await db.collection('users')
     .where('notificationsEnabled', '==', true)
     .get();
@@ -932,29 +981,43 @@ async function sendPersonalizedNotifications(articles) {
 
   const today = new Date().toISOString().split('T')[0];
   const messages = [];
+  const slotLabels = SLOT_LABELS[slot] ?? SLOT_LABELS.morning;
+  const slotField  = SLOT_FIELD[slot]  ?? SLOT_FIELD.morning;
+  const articleIdx = SLOT_ARTICLE_INDEX[slot] ?? 0;
 
   for (const userDoc of usersSnap.docs) {
     const user = userDoc.data();
     if (!user.expoPushToken) continue;
 
-    // Controlla se ha già ricevuto una notifica oggi
-    if (user.lastNotifDate === today) continue;
-
     const isPremium = user.isPremium ?? false;
-    const interests = user.interests ?? []; // es. ['animali', 'tecnologia']
     const prefs = user.notificationPrefs ?? {};
     if (prefs.enabled === false) continue;
 
-    // Trova l'articolo più rilevante per questo utente
-    const relevantArticle = findBestArticleForUser(articles, interests, isPremium);
+    const interests = user.interests ?? [];
+    const userSlot  = user.notificationSlot ?? 'Colazione'; // stringa salvata
+
+    if (isPremium) {
+      // Premium: notifica ad ogni fascia, purché non già ricevuta oggi per questo slot
+      if (user[slotField] === today) continue;
+    } else {
+      // Free: notifica solo nella fascia scelta, una volta al giorno
+      if (!slotLabels.includes(userSlot)) continue;
+      if (user.lastNotifDate === today) continue;
+    }
+
+    // Seleziona l'articolo: premium riceve quello al suo indice-slot, free il migliore
+    const relevantArticle = isPremium
+      ? findBestArticleForUser(articles, interests, true, articleIdx)
+      : findBestArticleForUser(articles, interests, false, 0);
     if (!relevantArticle) continue;
 
-    // Costruisci il testo della notifica
     const { title, body } = buildNotifText(relevantArticle, isPremium);
 
     messages.push({
       token: user.expoPushToken,
       userId: userDoc.id,
+      isPremium,
+      slotField,
       message: {
         to: user.expoPushToken,
         title,
@@ -977,7 +1040,7 @@ async function sendPersonalizedNotifications(articles) {
     return;
   }
 
-  console.log(`   Invio a ${messages.length} utenti...`);
+  console.log(`   Invio a ${messages.length} utenti (slot: ${slot})...`);
 
   // Invia in batch da 100 (limite Expo)
   const chunks = [];
@@ -996,30 +1059,37 @@ async function sendPersonalizedNotifications(articles) {
     const errors = (result.data ?? []).filter(r => r.status === 'error');
     console.log(`   ✓ ${chunk.length - errors.length} inviate, ⚠️ ${errors.length} fallite`);
 
-    // Aggiorna lastNotifDate per ogni utente notificato con successo
+    // Aggiorna il campo notif appropriato per ogni utente notificato
     const batchUpdate = db.batch();
-    chunk.forEach(({ userId }) => {
-      batchUpdate.update(db.collection('users').doc(userId), { lastNotifDate: today });
+    chunk.forEach(({ userId, isPremium: userIsPremium, slotField: sf }) => {
+      const update = userIsPremium
+        ? { [sf]: today }               // Premium: traccia per slot
+        : { lastNotifDate: today };      // Free: traccia per giorno
+      batchUpdate.update(db.collection('users').doc(userId), update);
     });
     await batchUpdate.commit();
   }
 }
 
-// Trova l'articolo migliore per un utente in base ai suoi interessi
-function findBestArticleForUser(articles, interests, isPremium) {
+// Trova l'articolo migliore per un utente in base ai suoi interessi.
+// articleIndex consente ai premium di ricevere articoli diversi in ogni fascia oraria.
+function findBestArticleForUser(articles, interests, isPremium, articleIndex = 0) {
   const accessibleArticles = isPremium
     ? articles
     : articles.filter(a => !a.isPremium);
 
   if (interests.length === 0) {
-    // Nessuna preferenza: ritorna l'articolo con più engagement
-    return accessibleArticles[0] ?? null;
+    // Nessuna preferenza: ritorna l'articolo all'indice richiesto
+    return accessibleArticles[articleIndex] ?? accessibleArticles[0] ?? null;
   }
 
   // Priorità: articoli nelle categorie di interesse
   const interestSet = new Set(interests);
   const relevant = accessibleArticles.filter(a => interestSet.has(a.category));
-  return relevant[0] ?? accessibleArticles[0] ?? null;
+
+  // Per i premium, pesca dall'indice richiesto nella lista rilevante
+  const ranked = [...relevant, ...accessibleArticles.filter(a => !interestSet.has(a.category))];
+  return ranked[articleIndex] ?? ranked[0] ?? null;
 }
 
 // Costruisce titolo e body della notifica

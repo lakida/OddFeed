@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated, Easing, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
@@ -245,6 +246,8 @@ function AppContent() {
   const [isPremium, setIsPremium] = useState(false);
   const [userStats, setUserStats] = useState<UserStats>(EMPTY_STATS);
   const [userInterests, setUserInterests] = useState<string[]>([]);
+  // Sblocco gratuito "Te ne sblocco una" — attivo dopo onboarding se l'utente ha scelto il regalo
+  const [freeUnlockActive, setFreeUnlockActive] = useState(false);
 
   // Flag per intercettare onAuthStateChanged dopo eliminazione account
   const accountJustDeleted = React.useRef(false);
@@ -450,9 +453,14 @@ function AppContent() {
     if (isNew) setAppScreen('EmailVerification');
   };
 
-  const handleOnboardingComplete = (_interests: string[], _slot: string) => {
+  const handleOnboardingComplete = async (_interests: string[], _slot: string) => {
     setAppScreen('Tabs');
     if (currentUser) loadUserStats(currentUser.uid);
+    // Controlla se l'utente ha scelto il regalo di sblocco durante l'onboarding
+    const freeUnlock = await AsyncStorage.getItem('oddFeedFreeUnlock');
+    if (freeUnlock === 'true') {
+      setFreeUnlockActive(true);
+    }
   };
 
   const handleLogout = async () => {
@@ -539,6 +547,7 @@ function AppContent() {
             userName={userName}
             userStats={userStats}
             interests={userInterests}
+            freeUnlockActive={freeUnlockActive}
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Archivio' ? 'flex' : 'none' }}>
@@ -604,6 +613,11 @@ function AppContent() {
             userId={currentUser?.uid ?? ''}
             userStats={userStats}
             isPremium={isPremium}
+            oneTimeFreeAccess={freeUnlockActive && (currentArticle?.isPremium ?? false)}
+            onUseFreeAccess={async () => {
+              setFreeUnlockActive(false);
+              await AsyncStorage.removeItem('oddFeedFreeUnlock');
+            }}
             onPointsChange={handlePointsChange}
             onUpgradePremium={() => setActiveTab('Profilo')}
           />
