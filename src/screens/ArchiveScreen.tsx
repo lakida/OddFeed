@@ -44,12 +44,12 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
     else setLoading(true);
     fetchArchive(language, isPremium, interests, newsLimit)
       .then(news => {
-        setArchiveNews(news.length > 0 ? news : MOCK_NEWS);
+        setArchiveNews(news);
         if (isRefresh) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       })
-      .catch(() => { setArchiveNews(MOCK_NEWS); })
+      .catch(() => { setArchiveNews([]); })
       .finally(() => {
         setLoading(false);
         setRefreshing(false);

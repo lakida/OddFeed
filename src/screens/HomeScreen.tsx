@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -93,9 +93,9 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
       fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
       fetchCurrentNews(language).catch(() => []),
     ]).then(([todayArr, pastArr, currentArr]) => {
-      const today = todayArr.length > 0 ? todayArr : [MOCK_NEWS[0]];
+      const today = todayArr;
       const remaining = Math.max(0, newsLimit - today.length);
-      const past = pastArr.length > 0 ? pastArr.slice(0, remaining) : MOCK_NEWS.slice(1, 1 + remaining);
+      const past = pastArr.slice(0, remaining);
       setTodayNews(today);
       setPastNews(past);
       setCurrentNews(currentArr);
@@ -109,6 +109,23 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   }, [language, isPremium, newsLimit]);
 
   useEffect(() => { loadNews(); }, [loadNews]);
+
+  // Auto-scroll "In primo piano"
+  const currentScrollRef = useRef<ScrollView>(null);
+  const currentIndexRef = useRef(0);
+  const CARD_WIDTH = 210; // card 200 + gap 10
+
+  useEffect(() => {
+    if (currentNews.length < 2) return;
+    const interval = setInterval(() => {
+      currentIndexRef.current = (currentIndexRef.current + 1) % currentNews.length;
+      currentScrollRef.current?.scrollTo({
+        x: currentIndexRef.current * CARD_WIDTH,
+        animated: true,
+      });
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [currentNews]);
 
   // Livello e progresso reali
   const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
@@ -153,9 +170,14 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
             <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>📰 IN PRIMO PIANO</Text>
             <ScrollView
+              ref={currentScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={currentStyles.row}
+              onMomentumScrollEnd={(e) => {
+                const x = e.nativeEvent.contentOffset.x;
+                currentIndexRef.current = Math.round(x / CARD_WIDTH);
+              }}
             >
               {currentNews.map((item) => (
                 <TouchableOpacity
