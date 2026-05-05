@@ -99,9 +99,11 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
       fetchTopOddNews(language).catch(() => []),
       fetchForbiddenNews(language).catch(() => []),
     ]).then(([todayArr, pastArr, currentArr, topOddArr, forbiddenArr]) => {
-      const today = todayArr;
+      // Deduplicazione: rimuovi da today/past gli articoli già presenti in topOdd
+      const topOddIds = new Set(topOddArr.map((n) => n.id));
+      const today = todayArr.filter((n) => !topOddIds.has(n.id));
       const remaining = Math.max(0, newsLimit - today.length);
-      const past = pastArr.slice(0, remaining);
+      const past = pastArr.filter((n) => !topOddIds.has(n.id)).slice(0, remaining);
       setTodayNews(today);
       setPastNews(past);
       setCurrentNews(currentArr);
@@ -176,7 +178,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {/* ── Sezione Attualità ── */}
         {!loading && currentNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>📰 IN PRIMO PIANO</Text>
+            <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>📰 ATTUALITÀ</Text>
             <ScrollView
               ref={currentScrollRef}
               horizontal
@@ -190,16 +192,21 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
               {currentNews.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[currentStyles.card, { backgroundColor: C.bg2, borderColor: C.border }]}
+                  style={[currentStyles.card, currentStyles.cardEditorial, { backgroundColor: C.cardWhite, borderColor: C.border }]}
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[currentStyles.cardCategory, { color: C.violet }]}>
-                    {item.categoryLabel}
+                  <Text style={[currentStyles.cardLabel, { color: C.violet }]}>
+                    📰 {item.categoryLabel}
                   </Text>
-                  <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={3}>
+                  <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={2}>
                     {item.title}
                   </Text>
+                  {!!item.description && (
+                    <Text style={[currentStyles.cardSubtitle, { color: C.textSecondary }]} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                  )}
                   <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
                     {item.source}
                   </Text>
@@ -212,15 +219,8 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {/* ── Top Odd News ── */}
         {!loading && topOddNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <View style={currentStyles.sectionHeaderRow}>
-              <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🔥 TOP ODD NEWS</Text>
-              {!isPremium && (
-                <View style={[currentStyles.sectionBadge, { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
-                  <Text style={[currentStyles.sectionBadgeText, { color: '#dc2626' }]}>Solo Premium</Text>
-                </View>
-              )}
-            </View>
-            <Text style={[currentStyles.sectionSubtitle, { color: C.textTertiary }]}>Le 3 più assurde di oggi. Selezionate per te.</Text>
+            <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🔥 TOP ODD NEWS</Text>
+            <Text style={[currentStyles.sectionSubtitle, { color: C.textTertiary }]}>Le 3 più assurde di oggi.</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -229,29 +229,31 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
               {topOddNews.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[topOddStyles.card, { backgroundColor: C.bg2, borderColor: isPremium ? C.border : '#fecaca' }]}
+                  style={[topOddStyles.card, { backgroundColor: '#fff5f5', borderColor: '#fca5a5' }]}
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
+                  {/* Badge 🔥 sempre visibile */}
                   <View style={topOddStyles.badgeRow}>
                     <View style={topOddStyles.badge}>
                       <Text style={topOddStyles.badgeText}>🔥 TOP</Text>
                     </View>
+                    {/* Lucchetto SOLO per utenti free */}
                     {!isPremium && (
                       <View style={topOddStyles.lockBadge}>
                         <Text style={topOddStyles.lockText}>🔒</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={3}>
+                  <Text style={[currentStyles.cardTitle, { color: '#1a1a2e' }]} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  {!isPremium && (
-                    <Text style={[topOddStyles.paywallHint, { color: '#dc2626' }]}>
-                      Tutti la vedono. Solo alcuni possono leggerla.
+                  {!!item.description && (
+                    <Text style={[currentStyles.cardSubtitle, { color: '#6b7280' }]} numberOfLines={2}>
+                      {item.description}
                     </Text>
                   )}
-                  <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
+                  <Text style={[currentStyles.cardSource, { color: '#9ca3af' }]}>
                     {item.source}
                   </Text>
                 </TouchableOpacity>
@@ -262,21 +264,15 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
 
         {/* ── Non dovresti leggerla ── */}
         {!loading && (forbiddenNews.length > 0 || !isPremium) && (
-          <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <View style={currentStyles.sectionHeaderRow}>
-              <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🚫 NON DOVRESTI LEGGERLA</Text>
-              {!isPremium && (
-                <View style={[currentStyles.sectionBadge, { backgroundColor: '#1e1b4b', borderColor: '#3730a3' }]}>
-                  <Text style={[currentStyles.sectionBadgeText, { color: '#e0e7ff' }]}>💎 Esclusiva</Text>
-                </View>
-              )}
-            </View>
-            <Text style={[currentStyles.sectionSubtitle, { color: C.textTertiary }]}>Le storie che non ti aspetti. Solo per chi ha coraggio.</Text>
+          <View style={[forbiddenStyles.section, { borderBottomColor: C.border }]}>
+            <Text style={forbiddenStyles.sectionTitle}>🚫 NON DOVRESTI LEGGERLA</Text>
+            <Text style={forbiddenStyles.sectionSubtitle}>Le storie che non ti aspetti. Solo per chi ha coraggio.</Text>
 
+            {/* PREMIUM: articoli sempre visibili, nessun lock */}
             {isPremium && forbiddenNews.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={[forbiddenStyles.item, { borderBottomColor: C.border }]}
+                style={forbiddenStyles.itemPremium}
                 onPress={() => onOpenArticle(item.id, item)}
                 activeOpacity={0.75}
               >
@@ -285,21 +281,22 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
                     <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
                   </View>
                 </View>
-                <Text style={[forbiddenStyles.title, { color: C.text }]} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <Text style={[forbiddenStyles.source, { color: C.textTertiary }]}>{item.source}</Text>
+                <Text style={forbiddenStyles.titlePremium} numberOfLines={2}>{item.title}</Text>
+                {!!item.description && (
+                  <Text style={forbiddenStyles.subtitlePremium} numberOfLines={2}>{item.description}</Text>
+                )}
+                <Text style={forbiddenStyles.sourcePremium}>{item.source}</Text>
               </TouchableOpacity>
             ))}
 
+            {/* FREE + regalo onboarding sbloccato */}
             {!isPremium && freeUnlockActive && forbiddenNews.length > 0 && (
-              // Regalo onboarding: mostra il primo articolo forbidden con banner regalo
               <View>
                 <View style={forbiddenStyles.giftBanner}>
                   <Text style={forbiddenStyles.giftBannerText}>🎁 Il tuo articolo regalo è sbloccato!</Text>
                 </View>
                 <TouchableOpacity
-                  style={[forbiddenStyles.item, { borderBottomColor: C.border }]}
+                  style={forbiddenStyles.itemPremium}
                   onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
                   activeOpacity={0.75}
                 >
@@ -308,41 +305,24 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
                       <Text style={forbiddenStyles.badgeText}>🔓 SBLOCCATO PER TE</Text>
                     </View>
                   </View>
-                  <Text style={[forbiddenStyles.title, { color: C.text }]} numberOfLines={2}>
-                    {forbiddenNews[0].title}
-                  </Text>
-                  <Text style={[forbiddenStyles.source, { color: C.textTertiary }]}>{forbiddenNews[0].source}</Text>
+                  <Text style={forbiddenStyles.titlePremium} numberOfLines={2}>{forbiddenNews[0].title}</Text>
+                  <Text style={forbiddenStyles.sourcePremium}>{forbiddenNews[0].source}</Text>
                 </TouchableOpacity>
               </View>
             )}
 
+            {/* FREE senza regalo: dark overlay, sempre 2 card bloccate */}
             {!isPremium && !freeUnlockActive && (
               <View style={forbiddenStyles.lockedContainer}>
-                <View style={[forbiddenStyles.lockedCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
-                  <View style={forbiddenStyles.badgeRow}>
-                    <View style={forbiddenStyles.badge}>
-                      <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
-                    </View>
-                  </View>
-                  <Text style={[forbiddenStyles.blurredTitle]} numberOfLines={2}>
-                    {'█████████ ████ ███████████████ ████████'}
-                  </Text>
-                  <Text style={[forbiddenStyles.lockedHint, { color: C.textTertiary }]}>
-                    Solo per abbonati Premium
-                  </Text>
+                <View style={forbiddenStyles.darkCard}>
+                  <Text style={forbiddenStyles.lockIcon}>🔒</Text>
+                  <Text style={forbiddenStyles.blurredTitle}>{'█████████ ████ ███████████████ ████████'}</Text>
+                  <Text style={forbiddenStyles.lockedHint}>Contenuto riservato ai Premium</Text>
                 </View>
-                <View style={[forbiddenStyles.lockedCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
-                  <View style={forbiddenStyles.badgeRow}>
-                    <View style={forbiddenStyles.badge}>
-                      <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
-                    </View>
-                  </View>
-                  <Text style={forbiddenStyles.blurredTitle} numberOfLines={2}>
-                    {'██████████████████ ████ █████████'}
-                  </Text>
-                  <Text style={[forbiddenStyles.lockedHint, { color: C.textTertiary }]}>
-                    Solo per abbonati Premium
-                  </Text>
+                <View style={forbiddenStyles.darkCard}>
+                  <Text style={forbiddenStyles.lockIcon}>🔒</Text>
+                  <Text style={forbiddenStyles.blurredTitle}>{'██████████████████ ████ █████████'}</Text>
+                  <Text style={forbiddenStyles.lockedHint}>Contenuto riservato ai Premium</Text>
                 </View>
               </View>
             )}
@@ -408,22 +388,24 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           </TouchableOpacity>
         )}
 
-        {/* Widget punti */}
-        <View style={[styles.pointsWidget, { backgroundColor: C.bg2, borderColor: C.border }]}>
-          <View style={styles.pwTop}>
-            <Text style={[styles.pwTitle, { color: C.textSecondary }]}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
-            <Text style={styles.pwStreak}>🔥 {userStats.streak}gg</Text>
+        {/* Widget punti — nascosto per utenti Premium */}
+        {!isPremium && (
+          <View style={[styles.pointsWidget, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <View style={styles.pwTop}>
+              <Text style={[styles.pwTitle, { color: C.textSecondary }]}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
+              <Text style={styles.pwStreak}>🔥 {userStats.streak}gg</Text>
+            </View>
+            <View style={[styles.pwBarBg, { backgroundColor: C.border }]}>
+              <View style={[styles.pwBarFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
+              <View style={{ flex: Math.max(1 - progress, 0) }} />
+            </View>
+            <Text style={[styles.pwHint, { color: C.textTertiary }]}>
+              {nextLevel
+                ? `${nextLevel.minPoints - userStats.points} pt per diventare ${nextLevel.name} ${nextLevel.emoji}`
+                : 'Hai raggiunto il livello massimo! 🏆'}
+            </Text>
           </View>
-          <View style={[styles.pwBarBg, { backgroundColor: C.border }]}>
-            <View style={[styles.pwBarFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
-            <View style={{ flex: Math.max(1 - progress, 0) }} />
-          </View>
-          <Text style={[styles.pwHint, { color: C.textTertiary }]}>
-            {nextLevel
-              ? `${nextLevel.minPoints - userStats.points} pt per diventare ${nextLevel.name} ${nextLevel.emoji}`
-              : 'Hai raggiunto il livello massimo! 🏆'}
-          </Text>
-        </View>
+        )}
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -647,6 +629,8 @@ const currentStyles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '700',
     letterSpacing: 0.8,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: 2,
   },
   sectionSubtitle: {
     fontSize: FontSize.xs,
@@ -675,7 +659,17 @@ const currentStyles = StyleSheet.create({
     borderWidth: 1,
     gap: 6,
   },
-  cardCategory: {
+  // Stile editoriale per Attualità: sfondo bianco, più pulito
+  cardEditorial: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  // Label piccola sopra il titolo (sostituisce cardCategory)
+  cardLabel: {
     fontSize: FontSize.xs,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -685,6 +679,11 @@ const currentStyles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '600',
     lineHeight: 21,
+  },
+  cardSubtitle: {
+    fontSize: FontSize.xs,
+    lineHeight: 16,
+    opacity: 0.8,
   },
   cardSource: {
     fontSize: FontSize.xs,
@@ -743,17 +742,42 @@ const topOddStyles = StyleSheet.create({
 
 // Stili "Non dovresti leggerla"
 const forbiddenStyles = StyleSheet.create({
-  item: {
+  // Contenitore sezione — sfondo scuro per enfatizzare il carattere "proibito"
+  section: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    backgroundColor: '#0f0f1a',
+  },
+  sectionTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#a78bfa',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: 2,
+  },
+  sectionSubtitle: {
+    fontSize: FontSize.xs,
+    color: '#6b7280',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+
+  // Articolo leggibile (per PREMIUM o freeUnlock)
+  itemPremium: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
+    borderTopWidth: 1,
+    borderTopColor: '#1f1f35',
+    gap: 4,
   },
   badgeRow: {
     flexDirection: 'row',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   badge: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#7c3aed',
     borderRadius: 4,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -764,56 +788,70 @@ const forbiddenStyles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.3,
   },
-  title: {
+  badgeGift: { backgroundColor: '#059669' },
+  titlePremium: {
     fontSize: FontSize.base,
     fontWeight: '700',
+    color: '#f3f4f6',
     lineHeight: 22,
-    marginBottom: 4,
   },
-  source: {
+  subtitlePremium: {
     fontSize: FontSize.xs,
+    color: '#9ca3af',
+    lineHeight: 16,
+  },
+  sourcePremium: {
+    fontSize: FontSize.xs,
+    color: '#6b7280',
     fontWeight: '500',
   },
+
+  // Card bloccata per FREE — dark overlay
   lockedContainer: {
     paddingHorizontal: Spacing.lg,
     gap: 10,
-    paddingBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
-  lockedCard: {
-    padding: Spacing.md,
+  darkCard: {
+    backgroundColor: '#1a1a2e',
     borderRadius: Radius.md,
     borderWidth: 1,
+    borderColor: '#2d2d4e',
+    padding: Spacing.md,
     gap: 6,
+    alignItems: 'flex-start',
+  },
+  lockIcon: {
+    fontSize: 20,
   },
   blurredTitle: {
     fontSize: FontSize.base,
     fontWeight: '700',
-    color: '#d1d5db',
+    color: '#374151',
     letterSpacing: 2,
     lineHeight: 22,
   },
   lockedHint: {
     fontSize: FontSize.xs,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#6b7280',
   },
+
+  // Banner regalo onboarding
   giftBanner: {
     marginHorizontal: Spacing.lg,
     marginBottom: 8,
-    marginTop: 4,
-    backgroundColor: '#ede9fe',
+    backgroundColor: '#1e1b4b',
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#c4b5fd',
+    borderColor: '#4338ca',
   },
   giftBannerText: {
     fontSize: FontSize.sm,
     fontWeight: '700',
-    color: '#4f46e5',
+    color: '#a5b4fc',
     textAlign: 'center',
-  },
-  badgeGift: {
-    backgroundColor: '#059669',
   },
 });

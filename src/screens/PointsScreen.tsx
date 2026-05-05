@@ -14,9 +14,10 @@ import { UserStats } from '../../App';
 interface PointsScreenProps {
   userStats: UserStats;
   userName: string;
+  isPremium?: boolean;
 }
 
-export default function PointsScreen({ userStats, userName }: PointsScreenProps) {
+export default function PointsScreen({ userStats, userName, isPremium = false }: PointsScreenProps) {
   const { t } = useTranslation();
   const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
   const nextLevel = USER_LEVELS[userStats.level + 1];
@@ -26,6 +27,24 @@ export default function PointsScreen({ userStats, userName }: PointsScreenProps)
     : 1;
 
   const pointsToNext = nextLevel ? nextLevel.minPoints - userStats.points : 0;
+
+  // Gli utenti Premium non hanno bisogno della gamification punti
+  if (isPremium) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{t.points.title}</Text>
+        </View>
+        <View style={styles.premiumPlaceholder}>
+          <Text style={styles.premiumPlaceholderEmoji}>👑</Text>
+          <Text style={styles.premiumPlaceholderTitle}>Sei già Premium</Text>
+          <Text style={styles.premiumPlaceholderSub}>
+            Il sistema di punti è pensato per gli utenti gratuiti. Con Premium hai accesso diretto a tutto.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -334,4 +353,29 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   unlockPtsLocked: { color: Colors.textTertiary },
+
+  // Premium placeholder
+  premiumPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  premiumPlaceholderEmoji: {
+    fontSize: 48,
+    marginBottom: Spacing.lg,
+  },
+  premiumPlaceholderTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  premiumPlaceholderSub: {
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

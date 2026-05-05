@@ -68,6 +68,8 @@ export function getColors(isDark: boolean) {
     premiumBannerBg:     isDark ? '#2C2510' : '#FFFCF0',
     premiumBannerBorder: isDark ? '#6B5A10' : '#F0D98A',
     premiumBannerText:   isDark ? '#D4A820' : '#7A6010',
+    // Card bianca editoriale (Attualità)
+    cardWhite:      isDark ? '#2C2C2E' : '#FFFFFF',
     // Tag (per ArticleScreen)
     tagAnimal:  '#1a472a',
     tagTech:    '#1a1a2e',

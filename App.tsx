@@ -554,7 +554,7 @@ function AppContent() {
           <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} interests={userInterests} userStats={userStats} />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
-          <PointsScreen userStats={userStats} userName={userName} />
+          <PointsScreen userStats={userStats} userName={userName} isPremium={isPremium} />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Premium' ? 'flex' : 'none' }}>
           <PremiumScreen

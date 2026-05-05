@@ -206,8 +206,15 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
           <TouchableOpacity
             style={styles.ctaBtnCancel}
             onPress={async () => {
-              await openManageSubscriptions();
-              onDowngrade();
+              try {
+                await openManageSubscriptions();
+              } catch (e) {
+                Alert.alert(
+                  'Impossibile aprire',
+                  'Impossibile caricare i piani. Riprova o gestisci l\'abbonamento direttamente da Impostazioni → App Store.',
+                  [{ text: 'OK' }]
+                );
+              }
             }}
           >
             <Text style={styles.ctaBtnCancelText}>{t.premium.cancelSubscription}</Text>
