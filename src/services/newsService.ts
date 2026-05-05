@@ -95,6 +95,10 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
       { emoji: '❤️', count: 0, label: 'Adoro' },
     ],
     userReaction: null,
+    isTopOdd: d.isTopOdd ?? false,
+    isForbidden: d.isForbidden ?? false,
+    viewSeed: d.viewSeed ?? null,
+    isPremium: d.isPremium ?? false,
   };
 }
 
@@ -148,7 +152,10 @@ export async function fetchTodayNews(
   const snap = await getDocs(q);
   const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
-    .filter(d => (d.data().articleType ?? 'bizarre') !== 'current') // Escludi attualità
+    .filter(d => {
+      const t = d.data().articleType ?? 'bizarre';
+      return t !== 'current' && t !== 'forbidden'; // Escludi attualità e "non dovresti"
+    })
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
   const sorted = filterAndSort(all, interests, language);
@@ -173,7 +180,10 @@ export async function fetchRecentPastNews(
   const snap = await getDocs(q);
   const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
-    .filter(d => (d.data().articleType ?? 'bizarre') !== 'current') // Escludi attualità
+    .filter(d => {
+      const t = d.data().articleType ?? 'bizarre';
+      return t !== 'current' && t !== 'forbidden';
+    })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
   return filterAndSort(all, interests, language).slice(0, count).map(x => x.item);
@@ -209,7 +219,10 @@ export async function fetchArchive(
   const snap = await getDocs(q);
   const all = snap.docs
     .filter(d => isPremium || !d.data().isPremium)
-    .filter(d => (d.data().articleType ?? 'bizarre') !== 'current') // Escludi attualità
+    .filter(d => {
+      const t = d.data().articleType ?? 'bizarre';
+      return t !== 'current' && t !== 'forbidden';
+    })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
   const sorted = filterAndSort(all, interests, language);
@@ -226,6 +239,34 @@ export async function fetchCurrentNews(language: 'it' | 'en'): Promise<NewsItem[
     collection(db, 'articles'),
     where('date', '==', today),
     where('articleType', '==', 'current'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+    .map(d => docToNewsItem(d, language));
+}
+
+// Carica le Top Odd News di oggi (isTopOdd = true) — visibili a tutti, leggibili solo dai Premium.
+export async function fetchTopOddNews(language: 'it' | 'en'): Promise<NewsItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const q = query(
+    collection(db, 'articles'),
+    where('date', '==', today),
+    where('isTopOdd', '==', true),
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+    .map(d => docToNewsItem(d, language));
+}
+
+// Carica gli articoli "Non dovresti leggerla" di oggi — solo Premium.
+export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const q = query(
+    collection(db, 'articles'),
+    where('date', '==', today),
+    where('articleType', '==', 'forbidden'),
   );
   const snap = await getDocs(q);
   return snap.docs

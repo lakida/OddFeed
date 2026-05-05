@@ -386,6 +386,25 @@ Rispondi SOLO con un JSON valido:
   }
 }
 
+// ─── Calcola viewSeed realistico per il contatore social proof ────
+// Il numero viene generato alla creazione in base al tipo/categoria.
+// Lato client viene incrementato in base all'ora del giorno per sembrare reale.
+function calcViewSeed(articleType, category) {
+  const ranges = {
+    top_odd:        [400, 1200],
+    forbidden:      [300,  900],
+    sesso_relazioni:[250,  800],
+    gossip:         [200,  600],
+    crimini_strani: [180,  500],
+    storie_assurde: [120,  400],
+  };
+  const key = articleType === 'top_odd' ? 'top_odd'
+    : articleType === 'forbidden' ? 'forbidden'
+    : (category ?? 'storie_assurde');
+  const [min, max] = ranges[key] ?? [80, 300];
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 // ─── Mappa sezione Guardian → paese/fonte ─────────────────────────
 function guessCountry(article) {
   // Fonti italiane → sempre Italia
@@ -547,6 +566,168 @@ Rispondi SOLO con JSON:
   console.log(`   ✅ ${selectedArticles.length} notizie di attualità salvate.`);
 }
 
+// ─── "Non dovresti leggerla" — articoli borderline/shock ──────────
+// Usa lo stesso pool dei bizzarri ma con un prompt che cerca contenuto
+// più scioccante, imbarazzante o morbosamente curioso.
+async function fetchAndSaveForbiddenNews(today, db, articlePool) {
+  console.log('\n🚫 Generazione "Non dovresti leggerla"...');
+
+  const existing = await db.collection('articles')
+    .where('date', '==', today)
+    .where('articleType', '==', 'forbidden')
+    .get();
+
+  if (!existing.empty && !process.argv.includes('--force')) {
+    console.log('   ℹ️  Articoli "Non dovresti" già presenti, skip.');
+    return;
+  }
+  if (!existing.empty) {
+    const del = db.batch();
+    existing.docs.forEach(d => del.delete(d.ref));
+    await del.commit();
+  }
+
+  if (articlePool.length === 0) {
+    console.log('   ⚠️  Pool vuoto, skip.');
+    return;
+  }
+
+  // Selezione AI: cerca il contenuto più scioccante/imbarazzante/morbosamente curioso
+  const summaries = articlePool.map((a, i) => {
+    const headline = a.fields?.headline ?? a.webTitle ?? '';
+    const trail = a.fields?.trailText ?? '';
+    return `[${i}] ${headline} | ${trail.substring(0, 100)}`;
+  }).join('\n');
+
+  const selPrompt = `Sei il curatore della sezione "Non dovresti leggerla" di OddFeed.
+Questa sezione contiene le notizie più scioccanti, imbarazzanti o morbosamente curiose.
+NON contenuto violento o traumatico — solo cose che fanno pensare "non avrei voluto saperlo".
+
+Criteri di selezione (almeno uno):
+- Comportamenti sessuali insoliti ma non volgari
+- Scandali imbarazzanti o rivelazioni shock
+- Crimini grotteschi o paradossali
+- Rivelazioni che cambiano come si vede una cosa comune
+
+Seleziona ESATTAMENTE 2 articoli. Se nessuno soddisfa i criteri, scegli i 2 più curiosi/imbarazzanti disponibili.
+
+Lista:
+${summaries}
+
+Rispondi SOLO con JSON: {"selected": [i1, i2], "reasoning": "..."}`;
+
+  let selectedIndices = [0, 1];
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: selPrompt }],
+      temperature: 0.3,
+      max_tokens: 150,
+    });
+    const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(raw);
+    console.log(`   Selezione: ${result.reasoning}`);
+    selectedIndices = result.selected ?? [0, 1];
+  } catch (e) {
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 2`);
+  }
+
+  const selectedArticles = selectedIndices.map(i => articlePool[i]).filter(Boolean).slice(0, 2);
+  if (selectedArticles.length === 0) return;
+
+  const batch = db.batch();
+  for (let i = 0; i < selectedArticles.length; i++) {
+    const article = selectedArticles[i];
+    process.stdout.write(`   [${i + 1}/${selectedArticles.length}] ${(article.webTitle ?? '').substring(0, 50)}... `);
+
+    if (!article._fullText) {
+      article._fullText = await fetchFullText(article.webUrl);
+    }
+
+    const rewritePrompt = `Sei il redattore della sezione "Non dovresti leggerla" di OddFeed.
+Riscrivi questa notizia con tono intrigante e leggermente misterioso, come se stessi rivelando un segreto.
+Il lettore deve sentirsi come se leggesse qualcosa che "non dovrebbe sapere".
+
+ARTICOLO ORIGINALE:
+Titolo: ${article.webTitle}
+Sommario: ${article.fields?.trailText ?? ''}
+${article._fullText ? `Testo: ${article._fullText.substring(0, 2000)}` : ''}
+
+REGOLE:
+- Titolo: inizia con "🚫" + max 65 caratteri, tono misterioso/intrigante
+- 3 paragrafi sostanziosi, tono narrativo
+- Rimani sui fatti reali — il mistero viene dal modo di raccontare
+- Categoria: sesso_relazioni, gossip, crimini_strani, o storie_assurde
+
+Rispondi SOLO con JSON:
+{
+  "titleIt": "🚫 ...",
+  "titleEn": "🚫 ...",
+  "descriptionIt": "...",
+  "descriptionEn": "...",
+  "fullTextIt": "paragrafo 1\\n\\nparagrafo 2\\n\\nparagrafo 3",
+  "fullTextEn": "...",
+  "category": "...",
+  "categoryLabelIt": "...",
+  "categoryLabelEn": "..."
+}`;
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: rewritePrompt }],
+        temperature: 0.7,
+        max_tokens: 1500,
+      });
+      const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      let ai;
+      try { ai = JSON.parse(raw); }
+      catch { const m = raw.match(/\{[\s\S]*\}/); ai = m ? JSON.parse(m[0]) : null; }
+      if (!ai) { process.stdout.write('✗ (JSON non parsabile)\n'); continue; }
+
+      const category = ai.category ?? 'storie_assurde';
+      const docRef = db.collection('articles').doc();
+      batch.set(docRef, {
+        articleType: 'forbidden',
+        isForbidden: true,
+        isPremium: true,
+        titleIt: ai.titleIt,
+        titleEn: ai.titleEn,
+        descriptionIt: ai.descriptionIt,
+        descriptionEn: ai.descriptionEn,
+        fullTextIt: ai.fullTextIt,
+        fullTextEn: ai.fullTextEn,
+        category,
+        categoryLabelIt: ai.categoryLabelIt ?? '🚫 Non dovresti',
+        categoryLabelEn: ai.categoryLabelEn ?? '🚫 Forbidden',
+        imageEmoji: '🚫',
+        imageColor: ['#1a0a0a', '#3d0000'],
+        country: guessCountry(article),
+        source: article._source ?? 'OddFeed',
+        sourceUrl: article.webUrl ?? '',
+        date: today,
+        order: i,
+        viewSeed: calcViewSeed('forbidden', category),
+        reactions: [
+          { emoji: '🤯', count: 0, label: 'Sconvolto' },
+          { emoji: '😮', count: 0, label: 'Sorpreso' },
+          { emoji: '😂', count: 0, label: 'Divertente' },
+          { emoji: '🤔', count: 0, label: 'Interessante' },
+          { emoji: '❤️', count: 0, label: 'Adoro' },
+        ],
+        createdAt: new Date(),
+      });
+      process.stdout.write('✓\n');
+    } catch (e) {
+      process.stdout.write(`✗ (${e.message})\n`);
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  await batch.commit();
+  console.log(`   ✅ ${selectedArticles.length} articoli "Non dovresti leggerla" salvati.`);
+}
+
 // ─── Funzione principale ───────────────────────────────────────────
 async function main() {
   console.log('🚀 OddFeed — Generazione notizie del giorno\n');
@@ -666,6 +847,8 @@ async function main() {
       const category = ai.category ?? article._suggestedCategory ?? 'storie_assurde';
       // isPremium = true se non è il primo articolo OPPURE se è in una categoria premium
       const isPremiumArticle = i > 0 || PREMIUM_CATS.has(category);
+      // Top Odd News: i 3 articoli più assurdi (i primi dopo ordinamento AI per bizarreness)
+      const isTopOdd = i < 3;
 
       const docRef = db.collection('articles').doc();
       const articleData = {
@@ -689,6 +872,8 @@ async function main() {
         isToday: true,
         order: i,
         isPremium: isPremiumArticle,
+        isTopOdd,
+        viewSeed: calcViewSeed(isTopOdd ? 'top_odd' : 'bizarre', category),
         daysAgo: 0,
 
         // Reazioni (iniziali)
@@ -718,6 +903,9 @@ async function main() {
 
   // Genera le notizie di attualità ("In primo piano")
   await fetchAndSaveCurrentNews(today, db);
+
+  // Genera gli articoli "Non dovresti leggerla" dal pool già scaricato
+  await fetchAndSaveForbiddenNews(today, db, selected);
 
   // Invia notifica push personalizzata per categoria
   console.log('\n🔔 Invio notifiche push personalizzate...');
@@ -842,15 +1030,25 @@ function buildNotifText(article, isPremium) {
     coincidenze: '🌀', tecnologia: '💻', record: '🏆',
     animali: '🐾', scienza: '🔬', leggi: '⚖️',
     cultura: '🌍', gastronomia: '🍽️', luoghi: '📍',
+    attualita: '📰', gossip_spettacolo: '🌟',
   };
   const emoji = EMOJI_MAP[article.category] ?? '📰';
-  const titleText = article.titleIt?.substring(0, 60) ?? 'Notizia del giorno';
-  const title = `${emoji} ${titleText}`;
-  const body = isPremium
-    ? article.descriptionIt?.substring(0, 100) ?? 'La tua notizia Premium di oggi è pronta!'
-    : 'La tua notizia curiosa di oggi è pronta!';
 
-  return { title, body };
+  if (isPremium) {
+    // Premium: usa il titolo riscritto come gancio, tono più coinvolgente
+    const titleText = article.titleIt?.substring(0, 55) ?? 'Notizia del giorno';
+    return {
+      title: `${titleText}`,
+      body: 'Buongiorno. La storia più assurda di oggi ti aspetta.',
+    };
+  }
+
+  // Free: tono standard
+  const titleText = article.titleIt?.substring(0, 60) ?? 'Notizia del giorno';
+  return {
+    title: `${emoji} ${titleText}`,
+    body: 'La tua notizia curiosa di oggi è pronta.',
+  };
 }
 
 main().catch(console.error);

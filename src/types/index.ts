@@ -59,7 +59,11 @@ export interface NewsItem {
   daysAgo: number;
   reactions: Reaction[];
   userReaction: ReactionType | null;
-  articleType?: 'bizarre' | 'current'; // tipo di articolo
+  articleType?: 'bizarre' | 'current' | 'top_odd' | 'forbidden'; // tipo di articolo
+  isTopOdd?: boolean;   // tra le 3 più assurde del giorno
+  isForbidden?: boolean; // sezione "Non dovresti leggerla"
+  viewSeed?: number;    // base per il contatore social proof
+  isPremium?: boolean;
 }
 
 export interface UserLevel {

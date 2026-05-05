@@ -13,7 +13,7 @@ import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews } from '../services/newsService';
+import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews, fetchTopOddNews, fetchForbiddenNews } from '../services/newsService';
 import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { UserStats } from '../../App';
@@ -77,6 +77,8 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   const [todayNews, setTodayNews] = useState<NewsItem[]>([]);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [currentNews, setCurrentNews] = useState<NewsItem[]>([]);
+  const [topOddNews, setTopOddNews] = useState<NewsItem[]>([]);
+  const [forbiddenNews, setForbiddenNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -92,13 +94,17 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
       fetchTodayNews(language, isPremium, interests, newsLimit).catch(() => []),
       fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
       fetchCurrentNews(language).catch(() => []),
-    ]).then(([todayArr, pastArr, currentArr]) => {
+      fetchTopOddNews(language).catch(() => []),
+      fetchForbiddenNews(language).catch(() => []),
+    ]).then(([todayArr, pastArr, currentArr, topOddArr, forbiddenArr]) => {
       const today = todayArr;
       const remaining = Math.max(0, newsLimit - today.length);
       const past = pastArr.slice(0, remaining);
       setTodayNews(today);
       setPastNews(past);
       setCurrentNews(currentArr);
+      setTopOddNews(topOddArr);
+      setForbiddenNews(forbiddenArr);
       if (isRefresh) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
@@ -198,6 +204,122 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </View>
+        )}
+
+        {/* ── Top Odd News ── */}
+        {!loading && topOddNews.length > 0 && (
+          <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
+            <View style={currentStyles.sectionHeaderRow}>
+              <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🔥 TOP ODD NEWS</Text>
+              {!isPremium && (
+                <View style={[currentStyles.sectionBadge, { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
+                  <Text style={[currentStyles.sectionBadgeText, { color: '#dc2626' }]}>Solo Premium</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[currentStyles.sectionSubtitle, { color: C.textTertiary }]}>Le 3 più assurde di oggi. Selezionate per te.</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={currentStyles.row}
+            >
+              {topOddNews.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[topOddStyles.card, { backgroundColor: C.bg2, borderColor: isPremium ? C.border : '#fecaca' }]}
+                  onPress={() => onOpenArticle(item.id, item)}
+                  activeOpacity={0.75}
+                >
+                  <View style={topOddStyles.badgeRow}>
+                    <View style={topOddStyles.badge}>
+                      <Text style={topOddStyles.badgeText}>🔥 TOP</Text>
+                    </View>
+                    {!isPremium && (
+                      <View style={topOddStyles.lockBadge}>
+                        <Text style={topOddStyles.lockText}>🔒</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={3}>
+                    {item.title}
+                  </Text>
+                  {!isPremium && (
+                    <Text style={[topOddStyles.paywallHint, { color: '#dc2626' }]}>
+                      Tutti la vedono. Solo alcuni possono leggerla.
+                    </Text>
+                  )}
+                  <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
+                    {item.source}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ── Non dovresti leggerla ── */}
+        {!loading && (forbiddenNews.length > 0 || !isPremium) && (
+          <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
+            <View style={currentStyles.sectionHeaderRow}>
+              <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🚫 NON DOVRESTI LEGGERLA</Text>
+              {!isPremium && (
+                <View style={[currentStyles.sectionBadge, { backgroundColor: '#1e1b4b', borderColor: '#3730a3' }]}>
+                  <Text style={[currentStyles.sectionBadgeText, { color: '#e0e7ff' }]}>💎 Esclusiva</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[currentStyles.sectionSubtitle, { color: C.textTertiary }]}>Le storie che non ti aspetti. Solo per chi ha coraggio.</Text>
+
+            {isPremium && forbiddenNews.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[forbiddenStyles.item, { borderBottomColor: C.border }]}
+                onPress={() => onOpenArticle(item.id, item)}
+                activeOpacity={0.75}
+              >
+                <View style={forbiddenStyles.badgeRow}>
+                  <View style={forbiddenStyles.badge}>
+                    <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
+                  </View>
+                </View>
+                <Text style={[forbiddenStyles.title, { color: C.text }]} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={[forbiddenStyles.source, { color: C.textTertiary }]}>{item.source}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {!isPremium && (
+              <View style={forbiddenStyles.lockedContainer}>
+                <View style={[forbiddenStyles.lockedCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
+                  <View style={forbiddenStyles.badgeRow}>
+                    <View style={forbiddenStyles.badge}>
+                      <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
+                    </View>
+                  </View>
+                  <Text style={[forbiddenStyles.blurredTitle]} numberOfLines={2}>
+                    {'█████████ ████ ███████████████ ████████'}
+                  </Text>
+                  <Text style={[forbiddenStyles.lockedHint, { color: C.textTertiary }]}>
+                    Solo per abbonati Premium
+                  </Text>
+                </View>
+                <View style={[forbiddenStyles.lockedCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
+                  <View style={forbiddenStyles.badgeRow}>
+                    <View style={forbiddenStyles.badge}>
+                      <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
+                    </View>
+                  </View>
+                  <Text style={forbiddenStyles.blurredTitle} numberOfLines={2}>
+                    {'██████████████████ ████ █████████'}
+                  </Text>
+                  <Text style={[forbiddenStyles.lockedHint, { color: C.textTertiary }]}>
+                    Solo per abbonati Premium
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -488,12 +610,33 @@ const currentStyles = StyleSheet.create({
     paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: 2,
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: FontSize.xs,
     fontWeight: '700',
     letterSpacing: 0.8,
+  },
+  sectionSubtitle: {
+    fontSize: FontSize.xs,
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+    opacity: 0.7,
+  },
+  sectionBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  sectionBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
   row: {
     paddingHorizontal: Spacing.lg,
@@ -521,5 +664,110 @@ const currentStyles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '500',
     marginTop: 2,
+  },
+});
+
+// Stili Top Odd News
+const topOddStyles = StyleSheet.create({
+  card: {
+    width: 210,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    gap: 6,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 5,
+    alignItems: 'center',
+  },
+  badge: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#dc2626',
+  },
+  lockBadge: {
+    backgroundColor: '#ede9fe',
+    borderWidth: 1,
+    borderColor: '#c4b5fd',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  lockText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6d28d9',
+  },
+  paywallHint: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    fontStyle: 'italic',
+    lineHeight: 14,
+  },
+});
+
+// Stili "Non dovresti leggerla"
+const forbiddenStyles = StyleSheet.create({
+  item: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  badge: {
+    backgroundColor: '#dc2626',
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+  title: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    lineHeight: 22,
+    marginBottom: 4,
+  },
+  source: {
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+  },
+  lockedContainer: {
+    paddingHorizontal: Spacing.lg,
+    gap: 10,
+    paddingBottom: Spacing.md,
+  },
+  lockedCard: {
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    gap: 6,
+  },
+  blurredTitle: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    color: '#d1d5db',
+    letterSpacing: 2,
+    lineHeight: 22,
+  },
+  lockedHint: {
+    fontSize: FontSize.xs,
+    fontWeight: '500',
   },
 });

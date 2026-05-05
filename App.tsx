@@ -603,7 +603,9 @@ function AppContent() {
             onBack={handleBack}
             userId={currentUser?.uid ?? ''}
             userStats={userStats}
+            isPremium={isPremium}
             onPointsChange={handlePointsChange}
+            onUpgradePremium={() => setActiveTab('Profilo')}
           />
         </Animated.View>
       )}

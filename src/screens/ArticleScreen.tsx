@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,14 +28,29 @@ interface ArticleScreenProps {
   onBack: () => void;
   userId: string;
   userStats: UserStats;
+  isPremium: boolean;
   onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
+  onUpgradePremium?: () => void;
 }
 
 
-export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange }: ArticleScreenProps) {
+export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange, isPremium, onUpgradePremium }: ArticleScreenProps) {
   const { t } = useTranslation();
   const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
+
+  // Paywall: articolo premium e utente non abbonato
+  const showPaywall = (article.isPremium ?? false) && !isPremium;
+
+  // Contatore social proof: viewSeed + incremento basato sull'ora del giorno
+  const viewCount = useMemo(() => {
+    if (!article.viewSeed) return null;
+    const hour = new Date().getHours();
+    // Cresce dal mattino (ore 7) alla sera (ore 22): ~10-30 letture per ora
+    const hoursActive = Math.max(0, Math.min(hour - 7, 15));
+    const increment = Math.floor(article.viewSeed * 0.03 * hoursActive);
+    return article.viewSeed + increment;
+  }, [article.viewSeed]);
 
   // Animazione per il tracciamento del dito durante lo swipe
   const swipePan = useRef(new Animated.Value(0)).current;
@@ -97,7 +112,9 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
     } catch (e) {}
   };
 
-  const paragraphs = article.fullText.split('\n\n').slice(0, 2);
+  const paragraphs = article.fullText?.split('\n\n') ?? [];
+  // Free: mostra solo le prime 2 righe del primo paragrafo (teaser)
+  const teaserText = paragraphs[0]?.split('. ').slice(0, 2).join('. ') + '…' ?? '';
 
   return (
     <Animated.View style={[styles.swipeContainer, { transform: [{ translateX: swipePan }] }]}>
@@ -129,29 +146,68 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
             </View>
           </View>
 
-          {/* Testo */}
-          {paragraphs.map((para, i) => (
-            <Text key={i} style={styles.articleText}>{para}</Text>
-          ))}
+          {/* Testo — completo se premium/free con accesso, teaser + paywall altrimenti */}
+          {!showPaywall ? (
+            paragraphs.map((para, i) => (
+              <Text key={i} style={styles.articleText}>{para}</Text>
+            ))
+          ) : (
+            <>
+              {/* Teaser: prime 2 frasi visibili */}
+              <Text style={styles.articleText}>{teaserText}</Text>
 
-          {/* Back — in fondo */}
-          <TouchableOpacity style={styles.backBtnBottom} onPress={onBack}>
-            <Text style={styles.backArrow}>←</Text>
-            <Text style={styles.backBtnBottomText}>{t.common.back}</Text>
-          </TouchableOpacity>
+              {/* Paywall block */}
+              <View style={styles.paywallBlock}>
+                {viewCount !== null && (
+                  <View style={styles.paywallCounter}>
+                    <Text style={styles.paywallCounterText}>
+                      👁 Oggi <Text style={styles.paywallCounterNum}>{viewCount} persone</Text> hanno letto questa storia
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.paywallIcon}>🔒</Text>
+                <Text style={styles.paywallTitle}>
+                  {article.isForbidden
+                    ? 'Non dovresti leggerla.'
+                    : article.isTopOdd
+                    ? 'È bloccata. Ed è probabilmente quella giusta.'
+                    : 'Questa non è per tutti.'}
+                </Text>
+                <Text style={styles.paywallSub}>7 giorni gratis. Nessuna sorpresa.</Text>
+                <TouchableOpacity
+                  style={styles.paywallBtn}
+                  onPress={onUpgradePremium}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.paywallBtnText}>✦ Accesso completo</Text>
+                </TouchableOpacity>
+                <Text style={styles.paywallPriceHint}>Meno di un caffè al mese. Le storie più assurde del mondo, ogni giorno.</Text>
+              </View>
+            </>
+          )}
+
+          {/* Back — in fondo (solo se non c'è paywall) */}
+          {!showPaywall && (
+            <TouchableOpacity style={styles.backBtnBottom} onPress={onBack}>
+              <Text style={styles.backArrow}>←</Text>
+              <Text style={styles.backBtnBottomText}>{t.common.back}</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={{ height: 12 }} />
         </View>
       </ScrollView>
 
-      {/* Condividi — fisso in fondo */}
-      <View style={styles.shareBar}>
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
-          <Ionicons name="share-outline" size={20} color="#fff" />
-          <Text style={styles.shareBtnText}>{t.article.share}</Text>
-        </TouchableOpacity>
-        <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
-      </View>
+      {/* Condividi — fisso in fondo (solo se non c'è paywall) */}
+      {!showPaywall && (
+        <View style={styles.shareBar}>
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
+            <Ionicons name="share-outline" size={20} color="#fff" />
+            <Text style={styles.shareBtnText}>{t.article.share}</Text>
+          </TouchableOpacity>
+          <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
+        </View>
+      )}
     </SafeAreaView>
     </Animated.View>
   );
@@ -268,5 +324,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textTertiary,
     textAlign: 'center',
+  },
+
+  // Paywall
+  paywallBlock: {
+    marginTop: Spacing.lg,
+    backgroundColor: '#f5f3ff',
+    borderWidth: 1.5,
+    borderColor: '#ddd6fe',
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    gap: 8,
+  },
+  paywallCounter: {
+    backgroundColor: '#1e1b4b',
+    borderRadius: Radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  paywallCounterText: {
+    fontSize: FontSize.xs,
+    color: '#a5b4fc',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  paywallCounterNum: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  paywallIcon: {
+    fontSize: 28,
+  },
+  paywallTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '800',
+    color: '#1e1b4b',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  paywallSub: {
+    fontSize: FontSize.sm,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  paywallBtn: {
+    backgroundColor: '#4f46e5',
+    borderRadius: Radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  paywallBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+  paywallPriceHint: {
+    fontSize: FontSize.xs,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 2,
   },
 });
