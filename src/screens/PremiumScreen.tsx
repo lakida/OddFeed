@@ -8,7 +8,8 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
 import { purchasePackage, restorePurchases, openManageSubscriptions, PRODUCT_IDS } from '../services/purchaseService';
 
@@ -34,34 +35,45 @@ interface PremiumScreenProps {
 
 export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: PremiumScreenProps) {
   const { t, language } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const [selected, setSelected] = useState<'monthly' | 'yearly'>('yearly');
 
   const fomoCards = language === 'it' ? FOMO_TOP_ODD : FOMO_TOP_ODD_EN;
   const fomoForbidden = language === 'it' ? FOMO_FORBIDDEN_IT : FOMO_FORBIDDEN_EN;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t.premium.title}</Text>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
+      <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.heroKicker}>ABBONAMENTO</Text>
+            <Text style={styles.heroTitle}>{t.premium.title}</Text>
+            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+              {isPremium ? 'Abbonamento attivo' : 'Scegli il piano per te'}
+            </Text>
+          </View>
+          <Text style={styles.heroEmoji}>{isPremium ? '👑' : '⭐'}</Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Hero */}
+        {/* Hero (sezione contenuto) */}
         <View style={styles.hero}>
           {isPremium ? (
             <>
-              <Text style={styles.heroEmoji}>👑</Text>
-              <Text style={styles.heroTitle}>{t.premium.heroTitleActive}</Text>
-              <Text style={styles.heroSub}>{t.premium.heroSubActive}</Text>
+              <Text style={styles.heroBigEmoji}>👑</Text>
+              <Text style={[styles.heroContentTitle, { color: C.text }]}>{t.premium.heroTitleActive}</Text>
+              <Text style={[styles.heroContentSub, { color: C.textSecondary }]}>{t.premium.heroSubActive}</Text>
               <View style={styles.activeTag}>
                 <Text style={styles.activeTagText}>{t.premium.activeTag}</Text>
               </View>
             </>
           ) : (
             <>
-              <Text style={styles.heroTitle}>{t.premium.heroTitle}</Text>
-              <Text style={styles.heroSub}>{t.premium.heroSub}</Text>
+              <Text style={[styles.heroContentTitle, { color: C.text }]}>{t.premium.heroTitle}</Text>
+              <Text style={[styles.heroContentSub, { color: C.textSecondary }]}>{t.premium.heroSub}</Text>
             </>
           )}
         </View>
@@ -140,34 +152,34 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
           <>
             <View style={styles.plansRow}>
               <TouchableOpacity
-                style={[styles.planCard, selected === 'monthly' && styles.planCardActive]}
+                style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'monthly' ? Colors.violet : C.border }, selected === 'monthly' && { backgroundColor: C.violetBg }]}
                 onPress={() => setSelected('monthly')}
               >
-                <Text style={[styles.planName, selected === 'monthly' && styles.planNameActive]}>
+                <Text style={[styles.planName, { color: selected === 'monthly' ? Colors.violet : C.text }]}>
                   {t.premium.monthly}
                 </Text>
-                <Text style={[styles.planPrice, selected === 'monthly' && styles.planPriceActive]}>
+                <Text style={[styles.planPrice, { color: selected === 'monthly' ? Colors.violet : C.text }]}>
                   1,99 €
                 </Text>
-                <Text style={[styles.planPeriod, selected === 'monthly' && styles.planPeriodActive]}>
+                <Text style={[styles.planPeriod, { color: selected === 'monthly' ? Colors.violet : C.textSecondary }]}>
                   {t.premium.perMonth}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.planCard, selected === 'yearly' && styles.planCardActive]}
+                style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'yearly' ? Colors.violet : C.border }, selected === 'yearly' && { backgroundColor: C.violetBg }]}
                 onPress={() => setSelected('yearly')}
               >
                 <View style={styles.bestValueBadge}>
                   <Text style={styles.bestValueText}>{t.premium.bestOffer}</Text>
                 </View>
-                <Text style={[styles.planName, selected === 'yearly' && styles.planNameActive]}>
+                <Text style={[styles.planName, { color: selected === 'yearly' ? Colors.violet : C.text }]}>
                   {t.premium.yearly}
                 </Text>
-                <Text style={[styles.planPrice, selected === 'yearly' && styles.planPriceActive]}>
+                <Text style={[styles.planPrice, { color: selected === 'yearly' ? Colors.violet : C.text }]}>
                   14,99 €
                 </Text>
-                <Text style={[styles.planPeriod, selected === 'yearly' && styles.planPeriodActive]}>
+                <Text style={[styles.planPeriod, { color: selected === 'yearly' ? Colors.violet : C.textSecondary }]}>
                   {t.premium.perYear}
                 </Text>
               </TouchableOpacity>
@@ -281,20 +293,43 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  header: {
+  heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
-  headerTitle: {
-    fontSize: 22,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroKicker: {
+    fontSize: 10,
     fontWeight: '700',
-    color: Colors.text,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
     letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 3,
+  },
+  heroEmoji: {
+    fontSize: 72,
+    lineHeight: 80,
+    marginTop: 4,
   },
 
-  // Hero
+  // Hero (sezione contenuto)
   hero: {
     alignItems: 'center',
     paddingTop: Spacing.xl,
@@ -302,8 +337,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
   },
-  heroEmoji: { fontSize: 40 },
-  heroTitle: {
+  heroBigEmoji: { fontSize: 40 },
+  heroContentTitle: {
     fontSize: 22,
     fontWeight: '800',
     color: Colors.text,
@@ -311,7 +346,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     letterSpacing: -0.3,
   },
-  heroSub: {
+  heroContentSub: {
     fontSize: FontSize.base,
     color: Colors.textSecondary,
     textAlign: 'center',

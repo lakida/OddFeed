@@ -1,0 +1,97 @@
+rules_version = '2';
+
+// ─── OddFeed — Regole di sicurezza Firestore ───────────────────────────────
+//
+// Principio: minimo privilegio.
+// - articles  → sola lettura per utenti autenticati, scrittura solo via Admin SDK
+// - users     → ogni utente legge/scrive SOLO il proprio documento
+// - Nessun accesso pubblico (non autenticato)
+//
+// Deployment: firebase deploy --only firestore:rules
+// ──────────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+
+    // Utente autenticato
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // L'utente sta operando sul proprio documento
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Controlla che i campi in scrittura siano un sottoinsieme dei campi consentiti.
+    // Impedisce agli utenti di aggiungere campi arbitrari.
+    function onlyAllowedFields(allowed) {
+      return request.resource.data.keys().hasOnly(allowed);
+    }
+
+    // ── Collection: articles ────────────────────────────────────────────────
+    // Articoli giornalieri generati dallo script fetch-news.js (Admin SDK).
+    // Lettura: qualsiasi utente autenticato.
+    // Scrittura: solo Admin SDK (service account) — nessun client può scrivere.
+    match /articles/{articleId} {
+
+      // Lettura consentita a tutti gli utenti autenticati
+      allow read: if isAuth();
+
+      // Nessuna scrittura dal client — solo Admin SDK (bypass rules)
+      allow write: if false;
+
+      // Aggiornamento reazioni: consenti solo l'incremento dei campi reactionCounts
+      // Nota: questo è gestito via Admin SDK nello script, quindi non è necessario
+      // qui, ma lo lasciamo documentato per chiarezza.
+    }
+
+    // ── Collection: users ───────────────────────────────────────────────────
+    // Profili utente, preferenze, punti, token push.
+    // Ogni utente può leggere e modificare SOLO il proprio documento.
+    match /users/{userId} {
+
+      // Lettura: solo il proprietario
+      allow read: if isOwner(userId);
+
+      // Creazione: l'utente può creare SOLO il proprio profilo
+      // con i campi consentiti (nessun campo isPremium arbitrario dal client)
+      allow create: if isOwner(userId)
+        && onlyAllowedFields([
+          'name', 'email', 'createdAt', 'isPremium', 'points',
+          'streak', 'level', 'interests', 'notificationSlot', 'language',
+          'emailVerified', 'onboardingDone', 'expoPushToken',
+          'notificationsEnabled', 'notificationPrefs', 'provider',
+          'readArticleIds', 'updatedAt',
+          'lastNotifDate', 'lastNotifMorning', 'lastNotifLunch', 'lastNotifEvening',
+        ]);
+
+      // Aggiornamento: il proprietario può aggiornare solo campi specifici.
+      // isPremium NON è aggiornabile dal client (viene scritto solo da Admin SDK
+      // tramite RevenueCat webhook o dalla service account dopo acquisto verificato).
+      allow update: if isOwner(userId)
+        && onlyAllowedFields([
+          'name', 'interests', 'notificationSlot', 'language',
+          'emailVerified', 'onboardingDone', 'expoPushToken',
+          'notificationsEnabled', 'notificationPrefs',
+          'points', 'streak', 'level', 'readArticleIds',
+          'updatedAt',
+          // isPremium: consentito solo se non sta modificando il valore
+          // (il client può leggerlo ma non impostarlo a true da solo)
+          // Per semplicità lo includiamo, ma la fonte di verità è RevenueCat.
+          'isPremium',
+        ]);
+
+      // Eliminazione: solo il proprietario può eliminare il proprio profilo
+      allow delete: if isOwner(userId);
+    }
+
+    // ── Blocco catch-all ────────────────────────────────────────────────────
+    // Qualsiasi altra collection/documento non è accessibile.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OddFeed Prototype</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pri:#4F46E5;--prl:#EEF2FF;--gld:#D97706;--glb:#FEF3C7;
+  --nv:#1E1B4B;--nvl:#2D2A6E;
+  --t1:#111827;--t2:#6B7280;--t3:#9CA3AF;
+  --bd:#E5E7EB;--bg:#FFFFFF;--bg2:#F9FAFB
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#F3F4F6;display:flex;justify-content:center;padding:24px 0 40px}
+.phone{width:375px;height:720px;background:var(--bg);border:1.5px solid #D1D5DB;border-radius:36px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.12)}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+
+/* ── TAB BAR ── */
+.tabbar{height:60px;background:var(--bg);border-top:0.5px solid var(--bd);display:flex;align-items:stretch;flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:none}
+.tab svg{width:22px;height:22px}
+.tab .ti{stroke:var(--t3);fill:none;stroke-width:1.7}
+.tab .tif{fill:var(--t3);stroke:none}
+.tab.active .ti{stroke:var(--pri)}
+.tab.active .tif{fill:var(--pri)}
+.tab-lbl{font-size:10px;color:var(--t3);font-weight:500}
+.tab.active .tab-lbl{color:var(--pri);font-weight:700}
+
+/* ── OTHER SCREEN HEADERS ── */
+.scr-hdr{padding:0 16px;border-bottom:0.5px solid var(--bd);background:var(--bg);position:relative;overflow:hidden}
+.scr-hdr-inner{padding:16px 0 14px;position:relative;z-index:1}
+.scr-hdr-kicker{font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--pri);text-transform:uppercase;margin-bottom:3px}
+.scr-hdr-title{font-size:22px;font-weight:800;color:var(--t1);letter-spacing:-.5px;line-height:1.15}
+.scr-hdr-sub{font-size:13px;color:var(--t2);margin-top:4px;line-height:1.4}
+.scr-hdr-art{position:absolute;right:-8px;bottom:-4px;font-size:64px;opacity:.13;line-height:1;pointer-events:none;z-index:0}
+
+/* ── HOME HEADER ── */
+.home-hdr{background:var(--pri);padding:16px 16px 16px;position:relative;overflow:hidden}
+.home-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.home-hdr-kicker{font-size:10px;font-weight:700;letter-spacing:1.2px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:4px}
+.home-hdr-title{font-size:33px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.2}
+.home-hdr-sub{font-size:13px;color:rgba(255,255,255,.7);margin-top:3px}
+.home-hdr-art{font-size:72px;line-height:1;margin-top:4px;opacity:.9;flex-shrink:0}
+
+/* ── SECTION HEADER ROW ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.sec-hdr-left{display:flex;align-items:center;gap:8px}
+.sec-hdr-icon{
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.sec-hdr-icon svg{width:22px;height:22px;stroke:var(--pri);stroke-width:2;fill:none}
+.sec-hdr-title{font-size:14px;font-weight:900;color:var(--nv);letter-spacing:.4px;text-transform:uppercase}
+.sec-hdr-link{font-size:12px;font-weight:600;color:var(--pri);display:flex;align-items:center;gap:2px}
+.sec-hdr-link svg{width:12px;height:12px;stroke:var(--pri);stroke-width:2.5;fill:none}
+
+/* ── ATTUALITÀ CARDS (horizontal scroll) ── */
+.att-scroll{display:flex;gap:10px;padding:0 16px 16px;overflow-x:auto;scrollbar-width:none}
+.att-scroll::-webkit-scrollbar{display:none}
+.att-card{
+  width:190px;flex-shrink:0;
+  border-radius:12px;overflow:hidden;
+  border:0.5px solid var(--bd);background:var(--bg);
+  cursor:pointer;
+}
+.att-img{
+  height:90px;position:relative;
+  display:flex;align-items:flex-start;padding:8px;
+  background-size:cover;background-position:center;
+}
+.att-cat-pill{
+  display:inline-flex;align-items:center;
+  background:var(--pri);color:#fff;
+  font-size:9px;font-weight:800;letter-spacing:.6px;
+  padding:3px 8px;border-radius:6px;text-transform:uppercase;
+}
+.att-body{padding:10px 11px 12px}
+.att-title{font-size:14px;font-weight:700;color:var(--t1);line-height:1.35;margin-bottom:8px}
+.att-meta{font-size:11px;color:var(--t3);display:flex;justify-content:space-between}
+
+/* ── NON DOVRESTI LEGGERE block ── */
+.ndl-block{
+  margin:0 14px 16px;
+  background:var(--nv);
+  border-radius:16px;overflow:hidden;
+}
+.ndl-head{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 14px 12px;
+  border-bottom:0.5px solid rgba(255,255,255,.1);
+}
+.ndl-lock-box{
+  width:40px;height:40px;border-radius:10px;
+  background:rgba(79,70,229,.6);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ndl-lock-box svg{width:18px;height:18px;stroke:#fff;stroke-width:2;fill:none}
+.ndl-head-txt{}
+.ndl-head-title{font-size:14px;font-weight:800;color:#fff;letter-spacing:.3px;margin-bottom:2px}
+.ndl-head-sub{font-size:12px;color:rgba(255,255,255,.5);line-height:1.4}
+.ndl-row{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 14px;
+  border-bottom:0.5px solid rgba(255,255,255,.08);
+  cursor:pointer;
+}
+.ndl-row-lock{
+  width:34px;height:34px;border-radius:8px;
+  background:rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ndl-row-lock svg{width:14px;height:14px;stroke:rgba(255,255,255,.5);stroke-width:2;fill:none}
+.ndl-row-body{flex:1;min-width:0}
+.ndl-row-title{font-size:13px;font-weight:600;color:#fff;line-height:1.3;margin-bottom:4px}
+.ndl-row-blur{
+  font-size:11px;color:rgba(255,255,255,.3);
+  filter:blur(3px);line-height:1.4;
+  overflow:hidden;white-space:nowrap;text-overflow:clip;
+}
+.ndl-row-chev{flex-shrink:0}
+.ndl-row-chev svg{width:14px;height:14px;stroke:rgba(255,255,255,.35);stroke-width:2;fill:none}
+/* GOLD CTA */
+.ndl-cta{
+  margin:10px 12px 12px;
+  background:linear-gradient(90deg,#D4900F 0%,#F5B800 20%,#FFD340 45%,#FFE566 50%,#FFD340 55%,#F5B800 80%,#D4900F 100%);
+  border-radius:12px;padding:7px 20px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  cursor:pointer;border:none;width:calc(100% - 24px);
+  white-space:nowrap;overflow:hidden;
+}
+.ndl-cta-crown svg{width:30px;height:30px;fill:#1C1917;flex-shrink:0}
+.ndl-cta-txt{font-size:12px;font-weight:600;color:#1C1917;letter-spacing:.1px;-webkit-font-smoothing:antialiased}
+.ndl-cta-spark{font-size:11px;color:#1C1917;opacity:.75;flex-shrink:0}
+
+/* ── ULTIME NOTIZIE rows ── */
+.un-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 16px;border-bottom:0.5px solid var(--bd);cursor:pointer;
+}
+.un-thumb{
+  width:76px;height:64px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+  overflow:hidden;
+}
+.un-body{flex:1;min-width:0}
+.un-title{font-size:14px;font-weight:700;color:var(--t1);line-height:1.35;margin-bottom:4px}
+.un-meta{font-size:11px;color:var(--t3);margin-bottom:3px}
+.un-cat{font-size:11px;font-weight:700;color:var(--pri)}
+.un-share{flex-shrink:0}
+.un-share svg{width:18px;height:18px;stroke:var(--t3);stroke-width:1.8;fill:none}
+.un-row:last-of-type{border-bottom:none}
+
+/* ── PUNTI BANNER ── */
+.pts-banner{
+  margin:8px 14px 16px;
+  background:var(--bg2);border-radius:14px;
+  border:0.5px solid var(--bd);
+  padding:13px 14px;
+  display:flex;align-items:center;gap:12px;
+}
+.pts-icon{
+  width:46px;height:46px;border-radius:12px;
+  background:var(--pri);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.pts-icon svg{width:22px;height:22px;stroke:#fff;stroke-width:1.8;fill:none}
+.pts-body{flex:1;min-width:0}
+.pts-label{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--t2);text-transform:uppercase;margin-bottom:3px}
+.pts-val{font-size:22px;font-weight:900;color:var(--pri);letter-spacing:-.5px;line-height:1;margin-bottom:3px}
+.pts-sub{font-size:11px;color:var(--t2);line-height:1.35}
+.pts-btn{
+  background:var(--pri);border-radius:10px;padding:9px 11px;
+  display:flex;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;
+  border:none;white-space:nowrap;
+}
+.pts-btn svg{width:15px;height:15px;stroke:#fff;stroke-width:1.8;fill:none;flex-shrink:0}
+.pts-btn-txt{font-size:11px;font-weight:700;color:#fff}
+
+/* ── ARCHIVIO ── */
+.arch-search{margin:10px 16px 6px;display:flex;align-items:center;background:var(--bg2);border-radius:10px;border:0.5px solid var(--bd);padding:9px 12px;gap:8px}
+.arch-search input{flex:1;border:none;background:none;font-size:13px;color:var(--t1);outline:none}
+.filter-row{display:flex;gap:6px;padding:0 16px 6px;overflow-x:auto;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-btn{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;border:0.5px solid var(--bd);background:var(--bg);color:var(--t2);cursor:pointer;white-space:nowrap}
+.filter-btn svg{width:12px;height:12px;stroke:var(--t3);stroke-width:2;fill:none}
+.filter-btn.on{background:var(--prl);color:var(--pri);border-color:var(--pri)}
+.filter-btn.on svg{stroke:var(--pri)}
+.arch-meta-row{padding:4px 16px 6px;display:flex;justify-content:space-between;align-items:center}
+.arch-meta-cnt{font-size:11px;color:var(--t3)}
+.arch-sort{font-size:11px;color:var(--pri);font-weight:700;display:flex;align-items:center;gap:3px}
+.art-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:0.5px solid var(--bd);cursor:pointer}
+.art-thumb{width:58px;height:58px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px}
+.art-body{flex:1;min-width:0}
+.art-cat{font-size:10px;color:var(--pri);font-weight:700;margin-bottom:3px;letter-spacing:.5px}
+.art-title{font-size:13px;font-weight:600;color:var(--t1);line-height:1.35}
+.art-meta{font-size:11px;color:var(--t3);margin-top:3px}
+
+/* ── PUNTI SCREEN ── */
+.lvl-card{margin:12px 16px;background:var(--bg2);border-radius:14px;padding:14px;border:0.5px solid var(--bd)}
+.lvl-top{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.lvl-badge-circle{width:52px;height:52px;border-radius:14px;background:var(--pri);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.lvl-name{font-size:16px;font-weight:800;color:var(--t1);letter-spacing:-.3px}
+.lvl-pts-sub{font-size:12px;color:var(--t2);margin-top:1px}
+.prog-row{display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:5px}
+.prog-bar{height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:3px}
+.prog-fill{height:100%;background:var(--pri);border-radius:3px}
+.prog-hint{font-size:11px;color:var(--t3)}
+.streak-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--bd)}
+.streak-left .streak-lbl{font-size:11px;color:var(--t2);margin-bottom:2px}
+.streak-left .streak-val{font-size:20px;font-weight:800;color:var(--t1)}
+.streak-badge{background:var(--bd);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--t1)}
+.card-sect{margin:0 16px 12px;padding:0 14px;background:var(--bg2);border-radius:12px;border:0.5px solid var(--bd)}
+.earn-row{display:flex;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--bd);gap:8px}
+.earn-row:last-child{border-bottom:none}
+.earn-lbl{flex:1;font-size:13px;color:var(--t1)}
+.earn-done{width:18px;height:18px;border-radius:9px;background:var(--prl);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.earn-pts{font-size:13px;font-weight:700;color:var(--t2)}
+.unlock-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--bd)}
+.unlock-row:last-child{border-bottom:none}
+.unlock-circle{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.uc-done{background:var(--prl);border:1.5px solid #C7D2FE}
+.uc-cur{background:var(--pri)}
+.uc-lock{background:var(--bg);border:1.5px solid var(--bd)}
+.unlock-info{flex:1}
+.unlock-name{font-size:13px;font-weight:600;color:var(--t1)}
+.unlock-name.locked{color:var(--t3)}
+.unlock-desc{font-size:11px;color:var(--t2);margin-top:1px}
+.unlock-pts{font-size:12px;font-weight:600;color:var(--t1);flex-shrink:0}
+.unlock-pts.locked{color:var(--t3)}
+
+/* ── PREMIUM SCREEN ── */
+.prem-screen-hdr{background:var(--pri);padding:22px 16px 26px;position:relative;overflow:hidden;text-align:center}
+.prem-screen-art{font-size:52px;margin-bottom:8px;position:relative;z-index:1}
+.prem-screen-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px;position:relative;z-index:1}
+.prem-screen-sub{font-size:13px;color:rgba(255,255,255,.7);margin-top:5px;position:relative;z-index:1}
+.prem-screen-bg{position:absolute;right:-20px;bottom:-20px;font-size:120px;opacity:.08;line-height:1;pointer-events:none}
+.cmp-wrap{margin:14px 16px;border:0.5px solid var(--bd);border-radius:14px;overflow:hidden}
+.cmp-head{display:grid;grid-template-columns:1.5fr 1fr 1fr;background:var(--bg2);border-bottom:0.5px solid var(--bd)}
+.cmp-hcell{padding:10px 8px;font-size:11px;font-weight:700;color:var(--t2);text-align:center}
+.cmp-hcell.gold-col{background:var(--glb);color:var(--gld)}
+.cmp-hcell.feat-col{text-align:left;color:var(--t3)}
+.cmp-row{display:grid;grid-template-columns:1.5fr 1fr 1fr;border-bottom:0.5px solid var(--bd)}
+.cmp-row:last-child{border-bottom:none}
+.cmp-cell{padding:9px 8px;font-size:12px;color:var(--t2);text-align:center;display:flex;align-items:center;justify-content:center}
+.cmp-cell.feat{justify-content:flex-start;font-size:12px;color:var(--t1);font-weight:500}
+.cmp-cell.gold-bg{background:rgba(217,119,6,.04)}
+.chk{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:9px;background:var(--prl)}
+.chk svg{width:10px;height:10px;stroke:var(--pri);stroke-width:2.5;fill:none}
+.cta-prem{margin:0 16px 8px}
+.cta-prem-btn{width:100%;background:linear-gradient(90deg,#D97706 0%,#F59E0B 100%);border-radius:14px;padding:15px 16px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.cta-prem-crown{font-size:16px}
+.cta-prem-title{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.cta-prem-spark{font-size:14px;opacity:.9}
+.cta-manage{width:100%;background:none;border:0.5px solid var(--bd);border-radius:14px;padding:12px;margin:0 0 14px;cursor:pointer;font-size:13px;color:var(--t2);font-weight:500}
+
+/* ── PLAN SELECTOR ── */
+.plan-wrap{display:flex;gap:10px;padding:14px 16px 4px}
+.plan-box{
+  flex:1;border-radius:14px;padding:14px 12px;
+  border:1.5px solid var(--bd);background:var(--bg);
+  cursor:pointer;position:relative;transition:border-color .15s;
+}
+.plan-box.selected{border-color:var(--pri);background:var(--prl)}
+.plan-box.selected .plan-name{color:var(--pri)}
+.plan-badge{
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:var(--pri);color:#fff;
+  font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  padding:3px 10px;border-radius:20px;white-space:nowrap;
+}
+.plan-name{font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.plan-price{font-size:24px;font-weight:900;color:var(--t1);letter-spacing:-.5px;line-height:1}
+.plan-price span{font-size:13px;font-weight:500;color:var(--t2)}
+.plan-sub{font-size:11px;color:var(--t2);margin-top:4px}
+.plan-saving{font-size:11px;font-weight:700;color:var(--pri);margin-top:4px}
+.plan-dot{
+  width:18px;height:18px;border-radius:9px;
+  border:1.5px solid var(--bd);background:var(--bg);
+  position:absolute;top:12px;right:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.plan-box.selected .plan-dot{background:var(--pri);border-color:var(--pri)}
+.plan-dot-inner{width:7px;height:7px;border-radius:4px;background:#fff}
+
+/* ── PROFILO ── */
+.prof-hdr{background:var(--pri);padding:20px 16px 40px;position:relative;overflow:hidden;text-align:center}
+.prof-hdr-art{position:absolute;right:-10px;bottom:-10px;font-size:100px;opacity:.1;pointer-events:none}
+.prof-avatar{width:60px;height:60px;border-radius:30px;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin:0 auto 8px;position:relative;z-index:1}
+.prof-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px;position:relative;z-index:1}
+.prof-badge-pill{display:inline-flex;align-items:center;gap:4px;background:var(--glb);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--gld);margin-top:4px;position:relative;z-index:1}
+.prof-card{margin:-20px 14px 0;background:var(--bg);border-radius:16px;border:0.5px solid var(--bd);overflow:hidden;position:relative;z-index:2}
+.set-section-hdr{display:flex;align-items:center;gap:6px;padding:12px 14px 4px}
+.set-section-lbl{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--pri);text-transform:uppercase}
+.set-row{display:flex;align-items:center;padding:11px 14px;border-top:0.5px solid var(--bd);cursor:pointer}
+.set-icon-box{width:30px;height:30px;border-radius:9px;background:var(--bg2);border:0.5px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px;margin-right:10px;flex-shrink:0}
+.set-lbl{flex:1;font-size:13px;color:var(--t1);font-weight:500}
+.set-val{font-size:12px;color:var(--t2);margin-right:4px}
+.set-chev{width:14px;height:14px;stroke:var(--t3);stroke-width:2;fill:none}
+.gold-banner{margin:4px 14px;background:var(--glb);border-radius:12px;padding:12px 14px;border:0.5px solid #FDE68A;display:flex;align-items:center;gap:10px;cursor:pointer}
+.gold-banner-title{font-size:13px;font-weight:700;color:var(--gld)}
+.gold-banner-sub{font-size:11px;color:#92400E;margin-top:1px}
+.interest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 14px 12px}
+.int-chip{border-radius:20px;padding:8px 16px;text-align:center;font-size:13px;cursor:pointer;font-weight:600;border:0.5px solid var(--bd);background:var(--bg);color:var(--t2);white-space:nowrap}
+.int-chip.on{background:var(--prl);border-color:var(--pri);color:var(--pri)}
+.red-row{display:flex;align-items:center;padding:12px 14px;border-top:0.5px solid var(--bd);cursor:pointer}
+.red-lbl{font-size:13px;color:#EF4444;font-weight:600}
+
+/* ── TOGGLE SWITCH ── */
+.toggle{width:40px;height:24px;border-radius:12px;background:var(--bd);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none;padding:0}
+.toggle.on{background:var(--pri)}
+.toggle-thumb{width:18px;height:18px;border-radius:9px;background:#fff;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on .toggle-thumb{transform:translateX(16px)}
+
+/* ── DETAIL ── */
+.detail-hdr{background:var(--pri);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.detail-back{background:rgba(255,255,255,.18);border:none;border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.detail-back svg{width:18px;height:18px;stroke:#fff;stroke-width:2.2;fill:none}
+.detail-hdr-txt{flex:1;min-width:0}
+.detail-hdr-kicker{font-size:10px;font-weight:700;letter-spacing:1.2px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:2px}
+.detail-hdr-src{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-hero{height:190px;background-size:cover;background-position:center;position:relative;flex-shrink:0}
+.detail-hero-pill{position:absolute;bottom:10px;left:14px;background:var(--pri);color:#fff;font-size:9px;font-weight:800;letter-spacing:.6px;padding:3px 10px;border-radius:6px;text-transform:uppercase}
+.detail-info{padding:14px 16px 10px}
+.detail-title{font-size:18px;font-weight:800;color:var(--t1);line-height:1.3;margin-bottom:7px;letter-spacing:-.3px}
+.detail-meta{font-size:12px;color:var(--t3)}
+.detail-body{padding:0 16px 16px;font-size:14px;color:var(--t2);line-height:1.75}
+.detail-actions{display:flex;gap:8px;padding:10px 16px 16px;border-top:0.5px solid var(--bd)}
+.action-btn{flex:1;border-radius:10px;padding:10px;border:0.5px solid var(--bd);background:var(--bg);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--t1)}
+.action-btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.action-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+<!-- ══════════════════════════════
+     HOME SCREEN
+══════════════════════════════ -->
+<div class="screen" id="scr-home">
+
+  <!-- Header: violet bg, OddFeed title, globe illustration, no filter chips -->
+  <div class="home-hdr">
+    <div class="home-hdr-top">
+      <div>
+        <div class="home-hdr-kicker">Benvenuto · Oggi</div>
+        <div class="home-hdr-title">OddFeed</div>
+        <div class="home-hdr-sub">Le notizie più assurde del mondo</div>
+      </div>
+      <div class="home-hdr-art">🌍</div>
+    </div>
+  </div>
+
+  <!-- ATTUALITÀ -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-left">
+      <div class="sec-hdr-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      </div>
+      <div class="sec-hdr-title">Attualità</div>
+    </div>
+    <div class="sec-hdr-link">Vedi tutte <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>
+  <div class="att-scroll">
+    <div class="att-card" onclick="show('detail')">
+      <div class="att-img" style="background-image:url('https://picsum.photos/seed/politica/380/180');background-size:cover;background-position:center">
+        <span class="att-cat-pill">Politica</span>
+      </div>
+      <div class="att-body">
+        <div class="att-title">Governo approva riforma fiscale: nuove aliquote da gennaio</div>
+        <div class="att-meta"><span>Corriere della Sera</span><span>2h fa</span></div>
+      </div>
+    </div>
+    <div class="att-card" onclick="show('detail')">
+      <div class="att-img" style="background-image:url('https://picsum.photos/seed/cronaca/380/180');background-size:cover;background-position:center">
+        <span class="att-cat-pill">Cronaca</span>
+      </div>
+      <div class="att-body">
+        <div class="att-title">Terremoto in Turchia di magnitudo 6.8: crolli in diverse province</div>
+        <div class="att-meta"><span>ANSA</span><span>3h fa</span></div>
+      </div>
+    </div>
+    <div class="att-card" onclick="show('detail')">
+      <div class="att-img" style="background-image:url('https://picsum.photos/seed/trasporti/380/180');background-size:cover;background-position:center">
+        <span class="att-cat-pill">Trasporti</span>
+      </div>
+      <div class="att-body">
+        <div class="att-title">Sciopero treni: stop a treno in tutta Italia per 24 ore</div>
+        <div class="att-meta"><span>ANSA</span><span>4h fa</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NON DOVRESTI LEGGERE -->
+  <div class="ndl-block">
+    <div class="ndl-head">
+      <div class="ndl-lock-box">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="ndl-head-txt">
+        <div class="ndl-head-title">NON DOVRESTI LEGGERE ✨</div>
+        <div class="ndl-head-sub">Alcune storie sono troppo assurde per essere vere. O forse no.</div>
+      </div>
+    </div>
+    <div class="ndl-row" onclick="nav('prem')">
+      <div class="ndl-row-lock"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="ndl-row-body">
+        <div class="ndl-row-title">La scoperta che potrebbe cambiare tutto ciò che sappiamo</div>
+        <div class="ndl-row-blur">Un team di scienziati ha trovato un fenomeno impossibile che potrebbe riscrivere le leggi della fisica come le conoscevamo.</div>
+      </div>
+      <div class="ndl-row-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="ndl-row" onclick="nav('prem')">
+      <div class="ndl-row-lock"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="ndl-row-body">
+        <div class="ndl-row-title">Il segreto che le aziende non vogliono che tu conosca</div>
+        <div class="ndl-row-blur">Documenti interni rivelano una verità scomoda che potrebbe cambiare per sempre il modo in cui guardi i prodotti che usi ogni giorno.</div>
+      </div>
+      <div class="ndl-row-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <!-- GOLD CTA -->
+    <button class="ndl-cta" onclick="nav('prem')">
+      <span class="ndl-cta-crown"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" fill="#1C1917" stroke="none"/></svg></span>
+      <span class="ndl-cta-txt">Scopri Premium e leggi tutto senza limiti</span>
+      <span class="ndl-cta-spark">✦</span>
+    </button>
+  </div>
+
+  <!-- ULTIME NOTIZIE -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-left">
+      <div class="sec-hdr-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+      </div>
+      <div class="sec-hdr-title">Ultime Notizie</div>
+    </div>
+    <div class="sec-hdr-link">Vedi tutte <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/animali/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Un'oca ha bloccato l'A1 per 40 minuti: la polizia ha capitolato</div>
+      <div class="un-meta">ANSA · 3h fa</div>
+      <div class="un-cat">Animali</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/robot/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Hotel gestito da robot in Giappone: si scusano per ogni errore con un inchino</div>
+      <div class="un-meta">The Guardian · Ieri</div>
+      <div class="un-cat">Tech</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row" style="border-bottom:none">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/mucche/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Le mucche hanno migliori amici e soffrono di solitudine: cambiano le norme UE</div>
+
+      <div class="un-meta">BBC Science · 2gg fa</div>
+      <div class="un-cat">Scienza</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+
+  <!-- I TUOI PUNTI BANNER -->
+  <div class="pts-banner">
+    <div class="pts-body">
+      <div class="pts-label">I tuoi punti</div>
+      <div class="pts-val">1.250 pts</div>
+      <div class="pts-sub">Accumula punti leggendo notizie e ottieni vantaggi esclusivi!</div>
+    </div>
+    <div class="pts-btn" onclick="nav('pts')">
+      <svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+      <span class="pts-btn-txt">Scopri i premi</span>
+    </div>
+  </div>
+  <div style="height:8px"></div>
+</div>
+
+<!-- ══════════════════════════════
+     ARCHIVIO SCREEN
+══════════════════════════════ -->
+<div class="screen" id="scr-arch" style="display:none">
+
+  <!-- Header violet — stesso stile home -->
+  <div class="home-hdr">
+    <div class="home-hdr-top">
+      <div>
+        <div class="home-hdr-kicker">Storico completo</div>
+        <div class="home-hdr-title">Archivio</div>
+        <div class="home-hdr-sub">Tutte le notizie assurde</div>
+      </div>
+      <div class="home-hdr-art">🗄️</div>
+    </div>
+  </div>
+
+  <!-- Filtri -->
+  <div style="height:10px"></div>
+  <div class="filter-row">
+    <button class="filter-btn on" onclick="toggleFilter(this)">Tutti<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <button class="filter-btn" onclick="toggleFilter(this)">Scienza<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <button class="filter-btn" onclick="toggleFilter(this)">Animali<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <button class="filter-btn" onclick="toggleFilter(this)">Tech<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <button class="filter-btn" onclick="toggleFilter(this)">Mondo<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+  </div>
+
+  <!-- Count / sort -->
+  <div class="arch-meta-row">
+    <div class="arch-meta-cnt">248 notizie trovate</div>
+    <div class="arch-sort">Recenti <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+  </div>
+
+  <!-- Lista articoli — stesso stile un-row della home -->
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/polpo/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Il polpo sogna cambiando colore della pelle</div>
+      <div class="un-meta">Nature Journal · Oggi, 09:42</div>
+      <div class="un-cat">Scienza</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/anatra/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Città olandese nomina un'anatra sindaco ufficiale</div>
+      <div class="un-meta">NRC · Ieri, 14:30</div>
+      <div class="un-cat">Politica</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/robot2/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">AI chiede il divorzio dal suo programmatore</div>
+      <div class="un-meta">Wired · Ieri, 18:10</div>
+      <div class="un-cat">Tecnologia</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/leone/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Leone adottato da branco di cagnolini a Vienna</div>
+      <div class="un-meta">BBC · 2 giorni fa</div>
+      <div class="un-cat">Animali</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/marte/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Oceano di acqua salata scoperto sotto Marte</div>
+      <div class="un-meta">NASA Science · 3 giorni fa</div>
+      <div class="un-cat">Scienza</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div onclick="show('detail')" class="un-row" style="border-bottom:none">
+    <div class="un-thumb" style="background-image:url('https://picsum.photos/seed/pizza/152/128');background-size:cover;background-position:center"></div>
+    <div class="un-body">
+      <div class="un-title">Pizzeria italiana brevetta la pizza quadrata triangolare</div>
+      <div class="un-meta">La Repubblica · 4 giorni fa</div>
+      <div class="un-cat">Cultura</div>
+    </div>
+    <div class="un-share"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+  </div>
+  <div style="height:16px"></div>
+</div>
+
+<!-- ══════════════════════════════
+     PUNTI SCREEN
+══════════════════════════════ -->
+<div class="screen" id="scr-pts" style="display:none">
+  <div class="home-hdr">
+    <div class="home-hdr-top">
+      <div>
+        <div class="home-hdr-kicker">Progressi e livelli</div>
+        <div class="home-hdr-title">Punti</div>
+        <div class="home-hdr-sub">Guadagna leggendo ogni giorno</div>
+      </div>
+      <div class="home-hdr-art">🏆</div>
+    </div>
+  </div>
+  <div class="lvl-card">
+    <div class="lvl-top">
+      <div class="lvl-badge-circle">🥈</div>
+      <div>
+        <div class="lvl-name">Esploratore</div>
+        <div class="lvl-pts-sub">Livello 2 · 340 punti totali</div>
+      </div>
+    </div>
+    <div class="prog-row"><span>340 pt</span><span style="color:var(--t1);font-weight:700">Giornalista</span><span>500 pt</span></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:68%"></div></div>
+    <div class="prog-hint">Ancora 160 pt per raggiungere Giornalista</div>
+    <div class="streak-row">
+      <div class="streak-left"><div class="streak-lbl">Giorni consecutivi</div><div class="streak-val">7 giorni</div></div>
+      <div class="streak-badge">+75 pt</div>
+    </div>
+  </div>
+  <div class="sec-hdr" style="padding-bottom:6px">
+    <div class="sec-hdr-left"><div class="sec-hdr-icon"><svg viewBox="0 0 24 24"><polyline points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="sec-hdr-title">Come guadagnare</div></div>
+  </div>
+  <div class="card-sect">
+    <div class="earn-row"><div class="earn-lbl">Leggi un articolo</div><div class="earn-done"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="earn-pts">+10 pt</div></div>
+    <div class="earn-row"><div class="earn-lbl">Condividi un articolo</div><div class="earn-done"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="earn-pts">+20 pt</div></div>
+    <div class="earn-row"><div class="earn-lbl">Accedi ogni giorno</div><div style="width:18px"></div><div class="earn-pts">+15 pt</div></div>
+    <div class="earn-row"><div class="earn-lbl">Streak settimanale</div><div style="width:18px"></div><div class="earn-pts">+75 pt</div></div>
+    <div class="earn-row"><div class="earn-lbl">Invita un amico</div><div style="width:18px"></div><div class="earn-pts">+150 pt</div></div>
+  </div>
+  <div class="sec-hdr" style="padding-bottom:6px">
+    <div class="sec-hdr-left"><div class="sec-hdr-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-hdr-title">Sblocchi</div></div>
+  </div>
+  <div class="card-sect">
+    <div class="unlock-row"><div class="unlock-circle uc-done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="unlock-info"><div class="unlock-name">Novizio</div><div class="unlock-desc">Accesso base al feed</div></div><div class="unlock-pts">—</div></div>
+    <div class="unlock-row"><div class="unlock-circle uc-done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="unlock-info"><div class="unlock-name">Esploratore</div><div class="unlock-desc">Archivio storico</div></div><div class="unlock-pts">100 pt</div></div>
+    <div class="unlock-row"><div class="unlock-circle uc-cur" style="font-size:16px">🥈</div><div class="unlock-info"><div class="unlock-name">Giornalista</div><div class="unlock-desc">Categorie personalizzate</div></div><div class="unlock-pts">500 pt</div></div>
+    <div class="unlock-row"><div class="unlock-circle uc-lock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="unlock-info"><div class="unlock-name locked">Editore</div><div class="unlock-desc">Feed esclusivo notturno</div></div><div class="unlock-pts locked">1.000 pt</div></div>
+    <div class="unlock-row"><div class="unlock-circle uc-lock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="unlock-info"><div class="unlock-name locked">Direttore</div><div class="unlock-desc">Badge oro + accesso beta</div></div><div class="unlock-pts locked">5.000 pt</div></div>
+  </div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ══════════════════════════════
+     PREMIUM SCREEN
+══════════════════════════════ -->
+<div class="screen" id="scr-prem" style="display:none">
+
+  <!-- Header violet — stesso stile home -->
+  <div class="home-hdr">
+    <div class="home-hdr-top">
+      <div>
+        <div class="home-hdr-kicker">Abbonamento</div>
+        <div class="home-hdr-title">Premium</div>
+        <div class="home-hdr-sub">Tutte le notizie assurde, senza limiti</div>
+      </div>
+      <div class="home-hdr-art">👑</div>
+    </div>
+  </div>
+
+  <!-- Tabella comparativa -->
+  <div class="cmp-wrap">
+    <div class="cmp-head">
+      <div class="cmp-hcell feat-col">Funzione</div>
+      <div class="cmp-hcell">FREE</div>
+      <div class="cmp-hcell gold-col">PREMIUM</div>
+    </div>
+    <div class="cmp-row"><div class="cmp-cell feat">Feed giornaliero</div><div class="cmp-cell">5 art.</div><div class="cmp-cell gold-bg" style="font-weight:700;color:var(--gld)">Illimitati</div></div>
+    <div class="cmp-row"><div class="cmp-cell feat">Non dovresti leggerla</div><div class="cmp-cell" style="color:var(--t3)">—</div><div class="cmp-cell gold-bg"><div class="chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div></div>
+    <div class="cmp-row"><div class="cmp-cell feat">Archivio storico</div><div class="cmp-cell">7 giorni</div><div class="cmp-cell gold-bg" style="font-weight:700;color:var(--gld)">Completo</div></div>
+    <div class="cmp-row"><div class="cmp-cell feat">Pubblicità</div><div class="cmp-cell">Sì</div><div class="cmp-cell gold-bg"><div class="chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div></div>
+    <div class="cmp-row"><div class="cmp-cell feat">Notifiche breaking</div><div class="cmp-cell" style="color:var(--t3)">—</div><div class="cmp-cell gold-bg"><div class="chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div></div>
+    <div class="cmp-row"><div class="cmp-cell feat">Lettura offline</div><div class="cmp-cell" style="color:var(--t3)">—</div><div class="cmp-cell gold-bg"><div class="chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div></div>
+  </div>
+
+  <!-- PLAN SELECTOR -->
+  <div class="plan-wrap">
+    <!-- Mensile -->
+    <div class="plan-box" id="plan-monthly" onclick="selectPlan('monthly')">
+      <div class="plan-dot"><div class="plan-dot-inner" style="display:none" id="dot-monthly"></div></div>
+      <div class="plan-name">Mensile</div>
+      <div class="plan-price">€1,99<span>/mese</span></div>
+      <div class="plan-sub">Rinnovo automatico</div>
+    </div>
+    <!-- Annuale -->
+    <div class="plan-box selected" id="plan-annual" onclick="selectPlan('annual')">
+      <div class="plan-badge">Più conveniente</div>
+      <div class="plan-dot" style="background:var(--pri);border-color:var(--pri)"><div class="plan-dot-inner" id="dot-annual"></div></div>
+      <div class="plan-name">Annuale</div>
+      <div class="plan-price">€14,99<span>/anno</span></div>
+      <div class="plan-sub">Solo €1,25/mese</div>
+      <div class="plan-saving">Risparmi il 37%</div>
+    </div>
+  </div>
+
+  <!-- CTA standard -->
+  <div style="padding:12px 16px 16px">
+    <button onclick="alert('Abbonamento attivato!')" style="width:100%;background:var(--pri);border:none;border-radius:14px;padding:14px 16px;font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;cursor:pointer;">Attiva ora</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PROFILO SCREEN
+══════════════════════════════ -->
+<div class="screen" id="scr-prof" style="display:none">
+
+  <!-- Header violet — stesso stile home -->
+  <div class="home-hdr">
+    <div class="home-hdr-top">
+      <div>
+        <div class="home-hdr-kicker">Il tuo profilo</div>
+        <div class="home-hdr-title">Kida</div>
+        <div class="home-hdr-sub" style="display:flex;align-items:center;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+          <span>Premium attivo</span>
+        </div>
+      </div>
+      <div class="home-hdr-art">👤</div>
+    </div>
+  </div>
+
+  <!-- Preferenze -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-left">
+      <div class="sec-hdr-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      <div class="sec-hdr-title">Preferenze</div>
+    </div>
+  </div>
+  <div class="set-row" style="border:none;padding:10px 16px">
+    <div class="set-icon-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
+    <div class="set-lbl">Modalità scura</div>
+    <button class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button>
+  </div>
+  <div class="set-row" style="border:none;padding:10px 16px">
+    <div class="set-icon-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+    <div class="set-lbl">Notifiche</div>
+    <button class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button>
+  </div>
+  <div class="set-row" style="border:none;padding:10px 16px">
+    <div class="set-icon-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+    <div class="set-lbl">Lingua</div><div class="set-val">Italiano</div>
+    <svg class="set-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+
+  <!-- Account -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-left">
+      <div class="sec-hdr-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="sec-hdr-title">Account</div>
+    </div>
+  </div>
+  <div class="gold-banner" style="border:none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gld)" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+    <div style="flex:1"><div class="gold-banner-title">OddFeed Premium attivo</div><div class="gold-banner-sub">Abbonato dall'aprile 2025</div></div>
+    <svg class="set-chev" viewBox="0 0 24 24" stroke="var(--gld)"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+
+  <!-- Interessi -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-left">
+      <div class="sec-hdr-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+      <div class="sec-hdr-title">Interessi</div>
+    </div>
+  </div>
+  <div class="interest-grid">
+    <div class="int-chip on">Scienza</div><div class="int-chip on">Animali</div><div class="int-chip">Politica</div>
+    <div class="int-chip on">Tech</div><div class="int-chip">Sport</div><div class="int-chip on">Cultura</div>
+    <div class="int-chip">Economia</div><div class="int-chip">Salute</div><div class="int-chip on">Spazio</div>
+  </div>
+
+  <!-- Privacy -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-left">
+      <div class="sec-hdr-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="sec-hdr-title">Privacy e dati</div>
+    </div>
+  </div>
+  <div class="set-row" style="border:none;padding:10px 16px">
+    <div class="set-icon-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+    <div class="set-lbl">Dati di utilizzo</div>
+    <svg class="set-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="set-row" style="border:none;padding:10px 16px">
+    <div class="set-icon-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
+    <div class="set-lbl">Elimina account</div>
+    <svg class="set-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="red-row" style="border:none;padding:10px 16px"><div class="red-lbl">Esci dall'account</div></div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ══════════════════════════════
+     ARTICLE DETAIL
+══════════════════════════════ -->
+<div class="screen" id="scr-detail" style="display:none">
+
+  <!-- Header violet con back -->
+  <div class="detail-hdr">
+    <button class="detail-back" onclick="back()">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+    </button>
+    <div class="detail-hdr-txt">
+      <div class="detail-hdr-kicker">Scienza · 3 min di lettura</div>
+      <div class="detail-hdr-src">Nature Journal</div>
+    </div>
+    <div class="un-share" style="flex-shrink:0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.8" width="20" height="20"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </div>
+  </div>
+
+  <!-- Hero image con pill categoria -->
+  <div class="detail-hero" style="background-image:url('https://picsum.photos/seed/polpo/750/380')">
+    <div class="detail-hero-pill">Scienza</div>
+  </div>
+
+  <!-- Info -->
+  <div class="detail-info">
+    <div class="detail-title">Il polpo sogna cambiando colore della pelle in modo sincronizzato</div>
+    <div class="detail-meta">Oggi, 09:42 · Nature Journal</div>
+  </div>
+
+  <!-- Corpo articolo -->
+  <div class="detail-body">I ricercatori dell'Università di Washington hanno documentato per la prima volta un polpo che cambia colore durante il sonno in pattern complessi e ripetibili. Gli scienziati ritengono che possa trattarsi di sogni visivi.<br><br>Lo studio, pubblicato su Nature, ha monitorato 8 esemplari per 3 mesi. I cambiamenti si verificano in fasi REM-like, circa 90 minuti dopo l'addormentamento.</div>
+
+  <!-- Azioni -->
+  <div class="detail-actions" style="flex-direction:column;gap:10px">
+    <!-- Condividi full width -->
+    <button class="action-btn pri" style="width:100%;padding:14px 16px;font-size:15px;font-weight:700;border-radius:14px;border:none">
+      <svg viewBox="0 0 24 24" stroke="#fff"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Condividi
+    </button>
+    <!-- Sottotitolo -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:-4px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span style="font-size:11px;color:var(--t3);font-weight:500">Condividi e incuriosisci i tuoi amici</span>
+    </div>
+    <!-- Indietro + Salva senza bordi -->
+    <div style="display:flex;justify-content:space-between;margin-top:10px">
+      <button class="action-btn" style="border:none;color:var(--t2);flex:none" onclick="back()">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>Indietro
+      </button>
+      <button class="action-btn" style="border:none;color:var(--t2);flex:none">
+        <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Salva
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tabbar">
+  <button class="tab active" id="tab-home" onclick="nav('home')">
+    <svg viewBox="0 0 24 24"><path class="ti" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline class="ti" points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="tab-lbl">Notizie</span>
+  </button>
+  <button class="tab" id="tab-arch" onclick="nav('arch')">
+    <svg viewBox="0 0 24 24"><rect class="ti" x="2" y="3" width="20" height="4" rx="1"/><path class="ti" d="M4 7v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><line class="ti" x1="9" y1="12" x2="15" y2="12"/></svg>
+    <span class="tab-lbl">Archivio</span>
+  </button>
+  <button class="tab" id="tab-pts" onclick="nav('pts')">
+    <svg viewBox="0 0 24 24"><polygon class="ti" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span class="tab-lbl">Punti</span>
+  </button>
+  <button class="tab" id="tab-prem" onclick="nav('prem')">
+    <svg viewBox="0 0 24 24"><path class="ti" d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+    <span class="tab-lbl">Premium</span>
+  </button>
+  <button class="tab" id="tab-prof" onclick="nav('prof')">
+    <svg viewBox="0 0 24 24"><path class="ti" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle class="ti" cx="12" cy="7" r="4"/></svg>
+    <span class="tab-lbl">Profilo</span>
+  </button>
+</div>
+
+</div>
+<script>
+var prev = 'home';
+function nav(s) {
+  ['home','arch','pts','prem','prof'].forEach(function(k) {
+    var el = document.getElementById('scr-' + k);
+    if (el) el.style.display = k === s ? '' : 'none';
+    var t = document.getElementById('tab-' + k);
+    if (t) t.classList.toggle('active', k === s);
+  });
+  document.getElementById('scr-detail').style.display = 'none';
+  prev = s;
+  var scrs = document.querySelectorAll('.screen');
+  scrs.forEach(function(s){ if(s.style.display !== 'none') s.scrollTop = 0; });
+}
+function show(s) {
+  ['home','arch','pts','prem','prof'].forEach(function(k) {
+    var el = document.getElementById('scr-' + k);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('scr-' + s).style.display = '';
+}
+function back() { show(prev); }
+function toggleFilter(btn) { btn.classList.toggle('on'); }
+function selectPlan(plan) {
+  var monthly = document.getElementById('plan-monthly');
+  var annual  = document.getElementById('plan-annual');
+  var dotM    = document.getElementById('dot-monthly');
+  var dotA    = document.getElementById('dot-annual');
+  if (plan === 'monthly') {
+    monthly.classList.add('selected');    annual.classList.remove('selected');
+    dotM.style.display = '';             dotA.style.display = 'none';
+    monthly.querySelector('.plan-dot').style.background = 'var(--pri)';
+    monthly.querySelector('.plan-dot').style.borderColor = 'var(--pri)';
+    annual.querySelector('.plan-dot').style.background = 'var(--bg)';
+    annual.querySelector('.plan-dot').style.borderColor = 'var(--bd)';
+  } else {
+    annual.classList.add('selected');    monthly.classList.remove('selected');
+    dotA.style.display = '';             dotM.style.display = 'none';
+    annual.querySelector('.plan-dot').style.background = 'var(--pri)';
+    annual.querySelector('.plan-dot').style.borderColor = 'var(--pri)';
+    monthly.querySelector('.plan-dot').style.background = 'var(--bg)';
+    monthly.querySelector('.plan-dot').style.borderColor = 'var(--bd)';
+  }
+}
+// init dots
+document.addEventListener('DOMContentLoaded', function() { selectPlan('annual'); });
+</script>
+</body>
+</html>

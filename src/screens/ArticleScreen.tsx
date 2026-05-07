@@ -13,10 +13,13 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 const SCREEN_W = Dimensions.get('window').width;
+// @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { UserStats } from '../../App';
@@ -34,13 +37,31 @@ interface ArticleScreenProps {
   onUseFreeAccess?: () => void;
   onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
   onUpgradePremium?: () => void;
+  savedIds?: Set<string>;
+  onToggleSave?: (id: string, article: NewsItem) => void;
 }
 
 
-export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange, isPremium, oneTimeFreeAccess, onUseFreeAccess, onUpgradePremium }: ArticleScreenProps) {
+export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange, isPremium, oneTimeFreeAccess, onUseFreeAccess, onUpgradePremium, savedIds, onToggleSave }: ArticleScreenProps) {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
+  const isSaved = savedIds?.has(article.id) ?? false;
+
+  // Animazione scale sul bottone salva
+  const saveScale = useRef(new Animated.Value(1)).current;
+  const animateSave = () => {
+    Animated.sequence([
+      Animated.timing(saveScale, { toValue: 1.4, duration: 100, useNativeDriver: true }),
+      Animated.spring(saveScale, { toValue: 1, useNativeDriver: true, bounciness: 8 }),
+    ]).start();
+  };
+  // URL di condivisione: web URL + fallback scheme per deep link
+  // Il web URL richiede Associated Domains (da configurare in produzione);
+  // il deep link funziona subito da qualsiasi app installata.
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
+  const articleDeepLink = `oddfeed://articolo/${article.id}`;
 
   // Paywall: articolo premium e utente non abbonato
   // Bypass: oneTimeFreeAccess = regalo onboarding (una volta sola)
@@ -109,10 +130,12 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
     try {
       // Su iOS, `url` viene aggiunto automaticamente dopo `message`,
       // quindi non va incluso nel testo per evitare il doppio link.
+      // Usiamo il web URL come URL primario; il deep link è nel testo per Android
+      // così chi ha OddFeed installato può aprirlo direttamente.
       await Share.share(
         Platform.OS === 'ios'
           ? { message: article.title, url: articleUrl }
-          : { message: `${article.title}\n\n${articleUrl}` }
+          : { message: `${article.title}\n\n${articleUrl}\n\n(Apri in OddFeed: ${articleDeepLink})` }
       );
       if (userId) onPointsChange('share');
     } catch (e) {}
@@ -120,34 +143,36 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
 
   const paragraphs = article.fullText?.split('\n\n') ?? [];
   // Free: mostra solo le prime 2 righe del primo paragrafo (teaser)
-  const teaserText = paragraphs[0]?.split('. ').slice(0, 2).join('. ') + '…' ?? '';
+  const teaserText = (paragraphs[0]?.split('. ').slice(0, 2).join('. ') ?? '') + '…';
 
   return (
     <Animated.View style={[styles.swipeContainer, { transform: [{ translateX: swipePan }] }]}>
-    <SafeAreaView style={styles.safe} {...panResponder.panHandlers}>
-      {/* Back — in alto */}
-      <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-        <Text style={styles.backArrow}>←</Text>
-        <Text style={styles.backText}>{t.common.back}</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]} {...panResponder.panHandlers}>
+      {/* Violet header with back button */}
+      <View style={[styles.articleHeader, { backgroundColor: C.hero }]}>
+        <TouchableOpacity style={styles.articleBackBtn} onPress={onBack}>
+          <Text style={styles.articleBackArrow}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.articleHeaderTitle} numberOfLines={1}>{article.categoryLabel ?? article.category}</Text>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.body}>
+        <View style={[styles.body, { backgroundColor: C.bg }]}>
           {/* Tags */}
-          <Text style={styles.tags}>{article.country} · {article.categoryLabel}</Text>
+          <Text style={[styles.tags, { color: C.textTertiary }]}>{article.country} · {article.categoryLabel}</Text>
 
           {/* Titolo */}
-          <Text style={styles.title}>{article.title}</Text>
+          <Text style={[styles.title, { color: C.text }]}>{article.title}</Text>
 
           {/* Fonte */}
           <View style={styles.sourceRow}>
             <View style={styles.sourceLeft}>
               <View style={styles.sourceDot} />
-              <Text style={styles.sourceName}>{article.source}</Text>
-              <Text style={styles.timeDot}>·</Text>
-              <Text style={styles.time}>{article.publishedAt}</Text>
+              <Text style={[styles.sourceName, { color: C.textSecondary }]}>{article.source}</Text>
+              <Text style={[styles.timeDot, { color: C.textTertiary }]}>·</Text>
+              <Text style={[styles.time, { color: C.textTertiary }]}>{article.publishedAt}</Text>
             </View>
-            <View style={styles.verifiedBadge}>
+            <View style={[styles.verifiedBadge, { backgroundColor: C.greenBg, borderColor: C.greenBorder }]}>
               <Text style={styles.verifiedText}>✓ Verificata</Text>
             </View>
           </View>
@@ -155,7 +180,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           {/* Testo — completo se premium/free con accesso, teaser + paywall altrimenti */}
           {!showPaywall ? (
             paragraphs.map((para, i) => (
-              <Text key={i} style={styles.articleText}>{para}</Text>
+              <Text key={i} style={[styles.articleText, { color: C.text }]}>{para}</Text>
             ))
           ) : (
             <>
@@ -192,26 +217,44 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
             </>
           )}
 
-          {/* Back — in fondo (solo se non c'è paywall) */}
-          {!showPaywall && (
-            <TouchableOpacity style={styles.backBtnBottom} onPress={onBack}>
-              <Text style={styles.backArrow}>←</Text>
-              <Text style={styles.backBtnBottomText}>{t.common.back}</Text>
-            </TouchableOpacity>
-          )}
-
           <View style={{ height: 12 }} />
         </View>
       </ScrollView>
 
       {/* Condividi — fisso in fondo (solo se non c'è paywall) */}
       {!showPaywall && (
-        <View style={styles.shareBar}>
+        <View style={[styles.shareBar, { borderTopColor: C.border, backgroundColor: C.bg }]}>
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
             <Ionicons name="share-outline" size={20} color="#fff" />
             <Text style={styles.shareBtnText}>{t.article.share}</Text>
           </TouchableOpacity>
           <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
+          <View style={styles.shareActions}>
+            <TouchableOpacity style={styles.shareActionBtn} onPress={onBack}>
+              <Text style={[styles.shareActionText, { color: C.textSecondary }]}>← {t.common.back}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.shareActionBtn}
+              onPress={() => {
+                animateSave();
+                Haptics.impactAsync(
+                  isSaved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
+                );
+                onToggleSave?.(article.id, article);
+              }}
+              activeOpacity={0.7}
+            >
+              <Animated.Text
+                style={[
+                  styles.shareActionText,
+                  { color: isSaved ? Colors.violet : C.textSecondary },
+                  { transform: [{ scale: saveScale }] },
+                ]}
+              >
+                {isSaved ? '🔖 Salvato' : '🔖 Salva'}
+              </Animated.Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </SafeAreaView>
@@ -222,17 +265,31 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
 const styles = StyleSheet.create({
   swipeContainer: { flex: 1, backgroundColor: Colors.bg },
   safe: { flex: 1, backgroundColor: Colors.bg },
-  backBtn: {
+  // Violet article header
+  articleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingVertical: 14,
   },
-  backArrow: { fontSize: 18, color: Colors.textSecondary },
-  backText: { fontSize: FontSize.base, fontWeight: '500', color: Colors.textSecondary },
+  articleBackBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  articleBackArrow: { fontSize: 18, color: '#fff' },
+  articleHeaderTitle: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    letterSpacing: 0.1,
+  },
   body: { padding: Spacing.lg },
   tags: {
     fontSize: FontSize.xs,
@@ -281,21 +338,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
 
-  // Back button in fondo
-  backBtnBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  backBtnBottomText: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-
   // Share
   shareBar: {
     borderTopWidth: 1,
@@ -311,14 +353,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingVertical: 15,
-    borderRadius: Radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.violet,
-    shadowColor: Colors.violet,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
   },
   shareBtnText: {
     fontSize: FontSize.base,
@@ -327,9 +365,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   shareHint: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textTertiary,
     textAlign: 'center',
+  },
+  shareActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+  },
+  shareActionBtn: {
+    paddingVertical: Spacing.sm,
+  },
+  shareActionText: {
+    fontSize: FontSize.base,
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
 
   // Paywall

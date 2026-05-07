@@ -4,8 +4,9 @@ import {
   StyleSheet, SafeAreaView, KeyboardAvoidingView,
   Platform, ScrollView, Alert,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { registerUser } from '../services/authService';
 
 interface RegisterScreenProps {
@@ -28,16 +29,16 @@ const STRENGTH_LABELS = ['', 'Debole', 'Discreta', 'Buona', 'Ottima'];
 const STRENGTH_COLORS = ['', Colors.red, '#F97316', '#F0D98A', Colors.green];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function PasswordToggle({ show, onPress }: { show: boolean; onPress: () => void }) {
+function PasswordToggle({ show, onPress, color }: { show: boolean; onPress: () => void; color: string }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.eyeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
       <View style={styles.eyeIconWrap}>
-        <View style={[styles.eyeOuter, { borderColor: Colors.textTertiary }]}>
+        <View style={[styles.eyeOuter, { borderColor: color }]}>
           {show ? (
-            <View style={[styles.pupil, { backgroundColor: Colors.textTertiary }]} />
+            <View style={[styles.pupil, { backgroundColor: color }]} />
           ) : null}
         </View>
-        {!show && <View style={[styles.slash, { backgroundColor: Colors.textTertiary }]} />}
+        {!show && <View style={[styles.slash, { backgroundColor: color }]} />}
       </View>
     </TouchableOpacity>
   );
@@ -45,6 +46,8 @@ function PasswordToggle({ show, onPress }: { show: boolean; onPress: () => void 
 
 export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProps) {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,9 +77,6 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
     setLoading(true);
     try {
       await registerUser(name.trim(), email.trim(), password);
-      // NON facciamo logoutUser qui: l'utente resta loggato così possiamo
-      // reinviare la email di verifica se necessario. Il logout avverrà
-      // in App.tsx una volta che l'utente ha confermato la mail.
       onSuccess(name.trim());
     } catch (err: any) {
       const code = err?.code ?? '';
@@ -93,26 +93,39 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-            <Text style={styles.backArrow}>←</Text>
-            <Text style={styles.backText}>{t.common.back}</Text>
+
+        {/* Violet hero header */}
+        <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+          <Text style={styles.heroKicker}>ODDFEED · REGISTRATI</Text>
+          <View style={styles.heroTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heroTitle}>Crea account.</Text>
+              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+                Inizia a leggere le notizie{'\n'}più assurde del mondo.
+              </Text>
+            </View>
+            <Text style={styles.heroEmoji}>✨</Text>
+          </View>
+
+          {/* Back button in hero */}
+          <TouchableOpacity style={styles.heroBackBtn} onPress={onBack}>
+            <Text style={styles.heroBackArrow}>←</Text>
+            <Text style={styles.heroBackText}>{t.common.back}</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>{t.login.titleRegister}</Text>
+        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: C.bg }]} keyboardShouldPersistTaps="handled">
 
           <View style={styles.form}>
             {/* Nome */}
             <View style={styles.field}>
-              <Text style={styles.label}>{t.login.nameLabel}</Text>
+              <Text style={[styles.label, { color: C.textSecondary }]}>{t.login.nameLabel}</Text>
               <TextInput
-                style={[styles.input, errors.name && styles.inputError]}
+                style={[styles.input, { borderColor: C.border, backgroundColor: C.bg2, color: C.text }, errors.name && styles.inputError]}
                 placeholder={t.login.namePlaceholder}
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={C.textTertiary}
                 value={name}
                 onChangeText={(v) => { setName(v); setErrors(p => ({ ...p, name: '' })); }}
                 autoCapitalize="words"
@@ -122,11 +135,11 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
 
             {/* Email */}
             <View style={styles.field}>
-              <Text style={styles.label}>{t.login.emailLabel}</Text>
+              <Text style={[styles.label, { color: C.textSecondary }]}>{t.login.emailLabel}</Text>
               <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
+                style={[styles.input, { borderColor: C.border, backgroundColor: C.bg2, color: C.text }, errors.email && styles.inputError]}
                 placeholder={t.login.emailPlaceholder}
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={C.textTertiary}
                 value={email}
                 onChangeText={(v) => { setEmail(v); setErrors(p => ({ ...p, email: '' })); }}
                 keyboardType="email-address"
@@ -137,25 +150,25 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
 
             {/* Password */}
             <View style={styles.field}>
-              <Text style={styles.label}>{t.login.passwordLabel}</Text>
-              <View style={[styles.inputRow, errors.password && styles.inputError]}>
+              <Text style={[styles.label, { color: C.textSecondary }]}>{t.login.passwordLabel}</Text>
+              <View style={[styles.inputRow, { borderColor: C.border, backgroundColor: C.bg2 }, errors.password && styles.inputError]}>
                 <TextInput
-                  style={styles.inputFlex}
+                  style={[styles.inputFlex, { color: C.text }]}
                   placeholder={t.login.passwordPlaceholderNew}
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={C.textTertiary}
                   value={password}
                   onChangeText={(v) => { setPassword(v); setErrors(p => ({ ...p, password: '' })); }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
-                <PasswordToggle show={showPassword} onPress={() => setShowPassword(!showPassword)} />
+                <PasswordToggle show={showPassword} onPress={() => setShowPassword(!showPassword)} color={C.textTertiary} />
               </View>
               {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
               {password.length > 0 && (
                 <View style={styles.strengthRow}>
                   <View style={styles.strengthBars}>
                     {[1,2,3,4].map(i => (
-                      <View key={i} style={[styles.strengthBar, { backgroundColor: i <= strength ? STRENGTH_COLORS[strength] : Colors.border }]} />
+                      <View key={i} style={[styles.strengthBar, { backgroundColor: i <= strength ? STRENGTH_COLORS[strength] : C.border }]} />
                     ))}
                   </View>
                   <Text style={[styles.strengthLabel, { color: STRENGTH_COLORS[strength] }]}>{STRENGTH_LABELS[strength]}</Text>
@@ -165,7 +178,7 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
                 {PASSWORD_RULES.map((rule, i) => {
                   const ok = rule.test(password);
                   return (
-                    <Text key={i} style={[styles.ruleText, ok && styles.ruleOk]}>
+                    <Text key={i} style={[styles.ruleText, { color: C.textTertiary }, ok && styles.ruleOk]}>
                       {ok ? '✓' : '·'} {rule.label}
                     </Text>
                   );
@@ -175,18 +188,18 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
 
             {/* Conferma password */}
             <View style={styles.field}>
-              <Text style={styles.label}>{t.login.confirmPasswordLabel}</Text>
-              <View style={[styles.inputRow, errors.confirmPassword && styles.inputError]}>
+              <Text style={[styles.label, { color: C.textSecondary }]}>{t.login.confirmPasswordLabel}</Text>
+              <View style={[styles.inputRow, { borderColor: C.border, backgroundColor: C.bg2 }, errors.confirmPassword && styles.inputError]}>
                 <TextInput
-                  style={styles.inputFlex}
+                  style={[styles.inputFlex, { color: C.text }]}
                   placeholder={t.login.confirmPasswordPlaceholder}
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={C.textTertiary}
                   value={confirmPassword}
                   onChangeText={(v) => { setConfirmPassword(v); setErrors(p => ({ ...p, confirmPassword: '' })); }}
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
                 />
-                <PasswordToggle show={showConfirmPassword} onPress={() => setShowConfirmPassword(!showConfirmPassword)} />
+                <PasswordToggle show={showConfirmPassword} onPress={() => setShowConfirmPassword(!showConfirmPassword)} color={C.textTertiary} />
               </View>
               {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
             </View>
@@ -201,7 +214,7 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.legal}>
+          <Text style={[styles.legal, { color: C.textTertiary }]}>
             Registrandoti accetti i nostri Termini di utilizzo e la nostra Privacy Policy.{'\n'}App +18.
           </Text>
         </ScrollView>
@@ -211,28 +224,72 @@ export default function RegisterScreen({ onBack, onSuccess }: RegisterScreenProp
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
+  safe: { flex: 1 },
   flex: { flex: 1 },
-  header: { borderBottomWidth: 1, borderBottomColor: Colors.border, paddingVertical: Spacing.sm },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  backArrow: { fontSize: 18, color: Colors.textSecondary },
-  backText: { fontSize: FontSize.base, fontWeight: '500', color: Colors.textSecondary },
+
+  // Violet hero header
+  heroArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    gap: 0,
+  },
+  heroKicker: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: Spacing.md,
+  },
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    lineHeight: 19,
+  },
+  heroEmoji: {
+    fontSize: 64,
+    lineHeight: 72,
+    marginTop: 2,
+  },
+  heroBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  heroBackArrow: { fontSize: 16, color: 'rgba(255,255,255,0.8)' },
+  heroBackText: { fontSize: FontSize.sm, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
+
   container: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: 40 },
-  title: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, marginBottom: Spacing.xl },
   form: { gap: Spacing.md, marginBottom: Spacing.xl },
   field: { gap: Spacing.xs },
-  label: { fontSize: FontSize.base, fontWeight: '600', color: Colors.textSecondary },
+  label: { fontSize: FontSize.base, fontWeight: '600' },
   input: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
+    borderWidth: 1, borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg, paddingVertical: 14,
-    fontSize: FontSize.lg, color: Colors.text, backgroundColor: Colors.bg2,
+    fontSize: FontSize.lg,
   },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
-    backgroundColor: Colors.bg2,
+    borderWidth: 1, borderRadius: Radius.md,
   },
-  inputFlex: { flex: 1, paddingHorizontal: Spacing.lg, paddingVertical: 14, fontSize: FontSize.lg, color: Colors.text },
+  inputFlex: { flex: 1, paddingHorizontal: Spacing.lg, paddingVertical: 14, fontSize: FontSize.lg },
   inputError: { borderColor: Colors.red },
   errorText: { fontSize: FontSize.sm, color: Colors.red, fontWeight: '500' },
   eyeBtn: { paddingHorizontal: Spacing.md, justifyContent: 'center', alignItems: 'center' },
@@ -245,10 +302,10 @@ const styles = StyleSheet.create({
   strengthBar: { flex: 1, height: 4, borderRadius: 2 },
   strengthLabel: { fontSize: FontSize.sm, fontWeight: '600', minWidth: 52 },
   rules: { marginTop: Spacing.sm, gap: 3 },
-  ruleText: { fontSize: FontSize.sm, color: Colors.textTertiary },
+  ruleText: { fontSize: FontSize.sm },
   ruleOk: { color: Colors.green, fontWeight: '600' },
-  submitBtn: { backgroundColor: Colors.text, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm },
+  submitBtn: { backgroundColor: Colors.violet, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },
-  legal: { textAlign: 'center', fontSize: FontSize.xs, color: Colors.textTertiary, lineHeight: 18 },
+  legal: { textAlign: 'center', fontSize: FontSize.xs, lineHeight: 18 },
 });

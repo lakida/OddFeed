@@ -3,8 +3,9 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { resetPassword } from '../services/authService';
 
 interface ForgotPasswordScreenProps {
@@ -15,6 +16,8 @@ type Step = 'form' | 'sent';
 
 export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenProps) {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const fp = t.forgotPassword;
   const [step, setStep] = useState<Step>('form');
   const [email, setEmail] = useState('');
@@ -45,25 +48,37 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-            <Text style={styles.backArrow}>←</Text>
-            <Text style={styles.backText}>{t.common.back}</Text>
+
+        {/* Violet hero */}
+        <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+          <Text style={styles.heroKicker}>ODDFEED · RECUPERA ACCESSO</Text>
+          <View style={styles.heroTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heroTitle}>{step === 'sent' ? 'Email inviata.' : 'Password dimenticata?'}</Text>
+              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+                {step === 'sent'
+                  ? 'Controlla la tua casella di posta.'
+                  : 'Ti mandiamo un link\nper reimpostarla.'}
+              </Text>
+            </View>
+            <Text style={styles.heroEmoji}>{step === 'sent' ? '✉️' : '🔑'}</Text>
+          </View>
+          <TouchableOpacity style={styles.heroBackBtn} onPress={onBack}>
+            <Text style={styles.heroBackArrow}>←</Text>
+            <Text style={styles.heroBackText}>{t.common.back}</Text>
           </TouchableOpacity>
         </View>
 
         {step === 'form' ? (
-          <View style={styles.container}>
-            <Text style={styles.title}>{fp.title}</Text>
-            <Text style={styles.subtitle}>{fp.subtitle}</Text>
+          <View style={[styles.container, { backgroundColor: C.bg }]}>
             <View style={styles.fieldWrap}>
-              <Text style={styles.label}>{fp.emailLabel}</Text>
+              <Text style={[styles.label, { color: C.textSecondary }]}>{fp.emailLabel}</Text>
               <TextInput
-                style={[styles.input, error && styles.inputError]}
+                style={[styles.input, { borderColor: C.border, backgroundColor: C.bg2, color: C.text }, error && styles.inputError]}
                 placeholder={fp.emailPlaceholder}
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={C.textTertiary}
                 value={email}
                 onChangeText={(v) => { setEmail(v); setError(''); }}
                 keyboardType="email-address"
@@ -85,22 +100,20 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.container}>
-            <View style={styles.successIcon}>
-              <Text style={styles.successEmoji}>✉️</Text>
-            </View>
-            <Text style={styles.title}>{fp.sentTitle}</Text>
-            <Text style={styles.subtitle}>
+          <View style={[styles.container, { backgroundColor: C.bg }]}>
+            <Text style={[styles.sentBody, { color: C.textSecondary }]}>
               {fp.sentBody(email).split('\n').map((line, i) =>
-                i === 1 ? <Text key={i} style={styles.bold}>{line}</Text> : line
+                i === 1
+                  ? <Text key={i} style={[styles.bold, { color: C.text }]}>{line}</Text>
+                  : line
               )}
             </Text>
-            <Text style={styles.note}>{fp.sentNote}</Text>
+            <Text style={[styles.note, { color: C.textTertiary }]}>{fp.sentNote}</Text>
             <TouchableOpacity style={styles.submitBtn} onPress={onBack}>
               <Text style={styles.submitBtnText}>{fp.backToLogin}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.resendBtn} onPress={() => setStep('form')}>
-              <Text style={styles.resendText}>{fp.resend}</Text>
+              <Text style={[styles.resendText, { color: C.textSecondary }]}>{fp.resend}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -110,32 +123,53 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
+  safe: { flex: 1 },
   flex: { flex: 1 },
-  header: { borderBottomWidth: 1, borderBottomColor: Colors.border, paddingVertical: Spacing.sm },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  backArrow: { fontSize: 18, color: Colors.textSecondary },
-  backText: { fontSize: FontSize.base, fontWeight: '500', color: Colors.textSecondary },
-  container: { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: 40 },
-  title: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
-  subtitle: { fontSize: FontSize.base, color: Colors.textSecondary, lineHeight: 24, marginBottom: Spacing.xl },
-  bold: { fontWeight: '700', color: Colors.text },
-  label: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary, marginBottom: Spacing.xs },
+
+  // Violet hero
+  heroArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  heroKicker: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginBottom: 10,
+  },
+  heroTop: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    justifyContent: 'space-between', gap: 8, marginBottom: Spacing.md,
+  },
+  heroTitle: { fontSize: 33, fontWeight: '800', color: '#fff', letterSpacing: -0.5, lineHeight: 40 },
+  heroSubtitle: { fontSize: 13, marginTop: 4, lineHeight: 19 },
+  heroEmoji: { fontSize: 64, lineHeight: 72, marginTop: 2 },
+  heroBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4 },
+  heroBackArrow: { fontSize: 16, color: 'rgba(255,255,255,0.8)' },
+  heroBackText: { fontSize: FontSize.sm, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
+
+  container: { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl },
+  bold: { fontWeight: '700' },
+  label: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: Spacing.xs },
   fieldWrap: { marginBottom: Spacing.xl },
   input: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
+    borderWidth: 1, borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-    fontSize: FontSize.base, color: Colors.text, backgroundColor: Colors.bg2,
+    fontSize: FontSize.base,
   },
   inputError: { borderColor: Colors.red },
-  errorBox: { marginTop: Spacing.sm, backgroundColor: '#FFF0F0', borderWidth: 1, borderColor: '#FFCDD2', borderRadius: Radius.sm, padding: Spacing.sm },
+  errorBox: {
+    marginTop: Spacing.sm, backgroundColor: '#FFF0F0',
+    borderWidth: 1, borderColor: '#FFCDD2', borderRadius: Radius.sm, padding: Spacing.sm,
+  },
   errorText: { fontSize: FontSize.sm, color: Colors.red, lineHeight: 18 },
-  submitBtn: { backgroundColor: Colors.text, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center' },
+  submitBtn: {
+    backgroundColor: Colors.violet, borderRadius: Radius.md,
+    paddingVertical: Spacing.lg, alignItems: 'center',
+  },
   submitBtnDisabled: { opacity: 0.35 },
   submitBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },
-  successIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.greenBg, borderWidth: 1, borderColor: Colors.greenBorder, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
-  successEmoji: { fontSize: 32 },
-  note: { fontSize: FontSize.sm, color: Colors.textTertiary, lineHeight: 20, marginTop: Spacing.md, marginBottom: Spacing.xl },
+  sentBody: { fontSize: FontSize.base, lineHeight: 24, marginBottom: Spacing.sm },
+  note: { fontSize: FontSize.sm, lineHeight: 20, marginBottom: Spacing.xl },
   resendBtn: { marginTop: Spacing.md, alignItems: 'center' },
-  resendText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '600', textDecorationLine: 'underline' },
+  resendText: { fontSize: FontSize.sm, fontWeight: '600', textDecorationLine: 'underline' },
 });

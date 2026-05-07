@@ -87,6 +87,7 @@ export async function getUserProfile(uid: string) {
 
 // Aggiorna preferenze utente
 export async function updateUserPreferences(uid: string, data: Partial<{
+  name: string;
   interests: string[];
   notificationSlot: string;
   language: string;
@@ -94,6 +95,17 @@ export async function updateUserPreferences(uid: string, data: Partial<{
   points: number;
   streak: number;
   level: number;
+  emailVerified: boolean;
+  onboardingDone: boolean;
+  expoPushToken: string;
+  notificationsEnabled: boolean;
+  notificationPrefs: Record<string, unknown>;
+  readArticleIds: string[];
+  updatedAt: string;
+  lastNotifDate: string;
+  lastNotifMorning: string;
+  lastNotifLunch: string;
+  lastNotifEvening: string;
 }>) {
   await setDoc(doc(db, 'users', uid), data, { merge: true });
 }

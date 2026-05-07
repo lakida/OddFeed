@@ -151,6 +151,25 @@ export const CATEGORY_CONFIG: CategoryConfig[] = [
     premiumOnly: false,
     engagementScore: 3,
   },
+  // ── ATTUALITÀ ─────────────────────────────────────────────────────────────
+  {
+    id: 'attualita',
+    labelIt: '📰 Attualità',
+    labelEn: '📰 News',
+    emoji: '📰',
+    weight: 3,
+    premiumOnly: false,
+    engagementScore: 6,
+  },
+  {
+    id: 'gossip_spettacolo',
+    labelIt: '🎬 Spettacolo',
+    labelEn: '🎬 Entertainment',
+    emoji: '🎬',
+    weight: 3,
+    premiumOnly: true,
+    engagementScore: 8,
+  },
 ];
 
 // Mappa rapida per accesso per ID

@@ -19,7 +19,8 @@ import { useTheme } from '../context/ThemeContext';
 import { USER_LEVELS } from '../data/mockData';
 import { useTranslation, Language } from '../context/LanguageContext';
 import { CATEGORY_CONFIG } from '../data/categoryConfig';
-import { deleteAccount, getUserProfile } from '../services/authService';
+import { deleteAccount, getUserProfile, updateUserPreferences } from '../services/authService';
+import { registerForPushNotifications } from '../services/notificationService';
 import { auth } from '../config/firebase';
 import { Category } from '../types';
 import { UserStats } from '../../App';
@@ -125,7 +126,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
     const user = auth.currentUser;
     if (!user) return;
     getUserProfile(user.uid).then(profile => {
-      if (profile?.interests?.length > 0) setInterests(profile.interests);
+      if (profile?.interests && profile.interests.length > 0) setInterests(profile.interests as Category[]);
       if (profile?.notificationSlot) setNotifSlot(profile.notificationSlot);
     }).catch(() => {});
   }, []);
@@ -188,34 +189,27 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
-      <View style={[styles.header, { borderBottomColor: C.border }]}>
-        <Text style={[styles.headerTitle, { color: C.text }]}>Profilo</Text>
+      <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.heroKicker}>IL TUO PROFILO</Text>
+            <Text style={styles.heroTitle}>{userName || '—'}</Text>
+            {isPremium ? (
+              <View style={styles.heroPremiumRow}>
+                <Text style={styles.heroPremiumIcon}>✦</Text>
+                <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Premium attivo</Text>
+              </View>
+            ) : (
+              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+                {userLevel.emoji} {t.levels[userLevel.level] ?? userLevel.name} · {userStats?.points ?? 0} pt
+              </Text>
+            )}
+          </View>
+          <Text style={styles.heroEmoji}>👤</Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header profilo */}
-        <View style={styles.profileHeader}>
-          <Text style={[styles.profileName, { color: C.text }]}>{userName || '—'}</Text>
-          <View style={styles.profileMeta}>
-            <View style={[styles.levelBadge, { backgroundColor: C.bg2, borderColor: C.border }]}>
-              <Text style={styles.levelBadgeEmoji}>{userLevel.emoji}</Text>
-              <Text style={[styles.levelBadgeText, { color: C.textSecondary }]}>{t.levels[userLevel.level] ?? userLevel.name}</Text>
-            </View>
-            <Text style={[styles.metaDot, { color: C.textTertiary }]}>·</Text>
-            <Text style={[styles.profilePoints, { color: C.textSecondary }]}><Text style={[styles.bold, { color: C.text }]}>{userStats?.points ?? 0}</Text> pt</Text>
-            {isPremium && (
-              <>
-                <Text style={[styles.metaDot, { color: C.textTertiary }]}>·</Text>
-                <View style={styles.premiumBadge}>
-                  <Text style={styles.premiumBadgeText}>⭐ Premium</Text>
-                </View>
-              </>
-            )}
-          </View>
-          <Text style={[styles.profileStreak, { color: C.textSecondary }]}>
-            {t.profile.streak}
-          </Text>
-        </View>
 
         {/* Preferenze */}
         <Text style={styles.sectionTitle}>{t.profile.preferences}</Text>
@@ -292,7 +286,15 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
             <CustomSwitch
               value={notifications}
-              onValueChange={setNotifications}
+              onValueChange={async (val) => {
+                setNotifications(val);
+                if (val) {
+                  const user = auth.currentUser;
+                  if (user) {
+                    registerForPushNotifications(user.uid).catch(() => {});
+                  }
+                }
+              }}
               activeColor={C.violet}
               inactiveColor={C.border}
             />
@@ -323,7 +325,12 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           <TouchableOpacity
             key={slot}
             style={[modalStyles.option, notifSlot === slot && modalStyles.optionActive]}
-            onPress={() => { setNotifSlot(slot); setShowSlot(false); }}
+            onPress={() => {
+              setNotifSlot(slot);
+              setShowSlot(false);
+              const user = auth.currentUser;
+              if (user) updateUserPreferences(user.uid, { notificationSlot: slot }).catch(() => {});
+            }}
           >
             <Text style={[modalStyles.optionText, notifSlot === slot && modalStyles.optionTextActive]}>
               {slot}
@@ -336,7 +343,13 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
       {/* Modal interessi */}
       <BottomSheet
         visible={showInterests}
-        onClose={() => setShowInterests(false)}
+        onClose={async () => {
+          setShowInterests(false);
+          const user = auth.currentUser;
+          if (user) {
+            updateUserPreferences(user.uid, { interests }).catch(() => {});
+          }
+        }}
         title={t.profile.interestsTitle}
       >
         <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 440 }}>
@@ -717,50 +730,51 @@ const modalStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  header: {
+  heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
-  headerTitle: {
-    fontSize: 22,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroKicker: {
+    fontSize: 10,
     fontWeight: '700',
-    color: Colors.text,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
     letterSpacing: -0.5,
+    lineHeight: 40,
   },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl,
-    gap: Spacing.sm,
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 3,
   },
-  profileName: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text },
-  profileMeta: {
+  heroPremiumRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    gap: 4,
+    marginTop: 3,
   },
-  metaDot: {
-    fontSize: FontSize.sm,
-    color: Colors.textTertiary,
+  heroPremiumIcon: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
   },
-  levelBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
-    backgroundColor: Colors.bg2,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.full,
+  heroEmoji: {
+    fontSize: 72,
+    lineHeight: 80,
+    marginTop: 4,
   },
-  levelBadgeEmoji: { fontSize: 13 },
-  levelBadgeText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
-  profilePoints: { fontSize: FontSize.base, color: Colors.textSecondary },
-  profileStreak: { fontSize: FontSize.base, color: Colors.textSecondary },
   bold: { fontWeight: '700', color: Colors.text },
   sectionTitle: {
     paddingHorizontal: Spacing.lg,

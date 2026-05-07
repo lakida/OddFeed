@@ -4,8 +4,9 @@ import {
   SafeAreaView, ScrollView, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { CATEGORY_CONFIG } from '../data/categoryConfig';
@@ -26,6 +27,8 @@ export default function OnboardingScreen({
   onComplete,
 }: OnboardingScreenProps) {
   const { t, language } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const ob = t.onboarding;
 
   const [step, setStep] = useState<Step>('benvenuto');
@@ -79,9 +82,9 @@ export default function OnboardingScreen({
     language === 'it' ? config.labelIt : config.labelEn;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       {/* Barra progresso */}
-      <View style={styles.progressBarBg}>
+      <View style={[styles.progressBarBg, { backgroundColor: C.border }]}>
         <View style={[styles.progressBarFill, { flex: progress }]} />
         <View style={{ flex: 1 - progress }} />
       </View>
@@ -89,20 +92,20 @@ export default function OnboardingScreen({
       {/* Step: Benvenuto */}
       {step === 'benvenuto' && (
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>{ob.welcome(name)}</Text>
-          <Text style={styles.stepSubtitle}>{ob.welcomeSub}</Text>
+          <Text style={[styles.stepTitle, { color: C.text }]}>{ob.welcome(name)}</Text>
+          <Text style={[styles.stepSubtitle, { color: C.textSecondary }]}>{ob.welcomeSub}</Text>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep('interessi')}>
             <Text style={styles.primaryBtnText}>{ob.welcomeBtn}</Text>
           </TouchableOpacity>
-          <Text style={styles.stepNote}>{ob.welcomeNote}</Text>
+          <Text style={[styles.stepNote, { color: C.textTertiary }]}>{ob.welcomeNote}</Text>
         </View>
       )}
 
       {/* Step: Interessi */}
       {step === 'interessi' && (
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>{ob.interestsTitle}</Text>
-          <Text style={styles.stepSubtitle}>{ob.interestsSub}</Text>
+          <Text style={[styles.stepTitle, { color: C.text }]}>{ob.interestsTitle}</Text>
+          <Text style={[styles.stepSubtitle, { color: C.textSecondary }]}>{ob.interestsSub}</Text>
 
           {!canContinue && (
             <View style={styles.warningBanner}>
@@ -116,7 +119,7 @@ export default function OnboardingScreen({
             contentContainerStyle={styles.tagsScrollContent}
           >
             {/* Categorie free */}
-            <Text style={styles.categoryGroupLabel}>
+            <Text style={[styles.categoryGroupLabel, { color: C.textTertiary }]}>
               {language === 'it' ? 'Categorie gratuite' : 'Free categories'}
             </Text>
             <View style={styles.tagsWrap}>
@@ -125,11 +128,11 @@ export default function OnboardingScreen({
                 return (
                   <TouchableOpacity
                     key={config.id}
-                    style={[styles.tag, active && styles.tagActive]}
+                    style={[styles.tag, { borderColor: C.border, backgroundColor: C.bg2 }, active && styles.tagActive]}
                     onPress={() => toggleInterest(config.id, false)}
                     activeOpacity={0.75}
                   >
-                    <Text style={[styles.tagText, active && styles.tagTextActive]}>
+                    <Text style={[styles.tagText, { color: C.textSecondary }, active && styles.tagTextActive]}>
                       {getCatLabel(config)}
                     </Text>
                   </TouchableOpacity>
@@ -139,7 +142,7 @@ export default function OnboardingScreen({
 
             {/* Categorie premium */}
             <View style={styles.premiumGroupHeader}>
-              <Text style={styles.categoryGroupLabel}>
+              <Text style={[styles.categoryGroupLabel, { color: C.textTertiary }]}>
                 {language === 'it' ? 'Categorie Premium' : 'Premium categories'}
               </Text>
               <View style={styles.premiumBadgeSmall}>
@@ -147,7 +150,7 @@ export default function OnboardingScreen({
               </View>
             </View>
             {!isPremium && (
-              <Text style={styles.premiumGroupHint}>
+              <Text style={[styles.premiumGroupHint, { color: C.textTertiary }]}>
                 {language === 'it'
                   ? 'Selezionale ora — le riceverai dopo aver attivato Premium'
                   : 'Select now — you\'ll receive them after activating Premium'}
@@ -196,17 +199,17 @@ export default function OnboardingScreen({
       {/* Step: Notifiche */}
       {step === 'notifiche' && (
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>{ob.notifTitle}</Text>
-          <Text style={styles.stepSubtitle}>{ob.notifSub}</Text>
+          <Text style={[styles.stepTitle, { color: C.text }]}>{ob.notifTitle}</Text>
+          <Text style={[styles.stepSubtitle, { color: C.textSecondary }]}>{ob.notifSub}</Text>
           <View style={styles.optionsList}>
             {ob.slots.map((s) => (
               <TouchableOpacity
                 key={s}
-                style={[styles.option, slot === s && styles.optionActive]}
+                style={[styles.option, { borderColor: C.border, backgroundColor: C.bg2 }, slot === s && styles.optionActive]}
                 onPress={() => setSlot(s)}
               >
-                <Text style={[styles.optionText, slot === s && styles.optionTextActive]}>{s}</Text>
-                {slot === s && <Text style={styles.optionCheck}>✓</Text>}
+                <Text style={[styles.optionText, { color: C.text }, slot === s && styles.optionTextActive]}>{s}</Text>
+                {slot === s && <Text style={[styles.optionCheck, { color: C.text }]}>✓</Text>}
               </TouchableOpacity>
             ))}
           </View>
@@ -219,12 +222,12 @@ export default function OnboardingScreen({
       {/* Step: Pronto */}
       {step === 'pronto' && (
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>🎉 {ob.readyTitle}</Text>
-          <Text style={styles.stepSubtitle}>{ob.readySub(slot)}</Text>
-          <View style={styles.recapCard}>
-            <Text style={styles.recapTitle}>{ob.recapTitle}</Text>
-            <Text style={styles.recapRow}>{ob.recapSlot(slot)}</Text>
-            <Text style={styles.recapRow}>
+          <Text style={[styles.stepTitle, { color: C.text }]}>🎉 {ob.readyTitle}</Text>
+          <Text style={[styles.stepSubtitle, { color: C.textSecondary }]}>{ob.readySub(slot)}</Text>
+          <View style={[styles.recapCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <Text style={[styles.recapTitle, { color: C.textTertiary }]}>{ob.recapTitle}</Text>
+            <Text style={[styles.recapRow, { color: C.textSecondary }]}>{ob.recapSlot(slot)}</Text>
+            <Text style={[styles.recapRow, { color: C.textSecondary }]}>
               {ob.recapInterests(
                 interests
                   .map(id => {
@@ -259,15 +262,15 @@ export default function OnboardingScreen({
       {/* Step: Sblocco regalo — "Te ne sblocco una. Ma solo questa volta." */}
       {step === 'sblocco' && (
         <View style={styles.stepContainer}>
-          <Text style={styles.sbloccoBadge}>
+          <Text style={[styles.sbloccoBadge]}>
             {language === 'it' ? '🎁 Regalo di benvenuto' : '🎁 Welcome gift'}
           </Text>
-          <Text style={styles.sbloccoTitle}>
+          <Text style={[styles.sbloccoTitle, { color: C.text }]}>
             {language === 'it'
               ? 'Te ne sblocco una.\nMa solo questa volta.'
               : 'I\'ll unlock one for you.\nJust this once.'}
           </Text>
-          <Text style={styles.sbloccoSub}>
+          <Text style={[styles.sbloccoSub, { color: C.textSecondary }]}>
             {language === 'it'
               ? 'Tra le notizie di oggi c\'è un articolo che normalmente è riservato agli abbonati Premium. È tuo, gratis, una volta sola.'
               : 'Among today\'s stories there\'s one normally reserved for Premium subscribers. It\'s yours, free, one time only.'}
@@ -335,7 +338,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     overflow: 'hidden',
   },
-  progressBarFill: { height: 3, backgroundColor: Colors.text },
+  progressBarFill: { height: 3, backgroundColor: Colors.violet },
 
   stepContainer: {
     flex: 1,
@@ -477,7 +480,7 @@ const styles = StyleSheet.create({
 
   // CTA
   primaryBtn: {
-    backgroundColor: Colors.text,
+    backgroundColor: Colors.violet,
     borderRadius: Radius.md,
     paddingVertical: Spacing.lg,
     alignItems: 'center',

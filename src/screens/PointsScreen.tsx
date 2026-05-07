@@ -6,9 +6,10 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { USER_LEVELS, HOW_TO_EARN } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { UserStats } from '../../App';
 
 interface PointsScreenProps {
@@ -19,6 +20,8 @@ interface PointsScreenProps {
 
 export default function PointsScreen({ userStats, userName, isPremium = false }: PointsScreenProps) {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
   const nextLevel = USER_LEVELS[userStats.level + 1];
 
@@ -31,14 +34,21 @@ export default function PointsScreen({ userStats, userName, isPremium = false }:
   // Gli utenti Premium non hanno bisogno della gamification punti
   if (isPremium) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t.points.title}</Text>
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
+        <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.heroKicker}>PROGRESSI E LIVELLI</Text>
+              <Text style={styles.heroTitle}>{t.points.title}</Text>
+              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Guadagna leggendo ogni giorno</Text>
+            </View>
+            <Text style={styles.heroEmoji}>🏆</Text>
+          </View>
         </View>
         <View style={styles.premiumPlaceholder}>
           <Text style={styles.premiumPlaceholderEmoji}>👑</Text>
-          <Text style={styles.premiumPlaceholderTitle}>Sei già Premium</Text>
-          <Text style={styles.premiumPlaceholderSub}>
+          <Text style={[styles.premiumPlaceholderTitle, { color: C.text }]}>Sei già Premium</Text>
+          <Text style={[styles.premiumPlaceholderSub, { color: C.textSecondary }]}>
             Il sistema di punti è pensato per gli utenti gratuiti. Con Premium hai accesso diretto a tutto.
           </Text>
         </View>
@@ -47,51 +57,58 @@ export default function PointsScreen({ userStats, userName, isPremium = false }:
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t.points.title}</Text>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
+      <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.heroKicker}>PROGRESSI E LIVELLI</Text>
+            <Text style={styles.heroTitle}>{t.points.title}</Text>
+            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Guadagna leggendo ogni giorno</Text>
+          </View>
+          <Text style={styles.heroEmoji}>🏆</Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* Card livello */}
-        <View style={styles.levelCard}>
+        <View style={[styles.levelCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
           <View style={styles.levelRow}>
-            <View style={styles.levelBadge}>
+            <View style={[styles.levelBadge, { backgroundColor: C.text }]}>
               <Text style={styles.levelBadgeEmoji}>{currentLevel.emoji}</Text>
             </View>
             <View>
-              <Text style={styles.levelName}>{t.levels[currentLevel.level] ?? currentLevel.name}</Text>
-              <Text style={styles.levelSub}>{t.points.level(currentLevel.level)} · {t.points.totalPoints(userStats.points)}</Text>
+              <Text style={[styles.levelName, { color: C.text }]}>{t.levels[currentLevel.level] ?? currentLevel.name}</Text>
+              <Text style={[styles.levelSub, { color: C.textSecondary }]}>{t.points.level(currentLevel.level)} · {t.points.totalPoints(userStats.points)}</Text>
             </View>
           </View>
 
           {/* Barra progresso */}
           <View style={styles.progressLabelRow}>
-            <Text style={styles.progressLabel}>{userStats.points} pt</Text>
-            <Text style={styles.progressLabel}>
-              {nextLevel ? <Text style={styles.bold}>{t.levels[nextLevel.level] ?? nextLevel.name}</Text> : null}
+            <Text style={[styles.progressLabel, { color: C.textSecondary }]}>{userStats.points} pt</Text>
+            <Text style={[styles.progressLabel, { color: C.textSecondary }]}>
+              {nextLevel ? <Text style={[styles.bold, { color: C.text }]}>{t.levels[nextLevel.level] ?? nextLevel.name}</Text> : null}
               {nextLevel ? ` — ${nextLevel.minPoints} pt` : ''}
             </Text>
           </View>
-          <View style={styles.progressBg}>
+          <View style={[styles.progressBg, { backgroundColor: C.border }]}>
             <View style={[styles.progressFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
             <View style={{ flex: Math.max(1 - progress, 0) }} />
           </View>
           {nextLevel && (
-            <Text style={styles.progressHint}>
+            <Text style={[styles.progressHint, { color: C.textTertiary }]}>
               {t.points.progressHint(pointsToNext, t.levels[nextLevel.level] ?? nextLevel.name)}
             </Text>
           )}
 
           {/* Giorni consecutivi */}
-          <View style={styles.streakRow}>
+          <View style={[styles.streakRow, { borderTopColor: C.border }]}>
             <View style={styles.streakLeft}>
-              <Text style={styles.streakLabel}>{t.points.consecutiveDays}</Text>
-              <Text style={styles.streakValue}>{userStats.streak} {userStats.streak === 1 ? 'giorno' : 'giorni'}</Text>
+              <Text style={[styles.streakLabel, { color: C.textSecondary }]}>{t.points.consecutiveDays}</Text>
+              <Text style={[styles.streakValue, { color: C.text }]}>{userStats.streak} {userStats.streak === 1 ? 'giorno' : 'giorni'}</Text>
             </View>
-            <View style={styles.streakBadge}>
-              <Text style={styles.streakBadgeText}>+75 pt</Text>
+            <View style={[styles.streakBadge, { backgroundColor: C.bg3 }]}>
+              <Text style={[styles.streakBadgeText, { color: C.text }]}>+75 pt</Text>
             </View>
           </View>
         </View>
@@ -102,11 +119,11 @@ export default function PointsScreen({ userStats, userName, isPremium = false }:
           {HOW_TO_EARN.map((item, i) => (
             <View
               key={i}
-              style={[styles.earnItem, i < HOW_TO_EARN.length - 1 && styles.earnItemBorder]}
+              style={[styles.earnItem, i < HOW_TO_EARN.length - 1 && [styles.earnItemBorder, { borderBottomColor: C.border }]]}
             >
-              <Text style={styles.earnLabel}>{item.label}</Text>
+              <Text style={[styles.earnLabel, { color: C.text }]}>{item.label}</Text>
               {item.doneToday && <Text style={styles.doneCheck}>✓</Text>}
-              <Text style={styles.earnPts}>+{item.points} pt</Text>
+              <Text style={[styles.earnPts, { color: C.textSecondary }]}>+{item.points} pt</Text>
             </View>
           ))}
         </View>
@@ -121,25 +138,25 @@ export default function PointsScreen({ userStats, userName, isPremium = false }:
             return (
               <View
                 key={lvl.level}
-                style={[styles.unlockItem, i < USER_LEVELS.length - 1 && styles.unlockItemBorder]}
+                style={[styles.unlockItem, i < USER_LEVELS.length - 1 && [styles.unlockItemBorder, { borderBottomColor: C.border }]]}
               >
                 <View style={[
                   styles.unlockCircle,
                   isDone    && styles.unlockDone,
-                  isCurrent && styles.unlockCurrent,
-                  isLocked  && styles.unlockLocked,
+                  isCurrent && { backgroundColor: C.text },
+                  isLocked  && { backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border },
                 ]}>
                   <Text style={styles.unlockCircleText}>
                     {isDone ? '✓' : isCurrent ? lvl.emoji : '🔒'}
                   </Text>
                 </View>
                 <View style={styles.unlockInfo}>
-                  <Text style={[styles.unlockName, isLocked && styles.unlockNameLocked]}>
+                  <Text style={[styles.unlockName, { color: isLocked ? C.textTertiary : C.text }]}>
                     {t.levels[lvl.level] ?? lvl.name}
                   </Text>
-                  <Text style={styles.unlockDesc}>{lvl.unlock}</Text>
+                  <Text style={[styles.unlockDesc, { color: C.textSecondary }]}>{lvl.unlock}</Text>
                 </View>
-                <Text style={[styles.unlockPts, isLocked && styles.unlockPtsLocked]}>
+                <Text style={[styles.unlockPts, { color: isLocked ? C.textTertiary : C.text }]}>
                   {lvl.minPoints === 0 ? '—' : `${lvl.minPoints.toLocaleString()} pt`}
                 </Text>
               </View>
@@ -155,17 +172,40 @@ export default function PointsScreen({ userStats, userName, isPremium = false }:
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  header: {
+  heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
-  headerTitle: {
-    fontSize: 22,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroKicker: {
+    fontSize: 10,
     fontWeight: '700',
-    color: Colors.text,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
     letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 3,
+  },
+  heroEmoji: {
+    fontSize: 72,
+    lineHeight: 80,
+    marginTop: 4,
   },
 
   // Card livello

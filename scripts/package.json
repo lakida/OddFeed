@@ -5,7 +5,10 @@
   "main": "fetch-news.js",
   "scripts": {
     "start": "node fetch-news.js",
-    "fetch": "node fetch-news.js"
+    "fetch": "node fetch-news.js",
+    "notify:lunch": "node send-notifications.js lunch",
+    "notify:evening": "node send-notifications.js evening",
+    "notify:morning": "node send-notifications.js morning"
   },
   "dependencies": {
     "dotenv": "^16.0.0",

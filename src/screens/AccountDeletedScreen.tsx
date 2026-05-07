@@ -1,44 +1,51 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 interface AccountDeletedScreenProps {
   onRestart: () => void;
 }
 
 export default function AccountDeletedScreen({ onRestart }: AccountDeletedScreenProps) {
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
 
-        {/* Icona */}
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>👋</Text>
+      {/* Violet hero */}
+      <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+        <Text style={styles.heroKicker}>ODDFEED · ARRIVEDERCI</Text>
+        <View style={styles.heroTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroTitle}>Account eliminato.</Text>
+            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+              Tutti i tuoi dati sono stati{'\n'}rimossi in modo definitivo.
+            </Text>
+          </View>
+          <Text style={styles.heroEmoji}>👋</Text>
         </View>
+      </View>
 
-        {/* Testi */}
-        <Text style={styles.title}>Account eliminato</Text>
-        <Text style={styles.subtitle}>
-          Il tuo account è stato rimosso correttamente.{'\n'}
-          Tutti i tuoi dati sono stati cancellati in modo definitivo.
-        </Text>
+      <View style={[styles.container, { backgroundColor: C.bg }]}>
 
         {/* Card empatica */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ci dispiace vederti andare 💙</Text>
-          <Text style={styles.cardBody}>
+        <View style={[styles.card, { backgroundColor: C.bg2, borderColor: C.border }]}>
+          <Text style={[styles.cardTitle, { color: C.text }]}>Ci dispiace vederti andare 💙</Text>
+          <Text style={[styles.cardBody, { color: C.textSecondary }]}>
             Speriamo che sia una cosa temporanea. OddFeed sarà qui se dovessi tornare — con le notizie più strane del mondo ad aspettarti.
           </Text>
         </View>
 
-        {/* CTA principale — re-iscrizione */}
+        {/* CTA principale */}
         <TouchableOpacity style={styles.primaryBtn} onPress={onRestart} activeOpacity={0.85}>
           <Text style={styles.primaryBtnText}>Registrati di nuovo</Text>
         </TouchableOpacity>
 
-        {/* CTA secondaria — era un errore */}
+        {/* CTA secondaria */}
         <TouchableOpacity style={styles.secondaryBtn} onPress={onRestart} activeOpacity={0.75}>
-          <Text style={styles.secondaryBtnText}>Era un errore — accedi al tuo account</Text>
+          <Text style={[styles.secondaryBtnText, { color: C.textSecondary }]}>Era un errore — accedi al tuo account</Text>
         </TouchableOpacity>
 
       </View>
@@ -47,85 +54,49 @@ export default function AccountDeletedScreen({ onRestart }: AccountDeletedScreen
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
+  safe: { flex: 1 },
+
+  heroArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  heroKicker: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginBottom: 10,
+  },
+  heroTop: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    justifyContent: 'space-between', gap: 8,
+  },
+  heroTitle: { fontSize: 33, fontWeight: '800', color: '#fff', letterSpacing: -0.5, lineHeight: 40 },
+  heroSubtitle: { fontSize: 13, marginTop: 4, lineHeight: 19 },
+  heroEmoji: { fontSize: 64, lineHeight: 72, marginTop: 2 },
+
   container: {
     flex: 1,
-    paddingHorizontal: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
     gap: Spacing.lg,
   },
 
-  iconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Colors.bg2,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  icon: { fontSize: 40 },
-
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: FontSize.base,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-
   card: {
-    width: '100%',
-    backgroundColor: Colors.bg2,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
     padding: Spacing.lg,
     gap: Spacing.sm,
-    marginVertical: Spacing.sm,
   },
-  cardTitle: {
-    fontSize: FontSize.base,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  cardBody: {
-    fontSize: FontSize.base,
-    color: Colors.textSecondary,
-    lineHeight: 23,
-  },
+  cardTitle: { fontSize: FontSize.base, fontWeight: '700' },
+  cardBody: { fontSize: FontSize.base, lineHeight: 23 },
 
   primaryBtn: {
-    width: '100%',
-    backgroundColor: Colors.text,
+    backgroundColor: Colors.violet,
     borderRadius: Radius.md,
     paddingVertical: 15,
     alignItems: 'center',
   },
-  primaryBtnText: {
-    fontSize: FontSize.base,
-    fontWeight: '700',
-    color: '#fff',
-  },
+  primaryBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },
 
-  secondaryBtn: {
-    width: '100%',
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    textDecorationLine: 'underline',
-  },
+  secondaryBtn: { paddingVertical: 13, alignItems: 'center' },
+  secondaryBtnText: { fontSize: FontSize.sm, fontWeight: '500', textDecorationLine: 'underline' },
 });

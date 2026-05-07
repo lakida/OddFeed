@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated, Easing, Dimensions, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -8,7 +8,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { getColors } from './src/theme/colors';
 import { onAuthChange, logoutUser, getUserProfile, resendVerificationEmail, ensureSocialUserProfile, updateUserPreferences } from './src/services/authService';
 import { verifyOTP } from './src/services/emailService';
-import { registerForPushNotifications } from './src/services/notificationService';
+import { registerForPushNotifications, registerNotificationResponseHandler } from './src/services/notificationService';
 import { initializePurchases, checkPremiumStatus } from './src/services/purchaseService';
 import {
   updateDailyActivity,
@@ -218,7 +218,7 @@ const successStyles = StyleSheet.create({
   bold: { fontWeight: '700', color: Colors.text },
   btn: {
     marginTop: 8,
-    backgroundColor: Colors.text,
+    backgroundColor: Colors.violet,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 48,
@@ -248,9 +248,41 @@ function AppContent() {
   const [userInterests, setUserInterests] = useState<string[]>([]);
   // Sblocco gratuito "Te ne sblocco una" — attivo dopo onboarding se l'utente ha scelto il regalo
   const [freeUnlockActive, setFreeUnlockActive] = useState(false);
+  // Articoli salvati
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedArticles, setSavedArticles] = useState<NewsItem[]>([]);
 
   // Flag per intercettare onAuthStateChanged dopo eliminazione account
   const accountJustDeleted = React.useRef(false);
+
+  // ─── Carica articoli salvati da AsyncStorage ────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem('oddFeedSavedArticles').then(data => {
+      if (data) {
+        const articles: NewsItem[] = JSON.parse(data);
+        setSavedArticles(articles);
+        setSavedIds(new Set(articles.map(a => a.id)));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleToggleSave = useCallback(async (articleId: string, article: NewsItem) => {
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      let nextArticles: NewsItem[];
+      if (next.has(articleId)) {
+        next.delete(articleId);
+        nextArticles = savedArticles.filter(a => a.id !== articleId);
+      } else {
+        next.add(articleId);
+        nextArticles = [article, ...savedArticles.filter(a => a.id !== articleId)];
+      }
+      setSavedArticles(nextArticles);
+      AsyncStorage.setItem('oddFeedSavedArticles', JSON.stringify(nextArticles)).catch(() => {});
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedArticles]);
 
   // ─── Animazione fade tra tab ─────────────────────────────────────────────
   const tabFadeAnim = useRef(new Animated.Value(1)).current;
@@ -384,8 +416,8 @@ function AppContent() {
           }
 
           // Carica interessi utente per filtrare le notizie
-          if (profile?.interests?.length > 0) {
-            setUserInterests(profile.interests);
+          if (profile?.interests && profile.interests.length > 0) {
+            setUserInterests(profile.interests as string[]);
           }
 
           // Verifica email solo per login email/password
@@ -422,6 +454,30 @@ function AppContent() {
     return unsubscribe;
   }, [loadUserStats]);
 
+  // Ref all'ultima versione di openArticle — usato da handler esterni (notifiche, deep link)
+  const openArticleRef = useRef<(id: string, article?: NewsItem) => void>(() => {});
+
+  // ─── RevenueCat — aggiornamento real-time stato premium ─────────────────
+  useEffect(() => {
+    if (!currentUser) return;
+    let cleanup: (() => void) | undefined;
+    try {
+      const Purchases = require('react-native-purchases').default;
+      const listener = Purchases.addCustomerInfoUpdateListener((customerInfo: any) => {
+        const premium = customerInfo.entitlements.active['premium'] !== undefined;
+        setIsPremium(premium);
+        // Sincronizza su Firestore in background
+        if (currentUser?.uid) {
+          updateUserPreferences(currentUser.uid, { isPremium: premium }).catch(() => {});
+        }
+      });
+      cleanup = () => listener.remove?.();
+    } catch {
+      // react-native-purchases non disponibile nel simulatore
+    }
+    return () => cleanup?.();
+  }, [currentUser]);
+
   const openArticle = (id: string, article?: NewsItem) => {
     setReadIds((prev) => new Set(prev).add(id));
     setArticleId(id);
@@ -438,6 +494,34 @@ function AppContent() {
       }).start();
     });
   };
+
+  // Tieni il ref sempre aggiornato all'ultima versione di openArticle
+  openArticleRef.current = openArticle;
+
+  // ─── Deep link + notifica tap → apri articolo ───────────────────────────
+  useEffect(() => {
+    // Handler tap su notifica push
+    const unsubscribeNotif = registerNotificationResponseHandler((newsId: string) => {
+      openArticleRef.current(newsId);
+    });
+
+    // Handler URL scheme: oddfeed://articolo/[id]
+    const handleUrl = ({ url }: { url: string }) => {
+      const match = url.match(/oddfeed:\/\/articolo\/([^/?#]+)/);
+      if (match?.[1]) openArticleRef.current(match[1]);
+    };
+    const urlSubscription = Linking.addEventListener('url', handleUrl);
+
+    // Controlla se l'app è stata aperta da un URL (cold start)
+    Linking.getInitialURL().then(url => {
+      if (url) handleUrl({ url });
+    }).catch(() => {});
+
+    return () => {
+      unsubscribeNotif();
+      urlSubscription.remove();
+    };
+  }, []);
 
   const handleBack = useCallback(() => {
     Animated.timing(articleSlideAnim, {
@@ -483,8 +567,11 @@ function AppContent() {
   if (appScreen === 'Loading') {
     return (
       <View style={styles.loading}>
-        <Text style={styles.loadingLogo}>Odd<Text style={styles.loadingLogoLight}>Feed</Text></Text>
-        <ActivityIndicator color={Colors.textTertiary} style={{ marginTop: 20 }} />
+        <View style={styles.loadingLogoWrap}>
+          <Text style={styles.loadingLogoMain}>OddFeed</Text>
+          <Text style={styles.loadingTagline}>Le notizie più strane del mondo</Text>
+        </View>
+        <ActivityIndicator color="rgba(255,255,255,0.6)" style={{ marginTop: 40 }} />
       </View>
     );
   }
@@ -542,6 +629,8 @@ function AppContent() {
           <HomeScreen
             onOpenArticle={openArticle}
             onGoToArchive={() => switchTab('Archivio')}
+            onGoToPremium={() => switchTab('Premium')}
+            onGoToPoints={() => switchTab('Punti')}
             readIds={readIds}
             isPremium={isPremium}
             userName={userName}
@@ -551,7 +640,14 @@ function AppContent() {
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Archivio' ? 'flex' : 'none' }}>
-          <ArchiveScreen onOpenArticle={openArticle} isPremium={isPremium} interests={userInterests} userStats={userStats} />
+          <ArchiveScreen
+            onOpenArticle={openArticle}
+            isPremium={isPremium}
+            interests={userInterests}
+            userStats={userStats}
+            savedIds={savedIds}
+            savedArticles={savedArticles}
+          />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
           <PointsScreen userStats={userStats} userName={userName} isPremium={isPremium} />
@@ -559,8 +655,18 @@ function AppContent() {
         <View style={{ flex: 1, display: activeTab === 'Premium' ? 'flex' : 'none' }}>
           <PremiumScreen
             isPremium={isPremium}
-            onUpgrade={() => setIsPremium(true)}
-            onDowngrade={() => setIsPremium(false)}
+            onUpgrade={() => {
+              setIsPremium(true);
+              if (currentUser?.uid) {
+                updateUserPreferences(currentUser.uid, { isPremium: true }).catch(() => {});
+              }
+            }}
+            onDowngrade={() => {
+              setIsPremium(false);
+              if (currentUser?.uid) {
+                updateUserPreferences(currentUser.uid, { isPremium: false }).catch(() => {});
+              }
+            }}
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Profilo' ? 'flex' : 'none' }}>
@@ -589,10 +695,13 @@ function AppContent() {
               onPress={() => switchTab(name)}
               activeOpacity={0.7}
             >
-              <Animated.Text style={[styles.tabEmoji, { transform: [{ scale: tabScales[name] }] }]}>
-                {TAB_EMOJIS[name]}
-              </Animated.Text>
-              <Text style={[styles.tabLabel, { color: focused ? C.text : C.textTertiary }, focused && styles.tabLabelActive]}>
+              {/* Pill indicator per il tab attivo */}
+              <View style={[styles.tabPill, focused && { backgroundColor: C.violetBg }]}>
+                <Animated.Text style={[styles.tabEmoji, { transform: [{ scale: tabScales[name] }] }]}>
+                  {TAB_EMOJIS[name]}
+                </Animated.Text>
+              </View>
+              <Text style={[styles.tabLabel, { color: focused ? Colors.violet : C.textTertiary }, focused && styles.tabLabelActive]}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -619,7 +728,9 @@ function AppContent() {
               await AsyncStorage.removeItem('oddFeedFreeUnlock');
             }}
             onPointsChange={handlePointsChange}
-            onUpgradePremium={() => setActiveTab('Profilo')}
+            onUpgradePremium={() => { handleBack(); switchTab('Premium'); }}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
           />
         </Animated.View>
       )}
@@ -632,19 +743,25 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   loading: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: Colors.violet,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingLogo: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#3730A3',
-    letterSpacing: -1,
+  loadingLogoWrap: {
+    alignItems: 'center',
+    gap: 8,
   },
-  loadingLogoLight: {
-    fontWeight: '300',
-    color: '#6366F1',
+  loadingLogoMain: {
+    fontSize: 40,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -1.5,
+  },
+  loadingTagline: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: 0.1,
   },
   tabBar: {
     flexDirection: 'row',
@@ -654,10 +771,16 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 28,
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  tabEmoji: { fontSize: 22 },
-  tabLabel: { fontSize: 13, color: Colors.textTertiary },
-  tabLabelActive: { color: Colors.text, fontWeight: '600' },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, paddingTop: 2 },
+  tabPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginBottom: 1,
+  },
+  tabEmoji: { fontSize: 20 },
+  tabLabel: { fontSize: 11, color: Colors.textTertiary, letterSpacing: 0.1 },
+  tabLabelActive: { color: Colors.violet, fontWeight: '700' },
 });
 
 export default function App() {

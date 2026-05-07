@@ -63,6 +63,8 @@ const badgeStyles = StyleSheet.create({
 interface HomeScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
   onGoToArchive: () => void;
+  onGoToPremium?: () => void;
+  onGoToPoints?: () => void;
   readIds: Set<string>;
   isPremium: boolean;
   userName: string;
@@ -72,7 +74,7 @@ interface HomeScreenProps {
   freeUnlockActive?: boolean;
 }
 
-export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPremium, userName, userStats, interests = [], freeUnlockActive = false }: HomeScreenProps) {
+export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium, onGoToPoints, readIds, isPremium, userName, userStats, interests = [], freeUnlockActive = false }: HomeScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -83,6 +85,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   const [forbiddenNews, setForbiddenNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   // Limite notizie basato su livello + premium
   const newsLimit = isPremium
@@ -92,6 +95,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
   const loadNews = useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+    setHasError(false);
     Promise.all([
       fetchTodayNews(language, isPremium, interests, newsLimit).catch(() => []),
       fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
@@ -109,9 +113,15 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
       setCurrentNews(currentArr);
       setTopOddNews(topOddArr);
       setForbiddenNews(forbiddenArr);
+      // Se nessuna notizia ricevuta, segnala errore
+      if (today.length === 0 && past.length === 0 && currentArr.length === 0) {
+        setHasError(true);
+      }
       if (isRefresh) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
+    }).catch(() => {
+      setHasError(true);
     }).finally(() => {
       setLoading(false);
       setRefreshing(false);
@@ -140,29 +150,27 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
           />
         }
       >
-        {/* Header + Saluto unificati con sfondo colorato */}
+        {/* Header violet */}
         <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
-          {/* Cerchi decorativi di sfondo */}
-          <View style={[styles.circle1, { backgroundColor: C.heroCircle1 }]} />
-          <View style={[styles.circle2, { backgroundColor: C.heroCircle2 }]} />
-          <View style={styles.circle3} />
-
-          {/* Logo */}
-          <Text style={[styles.logo, { color: C.logoMain }]}>
-            Odd<Text style={[styles.logoLight, { color: C.logoLight }]}>Feed</Text>
-          </Text>
-
-          {/* Saluto */}
-          <Text style={[styles.greetingText, { color: C.heroText }]}>{t.home.greeting(userName)}</Text>
-          <Text style={[styles.greetingSubtitle, { color: C.heroSubtext }]}>
-            {isPremium ? t.home.todayNewsPlural : t.home.todayNews}
-          </Text>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.heroKicker}>BENVENUTO · OGGI</Text>
+              <Text style={styles.heroTitle}>OddFeed</Text>
+              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+                {isPremium ? t.home.todayNewsPlural : t.home.todayNews}
+              </Text>
+            </View>
+            <Text style={styles.heroEmoji}>🌍</Text>
+          </View>
         </View>
 
         {/* ── Sezione Attualità ── */}
         {!loading && currentNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>📰 ATTUALITÀ</Text>
+            <View style={currentStyles.secHdr}>
+              <Text style={currentStyles.secHdrIcon}>📰</Text>
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ATTUALITÀ</Text>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -171,21 +179,25 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
               {currentNews.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[currentStyles.card, currentStyles.cardEditorial, { backgroundColor: C.cardWhite, borderColor: C.border }]}
+                  style={[currentStyles.card, { backgroundColor: C.cardWhite, borderColor: C.border }]}
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  {!!item.description && (
-                    <Text style={[currentStyles.cardSubtitle, { color: C.textSecondary }]} numberOfLines={2}>
-                      {item.description}
+                  {/* Immagine con pill categoria */}
+                  <View style={[currentStyles.cardImg, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF' }]}>
+                    <Text style={currentStyles.cardImgEmoji}>{item.imageEmoji}</Text>
+                    <View style={currentStyles.cardPill}>
+                      <Text style={currentStyles.cardPillText}>{item.categoryLabel?.replace(/^[^\s]+\s/, '') ?? item.category}</Text>
+                    </View>
+                  </View>
+                  <View style={currentStyles.cardBody}>
+                    <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={2}>
+                      {item.title}
                     </Text>
-                  )}
-                  <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
-                    {item.source}
-                  </Text>
+                    <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
+                      {item.source} · {item.publishedAt}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -195,7 +207,10 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         {/* ── Top Odd News ── */}
         {!loading && topOddNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <Text style={[currentStyles.sectionTitle, { color: C.textTertiary }]}>🔥 TOP ODD NEWS</Text>
+            <View style={currentStyles.secHdr}>
+              <Text style={currentStyles.secHdrIcon}>🔥</Text>
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>TOP ODD NEWS</Text>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -204,33 +219,24 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
               {topOddNews.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[topOddStyles.card, { backgroundColor: '#fff5f5', borderColor: '#fca5a5' }]}
+                  style={[currentStyles.card, { backgroundColor: '#fff5f5', borderColor: '#fca5a5' }]}
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
-                  {/* Badge 🔥 sempre visibile */}
-                  <View style={topOddStyles.badgeRow}>
-                    <View style={topOddStyles.badge}>
-                      <Text style={topOddStyles.badgeText}>🔥 TOP</Text>
+                  <View style={[currentStyles.cardImg, { backgroundColor: '#fef2f2' }]}>
+                    <Text style={currentStyles.cardImgEmoji}>{item.imageEmoji}</Text>
+                    <View style={[currentStyles.cardPill, { backgroundColor: '#dc2626' }]}>
+                      <Text style={currentStyles.cardPillText}>🔥 TOP{!isPremium ? ' 🔒' : ''}</Text>
                     </View>
-                    {/* Lucchetto SOLO per utenti free */}
-                    {!isPremium && (
-                      <View style={topOddStyles.lockBadge}>
-                        <Text style={topOddStyles.lockText}>🔒</Text>
-                      </View>
-                    )}
                   </View>
-                  <Text style={[currentStyles.cardTitle, { color: '#1a1a2e' }]} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  {!!item.description && (
-                    <Text style={[currentStyles.cardSubtitle, { color: '#6b7280' }]} numberOfLines={2}>
-                      {item.description}
+                  <View style={currentStyles.cardBody}>
+                    <Text style={[currentStyles.cardTitle, { color: '#1a1a2e' }]} numberOfLines={2}>
+                      {item.title}
                     </Text>
-                  )}
-                  <Text style={[currentStyles.cardSource, { color: '#9ca3af' }]}>
-                    {item.source}
-                  </Text>
+                    <Text style={[currentStyles.cardSource, { color: '#9ca3af' }]}>
+                      {item.source} · {item.publishedAt}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -304,55 +310,89 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
         )}
 
         {/* Skeleton mentre carica */}
-        {loading && <SkeletonNewsList count={3} />}
+        {loading && <SkeletonNewsList count={4} variant="row" />}
 
-        {/* Notizie di oggi (multiple per livelli alti / premium) */}
-        {!loading && todayNews.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[styles.item, { borderBottomColor: C.border }]}
-            onPress={() => onOpenArticle(item.id, item)}
-            activeOpacity={0.7}
-          >
-            <StatusBadge read={readIds.has(item.id)} t={t} />
-            <Text style={[styles.itemMeta, { color: C.textTertiary }]}>{item.country} · {item.categoryLabel}</Text>
-            <Text style={[styles.itemTitle, { color: C.text }]}>{item.title}</Text>
-            <View style={styles.itemFooter}>
-              <View style={styles.sourceDot} />
-              <Text style={[styles.itemSource, { color: C.textSecondary }]}>{item.source}</Text>
-              <Text style={[styles.itemDot, { color: C.textTertiary }]}>·</Text>
-              <Text style={[styles.itemTime, { color: C.textTertiary }]}>{item.publishedAt}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {/* Errore / nessuna notizia */}
+        {!loading && hasError && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📡</Text>
+            <Text style={[styles.emptyTitle, { color: C.text }]}>Connessione assente</Text>
+            <Text style={[styles.emptySub, { color: C.textSecondary }]}>Controlla la connessione e riprova.</Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { backgroundColor: C.text }]}
+              onPress={() => loadNews()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.retryBtnText}>Riprova</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Ultime Notizie ── */}
+        {!loading && (todayNews.length > 0 || pastNews.length > 0) && (
+          <View style={[currentStyles.secHdr, { paddingTop: 14, paddingBottom: 8 }]}>
+            <Text style={currentStyles.secHdrIcon}>🕐</Text>
+            <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE</Text>
+          </View>
+        )}
+
+        {/* Notizie di oggi */}
+        {!loading && todayNews.map((item, idx) => {
+          const isRead = readIds.has(item.id);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === todayNews.length - 1 && pastNews.length === 0 ? 0 : 0.5 }]}
+              onPress={() => onOpenArticle(item.id, item)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF', opacity: isRead ? 0.5 : 1 }]}>
+                <Text style={styles.unThumbEmoji}>{item.imageEmoji}</Text>
+              </View>
+              <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
+                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
+                <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
+              </View>
+              {isRead && <View style={styles.readDot} />}
+            </TouchableOpacity>
+          );
+        })}
 
         {/* Notizie dai giorni precedenti */}
-        {!loading && pastNews.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[styles.item, { borderBottomColor: C.border }]}
-            onPress={() => onOpenArticle(item.id, item)}
-            activeOpacity={0.7}
-          >
-            <StatusBadge read={readIds.has(item.id)} t={t} />
-            <Text style={[styles.itemMeta, { color: C.textTertiary }]}>{item.country} · {item.categoryLabel}</Text>
-            <Text style={[styles.itemTitle, { color: C.text }]}>{item.title}</Text>
-            <View style={styles.itemFooter}>
-              <View style={styles.sourceDot} />
-              <Text style={[styles.itemSource, { color: C.textSecondary }]}>{item.source}</Text>
-              <Text style={[styles.itemDot, { color: C.textTertiary }]}>·</Text>
-              <Text style={[styles.itemTime, { color: C.textTertiary }]}>{item.publishedAt}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {!loading && pastNews.map((item, idx) => {
+          const isRead = readIds.has(item.id);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === pastNews.length - 1 ? 0 : 0.5 }]}
+              onPress={() => onOpenArticle(item.id, item)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF', opacity: isRead ? 0.5 : 1 }]}>
+                <Text style={styles.unThumbEmoji}>{item.imageEmoji}</Text>
+              </View>
+              <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
+                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
+                <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
+              </View>
+              {isRead && <View style={styles.readDot} />}
+            </TouchableOpacity>
+          );
+        })}
 
         {/* Banner premium per utenti free */}
         {!loading && !isPremium && (
-          <View style={[styles.premiumBanner, { backgroundColor: C.premiumBannerBg, borderColor: C.premiumBannerBorder }]}>
+          <TouchableOpacity
+            style={[styles.premiumBanner, { backgroundColor: C.premiumBannerBg, borderColor: C.premiumBannerBorder }]}
+            onPress={onGoToPremium}
+            activeOpacity={0.75}
+          >
             <Text style={[styles.premiumBannerText, { color: C.premiumBannerText }]}>
-              {t.home.premiumBanner}
+              {t.home.premiumBanner} →
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* CTA archivio */}
@@ -364,7 +404,11 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
 
         {/* Widget punti — nascosto per utenti Premium */}
         {!isPremium && (
-          <View style={[styles.pointsWidget, { backgroundColor: C.bg2, borderColor: C.border }]}>
+          <TouchableOpacity
+            style={[styles.pointsWidget, { backgroundColor: C.bg2, borderColor: C.border }]}
+            onPress={onGoToPoints}
+            activeOpacity={0.75}
+          >
             <View style={styles.pwTop}>
               <Text style={[styles.pwTitle, { color: C.textSecondary }]}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
               <Text style={styles.pwStreak}>🔥 {userStats.streak}gg</Text>
@@ -378,7 +422,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, isPr
                 ? `${nextLevel.minPoints - userStats.points} pt per diventare ${nextLevel.name} ${nextLevel.emoji}`
                 : 'Hai raggiunto il livello massimo! 🏆'}
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
 
         <View style={{ height: 24 }} />
@@ -393,65 +437,75 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   heroArea: {
-    backgroundColor: '#EEF2FF',
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
-    overflow: 'hidden',
-    position: 'relative',
   },
-  // Cerchi decorativi
-  circle1: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#C7D2FE',
-    opacity: 0.35,
-    top: -60,
-    right: -40,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  circle2: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#A5B4FC',
-    opacity: 0.2,
-    bottom: -30,
-    left: 30,
-  },
-  circle3: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#818CF8',
-    opacity: 0.12,
-    top: 20,
-    right: 100,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#3730A3',
-    letterSpacing: -1,
-    marginBottom: Spacing.lg,
-  },
-  logoLight: {
-    fontWeight: '300',
-    color: '#6366F1',
-  },
-  greetingText: {
-    fontSize: FontSize.xxl,
+  heroKicker: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#1E1B4B',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
-  greetingSubtitle: {
-    fontSize: FontSize.base,
-    color: '#4338CA',
-    opacity: 0.8,
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 3,
+  },
+  heroEmoji: {
+    fontSize: 72,
+    lineHeight: 80,
+    marginTop: 4,
+  },
+
+  // Ultime Notizie rows
+  unRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+  },
+  unThumb: {
+    width: 76,
+    height: 64,
+    borderRadius: 10,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  unThumbEmoji: {
+    fontSize: 28,
+  },
+  unBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  unCat: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  readDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.violet,
+    flexShrink: 0,
   },
 
   // Notizie
@@ -540,6 +594,39 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
+  // Empty / error state
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyEmoji: { fontSize: 44 },
+  emptyTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  emptySub: {
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.text,
+  },
+  retryBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
   // Widget punti
   pointsWidget: {
     marginHorizontal: Spacing.lg,
@@ -592,35 +679,20 @@ const currentStyles = StyleSheet.create({
     paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
   },
-  sectionHeaderRow: {
+  secHdr: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     paddingHorizontal: Spacing.lg,
-    marginBottom: 2,
-    gap: 8,
+    marginBottom: Spacing.md,
+  },
+  secHdrIcon: {
+    fontSize: 13,
   },
   sectionTitle: {
     fontSize: FontSize.xs,
     fontWeight: '700',
     letterSpacing: 0.8,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  sectionSubtitle: {
-    fontSize: FontSize.xs,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    opacity: 0.7,
-  },
-  sectionBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  sectionBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
   },
   row: {
     paddingHorizontal: Spacing.lg,
@@ -628,36 +700,43 @@ const currentStyles = StyleSheet.create({
   },
   card: {
     width: 200,
-    padding: Spacing.md,
     borderRadius: Radius.md,
     borderWidth: 1,
-    gap: 6,
+    overflow: 'hidden',
   },
-  // Stile editoriale per Attualità: sfondo bianco, più pulito
-  cardEditorial: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
+  cardImg: {
+    height: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
-  // Label piccola sopra il titolo (sostituisce cardCategory)
-  cardLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
+  cardImgEmoji: {
+    fontSize: 36,
+  },
+  cardPill: {
+    position: 'absolute',
+    bottom: 8,
+    left: 10,
+    backgroundColor: Colors.violet,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  cardPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+  },
+  cardBody: {
+    padding: Spacing.md,
+    gap: 4,
   },
   cardTitle: {
     fontSize: FontSize.base,
     fontWeight: '600',
     lineHeight: 21,
-  },
-  cardSubtitle: {
-    fontSize: FontSize.xs,
-    lineHeight: 16,
-    opacity: 0.8,
   },
   cardSource: {
     fontSize: FontSize.xs,
@@ -721,7 +800,7 @@ const forbiddenStyles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
-    backgroundColor: '#0f0f1a',
+    backgroundColor: '#1E1B4B',
   },
   sectionTitle: {
     fontSize: FontSize.xs,

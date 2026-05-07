@@ -1,14 +1,30 @@
 #!/bin/bash
 # OddFeed — Script giornaliero automatico
-# Eseguito ogni mattina alle 7:00 dal cron job
+#
+# ─── CRONTAB SETUP ────────────────────────────────────────────────────────────
+# Esegui `crontab -e` e aggiungi queste righe:
+#
+#   # Genera notizie + notifiche fascia Colazione (ore 07:00)
+#   0 7 * * * cd ~/Desktop/OddFeed && /usr/local/bin/node scripts/fetch-news.js >> logs/fetch.log 2>&1
+#
+#   # Notifiche fascia Pranzo (ore 14:00)
+#   0 14 * * * cd ~/Desktop/OddFeed && /usr/local/bin/node scripts/send-notifications.js lunch >> logs/notif-lunch.log 2>&1
+#
+#   # Notifiche fascia Pomeriggio/Cena (ore 17:30)
+#   30 17 * * * cd ~/Desktop/OddFeed && /usr/local/bin/node scripts/send-notifications.js evening >> logs/notif-evening.log 2>&1
+#
+# ─── GITHUB ACTIONS (alternativa cloud) ───────────────────────────────────────
+# Vedi .github/workflows/daily-news.yml (già configurato nel repo).
+# Per gli slot aggiuntivi, aggiungi altri workflow o jobs nello stesso file.
+# ──────────────────────────────────────────────────────────────────────────────
 
 cd ~/Desktop/OddFeed
 
-# Log con timestamp
-echo "----------------------------------------" >> ~/Desktop/OddFeed/logs/fetch.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Avvio generazione notizie..." >> ~/Desktop/OddFeed/logs/fetch.log
+LOG_FILE=~/Desktop/OddFeed/logs/fetch.log
 
-# Esegui lo script con il node di sistema
-/usr/local/bin/node scripts/fetch-news.js >> ~/Desktop/OddFeed/logs/fetch.log 2>&1
+echo "----------------------------------------" >> "$LOG_FILE"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Avvio generazione notizie..." >> "$LOG_FILE"
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Completato." >> ~/Desktop/OddFeed/logs/fetch.log
+/usr/local/bin/node scripts/fetch-news.js >> "$LOG_FILE" 2>&1
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Completato." >> "$LOG_FILE"

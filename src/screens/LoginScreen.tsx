@@ -15,11 +15,12 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Colors, FontSize, Spacing, Radius } from '../theme/colors';
+import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { registerUser, loginUser, logoutUser, signInWithGoogle, signInWithFacebook } from '../services/authService';
 import { fetchSignInMethodsForEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useTranslation } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../config/socialAuth';
@@ -147,6 +148,8 @@ const eyeStyles = StyleSheet.create({
 
 export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister }: LoginScreenProps) {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
   const isRegister = false;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -277,17 +280,26 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
 
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-          {/* Logo */}
-          <View style={styles.logoWrap}>
-            <Text style={styles.logo}>Odd<Text style={styles.logoLight}>Feed</Text></Text>
-            <Text style={styles.tagline}>Le notizie più strane dal mondo</Text>
+        {/* Violet hero — fuori dallo scroll */}
+        <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
+          <Text style={styles.heroKicker}>ODDFEED · {isRegister ? 'REGISTRATI' : 'ACCEDI'}</Text>
+          <View style={styles.heroTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heroTitle}>{isRegister ? 'Crea account.' : 'Bentornato.'}</Text>
+              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
+                {isRegister
+                  ? 'Inizia a leggere le notizie più assurde del mondo.'
+                  : 'Le storie più strane del mondo,\nsolo per te.'}
+              </Text>
+            </View>
+            <Text style={styles.heroEmoji}>🌍</Text>
           </View>
+        </View>
 
-          <Text style={styles.title}>{isRegister ? 'Crea il tuo account' : 'Accedi al tuo account'}</Text>
+        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: C.bg }]} keyboardShouldPersistTaps="handled">
 
           {/* Social login */}
           <View style={styles.socialWrap}>
@@ -328,9 +340,9 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
 
           {/* Separatore */}
           <View style={styles.separatorRow}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>oppure</Text>
-            <View style={styles.separatorLine} />
+            <View style={[styles.separatorLine, { backgroundColor: C.border }]} />
+            <Text style={[styles.separatorText, { color: C.textTertiary }]}>oppure</Text>
+            <View style={[styles.separatorLine, { backgroundColor: C.border }]} />
           </View>
 
           <View style={styles.form}>
@@ -338,11 +350,11 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
             {/* Nome */}
             {isRegister && (
               <View style={styles.field}>
-                <Text style={styles.label}>Nome</Text>
+                <Text style={[styles.label, { color: C.textSecondary }]}>Nome</Text>
                 <TextInput
-                  style={[styles.input, errors.name && styles.inputError]}
+                  style={[styles.input, { borderColor: C.border, backgroundColor: C.bg2, color: C.text }, errors.name && styles.inputError]}
                   placeholder="Come ti chiami?"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={C.textTertiary}
                   value={name}
                   onChangeText={(v) => { setName(v); setErrors(p => ({ ...p, name: '' })); }}
                   autoCapitalize="words"
@@ -353,11 +365,11 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
 
             {/* Email */}
             <View style={styles.field}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={[styles.label, { color: C.textSecondary }]}>Email</Text>
               <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
+                style={[styles.input, { borderColor: C.border, backgroundColor: C.bg2, color: C.text }, errors.email && styles.inputError]}
                 placeholder="nome@esempio.it"
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={C.textTertiary}
                 value={email}
                 onChangeText={(v) => { setEmail(v); setErrors(p => ({ ...p, email: '' })); }}
                 keyboardType="email-address"
@@ -368,12 +380,12 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
 
             {/* Password */}
             <View style={styles.field}>
-              <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputRow, errors.password && styles.inputError]}>
+              <Text style={[styles.label, { color: C.textSecondary }]}>Password</Text>
+              <View style={[styles.inputRow, { borderColor: C.border, backgroundColor: C.bg2 }, errors.password && styles.inputError]}>
                 <TextInput
-                  style={styles.inputFlex}
+                  style={[styles.inputFlex, { color: C.text }]}
                   placeholder={isRegister ? 'Crea una password sicura' : 'La tua password'}
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={C.textTertiary}
                   value={password}
                   onChangeText={(v) => { setPassword(v); setErrors(p => ({ ...p, password: '' })); }}
                   secureTextEntry={!showPassword}
@@ -415,12 +427,12 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
             {/* Conferma password */}
             {isRegister && (
               <View style={styles.field}>
-                <Text style={styles.label}>Conferma password</Text>
-                <View style={[styles.inputRow, errors.confirmPassword && styles.inputError]}>
+                <Text style={[styles.label, { color: C.textSecondary }]}>Conferma password</Text>
+                <View style={[styles.inputRow, { borderColor: C.border, backgroundColor: C.bg2 }, errors.confirmPassword && styles.inputError]}>
                   <TextInput
-                    style={styles.inputFlex}
+                    style={[styles.inputFlex, { color: C.text }]}
                     placeholder="Ripeti la password"
-                    placeholderTextColor={Colors.textTertiary}
+                    placeholderTextColor={C.textTertiary}
                     value={confirmPassword}
                     onChangeText={(v) => { setConfirmPassword(v); setErrors(p => ({ ...p, confirmPassword: '' })); }}
                     secureTextEntry={!showConfirmPassword}
@@ -435,7 +447,7 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
             {/* Recupera password */}
             {!isRegister && (
               <TouchableOpacity onPress={onForgotPassword} style={styles.forgotWrap}>
-                <Text style={styles.forgotText}>Password dimenticata?</Text>
+                <Text style={[styles.forgotText, { color: C.textSecondary }]}>Password dimenticata?</Text>
               </TouchableOpacity>
             )}
 
@@ -446,18 +458,18 @@ export default function LoginScreen({ onLogin, onForgotPassword, onGoToRegister 
 
           {/* Vai alla registrazione */}
           <TouchableOpacity onPress={onGoToRegister}>
-            <Text style={styles.switchText}>
+            <Text style={[styles.switchText, { color: C.textSecondary }]}>
               {t.login.switchToRegister}
-              <Text style={styles.switchLink}>{t.login.switchRegisterLink}</Text>
+              <Text style={[styles.switchLink, { color: C.text }]}>{t.login.switchRegisterLink}</Text>
             </Text>
           </TouchableOpacity>
 
           {/* Legale */}
-          <Text style={styles.legal}>
+          <Text style={[styles.legal, { color: C.textTertiary }]}>
             Continuando accetti i nostri{' '}
-            <Text style={styles.legalLink} onPress={() => setShowTerms(true)}>Termini di utilizzo</Text>
+            <Text style={[styles.legalLink, { color: C.textSecondary }]} onPress={() => setShowTerms(true)}>Termini di utilizzo</Text>
             {' '}e la nostra{' '}
-            <Text style={styles.legalLink} onPress={() => setShowPrivacy(true)}>Privacy Policy</Text>.
+            <Text style={[styles.legalLink, { color: C.textSecondary }]} onPress={() => setShowPrivacy(true)}>Privacy Policy</Text>.
             {'\n'}App +18.
           </Text>
         </ScrollView>
@@ -521,25 +533,52 @@ const legalModal = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
+  safe: { flex: 1 },
   flex: { flex: 1 },
+
+  // Violet hero header
+  heroArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  heroKicker: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    lineHeight: 19,
+  },
+  heroEmoji: {
+    fontSize: 64,
+    lineHeight: 72,
+    marginTop: 2,
+  },
+
   container: {
-    flexGrow: 1, paddingHorizontal: Spacing.lg,
-    paddingTop: 60, paddingBottom: 40,
-  },
-  logoWrap: { alignItems: 'center', marginBottom: 48 },
-  logo: { fontSize: 36, fontWeight: '700', color: Colors.text, letterSpacing: -1 },
-  logoLight: { fontWeight: '300', color: Colors.textSecondary },
-  tagline: {
-    fontSize: FontSize.lg,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    marginTop: 8,
-    letterSpacing: 0.1,
-  },
-  title: {
-    fontSize: FontSize.xxl, fontWeight: '700',
-    color: Colors.text, marginBottom: Spacing.xl,
+    flexGrow: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: 40,
   },
   form: { gap: Spacing.md, marginBottom: Spacing.xl },
   field: { gap: Spacing.xs },
@@ -581,7 +620,7 @@ const styles = StyleSheet.create({
   forgotWrap: { alignItems: 'flex-end' },
   forgotText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
   submitBtn: {
-    backgroundColor: Colors.text, borderRadius: Radius.md,
+    backgroundColor: Colors.violet, borderRadius: Radius.md,
     paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm,
   },
   submitBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },

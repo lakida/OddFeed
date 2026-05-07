@@ -125,6 +125,16 @@ export const NOTIFICATION_COPY: Record<Category, string[]> = {
     'Il luogo più strano del pianeta: lo scopri oggi',
     'Questo posto sembra uscito da un film. Esiste.',
   ],
+  attualita: [
+    'La notizia del giorno vista da un\'angolazione inaspettata 📰',
+    'Cosa sta succedendo nel mondo oggi?',
+    'L\'attualità spiegata in modo che non hai mai sentito',
+  ],
+  gossip_spettacolo: [
+    'Il gossip di oggi che sta impazzando sul web 🎬',
+    'La star del momento ha fatto una cosa che non ti aspetti',
+    'Il mondo dello spettacolo non smette di sorprendere 🌟',
+  ],
 };
 
 // ─── REGISTRAZIONE TOKEN ──────────────────────────────────────────────────────

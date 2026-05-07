@@ -125,9 +125,8 @@ jobs:
       - name: Invia notifiche pranzo
         working-directory: scripts
         env:
-          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: node fetch-news.js --notify-only --slot=lunch
+        run: node send-notifications.js lunch
 
       - name: Notifica fallimento
         if: failure()
@@ -156,9 +155,8 @@ jobs:
       - name: Invia notifiche cena
         working-directory: scripts
         env:
-          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: node fetch-news.js --notify-only --slot=evening
+        run: node send-notifications.js evening
 
       - name: Notifica fallimento
         if: failure()

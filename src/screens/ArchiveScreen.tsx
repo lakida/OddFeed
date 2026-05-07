@@ -23,9 +23,11 @@ interface ArchiveScreenProps {
   isPremium: boolean;
   interests?: string[];
   userStats?: { level: number; points: number; streak: number; readArticleIds: string[] };
+  savedIds?: Set<string>;
+  savedArticles?: NewsItem[];
 }
 
-export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [], userStats }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [], userStats, savedIds = new Set(), savedArticles = [] }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -38,10 +40,12 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const loadArchive = useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+    setHasError(false);
     fetchArchive(language, isPremium, interests, newsLimit)
       .then(news => {
         setArchiveNews(news);
@@ -49,7 +53,10 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       })
-      .catch(() => { setArchiveNews([]); })
+      .catch(() => {
+        setArchiveNews([]);
+        setHasError(true);
+      })
       .finally(() => {
         setLoading(false);
         setRefreshing(false);
@@ -77,6 +84,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
 
     return [
       { key: 'tutto', label: 'Tutto' },
+      { key: 'salvati', label: '🔖 Salvati' },
       { key: 'settimana', label: 'Questa settimana' },
       { key: currentMonth, label: currentMonth },
       ...cats,
@@ -86,6 +94,8 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
   // Applica il filtro attivo agli articoli
   const filteredNews = React.useMemo(() => {
     if (activeFilter === 'tutto') return archiveNews;
+
+    if (activeFilter === 'salvati') return savedArticles;
 
     if (activeFilter === 'settimana') {
       const weekAgo = new Date();
@@ -114,13 +124,14 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
-        <View style={[styles.circle1, { backgroundColor: C.heroCircle1 }]} />
-        <View style={[styles.circle2, { backgroundColor: C.heroCircle2 }]} />
-        <Text style={[styles.logo, { color: C.logoMain }]}>
-          Odd<Text style={[styles.logoLight, { color: C.logoLight }]}>Feed</Text>
-        </Text>
-        <Text style={[styles.headerTitle, { color: C.heroText }]}>{t.archive.title}</Text>
-        <Text style={[styles.headerSubtitle, { color: C.heroSubtext }]}>Tutte le notizie passate, in un posto solo.</Text>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.heroKicker}>ARCHIVIO · NOTIZIE</Text>
+            <Text style={styles.heroTitle}>{t.archive.title}</Text>
+            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Tutte le notizie passate, in un posto solo.</Text>
+          </View>
+          <Text style={styles.heroEmoji}>🗂️</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -168,13 +179,35 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         </ScrollView>
 
         {/* Skeleton mentre carica */}
-        {loading && <SkeletonNewsList count={5} />}
+        {loading && <SkeletonNewsList count={5} variant="card" />}
 
         {/* Lista notizie */}
-        {!loading && filteredNews.length === 0 && (
-          <Text style={{ textAlign: 'center', color: C.textTertiary, marginTop: 40, fontSize: FontSize.base }}>
-            Nessuna notizia per questo filtro.
-          </Text>
+        {!loading && hasError && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📡</Text>
+            <Text style={[styles.emptyTitle, { color: C.text }]}>Connessione assente</Text>
+            <Text style={[styles.emptySub, { color: C.textSecondary }]}>Controlla la connessione e riprova.</Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { backgroundColor: C.text }]}
+              onPress={() => loadArchive()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.retryBtnText}>Riprova</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {!loading && !hasError && filteredNews.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>{activeFilter === 'salvati' ? '🔖' : '📭'}</Text>
+            <Text style={[styles.emptyTitle, { color: C.text }]}>
+              {activeFilter === 'salvati' ? 'Nessun articolo salvato' : 'Nessuna notizia'}
+            </Text>
+            <Text style={[styles.emptySub, { color: C.textSecondary }]}>
+              {activeFilter === 'salvati'
+                ? 'Premi 🔖 su un articolo per salvarlo e ritrovarlo qui.'
+                : 'Nessuna notizia per questo filtro.'}
+            </Text>
+          </View>
         )}
         {!loading && filteredNews.map((item) => (
           <TouchableOpacity
@@ -194,6 +227,9 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
               <Text style={[styles.itemSource, { color: C.textSecondary }]}>{item.source}</Text>
               <Text style={[styles.itemDot, { color: C.textTertiary }]}>·</Text>
               <Text style={[styles.itemTime, { color: C.textTertiary }]}>{item.publishedAt}</Text>
+              {savedIds.has(item.id) && (
+                <Text style={styles.savedBadge}>🔖</Text>
+              )}
             </View>
           </TouchableOpacity>
         ))}
@@ -210,55 +246,39 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   heroArea: {
-    backgroundColor: '#EEF2FF',
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
-    overflow: 'hidden',
-    position: 'relative',
   },
-  circle1: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#C7D2FE',
-    opacity: 0.35,
-    top: -60,
-    right: -40,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  circle2: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#A5B4FC',
-    opacity: 0.2,
-    bottom: -30,
-    left: 30,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#3730A3',
-    letterSpacing: -1,
-    marginBottom: Spacing.lg,
-  },
-  logoLight: {
-    fontWeight: '300',
-    color: '#6366F1',
-  },
-  headerTitle: {
-    fontSize: 24,
+  heroKicker: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#1E1B4B',
-    letterSpacing: -0.3,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: FontSize.base,
-    color: '#4338CA',
-    opacity: 0.8,
+  heroTitle: {
+    fontSize: 33,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 3,
+  },
+  heroEmoji: {
+    fontSize: 72,
+    lineHeight: 80,
+    marginTop: 4,
   },
   premiumBanner: {
     marginHorizontal: Spacing.lg,
@@ -277,14 +297,15 @@ const styles = StyleSheet.create({
   },
   filtersRow: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
     gap: 8,
   },
   filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: Radius.full,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: Colors.border,
   },
   filterPillActive: {
@@ -292,8 +313,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.text,
   },
   filterPillText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: Colors.textSecondary,
   },
   filterPillTextActive: {
@@ -345,5 +366,40 @@ const styles = StyleSheet.create({
   itemTime: {
     fontSize: FontSize.sm,
     color: Colors.textTertiary,
+  },
+  savedBadge: {
+    fontSize: FontSize.sm,
+    marginLeft: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyEmoji: { fontSize: 44 },
+  emptyTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: Colors.text,
+  },
+  emptySub: {
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.text,
+  },
+  retryBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

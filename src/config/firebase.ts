@@ -1,7 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// Firebase 10+ moved this to a React-Native-specific subpath
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getReactNativePersistence } = require('firebase/auth/react-native');
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnkdcmTvNGyP1sXB0xS01Un70LKrnIa60",
