@@ -49,16 +49,14 @@
         "resourceClass": "m-medium"
       },
       "android": {
-        "buildType": "aab"
+        "buildType": "app-bundle"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "kida.mancinimesi@gmail.com",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "appleId": "kida.mancinimesi@gmail.com"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account-play.json",
