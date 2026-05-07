@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Animated, Easing, Dimensions, Linking } from 'react-native';
+// @ts-ignore
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -44,8 +46,12 @@ export type UserStats = {
 
 const EMPTY_STATS: UserStats = { points: 0, streak: 0, level: 0, readArticleIds: [] };
 
-const TAB_EMOJIS: Record<Tab, string> = {
-  Notizie: '📰', Archivio: '🗂️', Punti: '⭐', Premium: '👑', Profilo: '👤',
+const TAB_ICONS: Record<Tab, { inactive: string; active: string }> = {
+  Notizie:  { inactive: 'home-outline',    active: 'home'    },
+  Archivio: { inactive: 'archive-outline', active: 'archive' },
+  Punti:    { inactive: 'star-outline',    active: 'star'    },
+  Premium:  { inactive: 'diamond-outline', active: 'diamond' },
+  Profilo:  { inactive: 'person-outline',  active: 'person'  },
 };
 
 function RegisterSuccessScreen({ onGoToLogin, userName }: { onGoToLogin: () => void; userName: string }) {
@@ -681,13 +687,14 @@ function AppContent() {
         </View>
       </Animated.View>
 
-      <View style={[styles.tabBar, { backgroundColor: C.bg2, borderTopColor: C.border }]}>
-        {(Object.keys(TAB_EMOJIS) as Tab[]).map((name) => {
+      <View style={[styles.tabBar, { backgroundColor: C.bg, borderTopColor: C.border }]}>
+        {(Object.keys(TAB_ICONS) as Tab[]).map((name) => {
           const focused = activeTab === name;
           const TAB_KEYS: Record<Tab, keyof typeof t.tabs> = {
             Notizie: 'news', Archivio: 'archive', Punti: 'points', Premium: 'premium', Profilo: 'profile',
           };
           const label = t.tabs[TAB_KEYS[name]];
+          const iconName = focused ? TAB_ICONS[name].active : TAB_ICONS[name].inactive;
           return (
             <TouchableOpacity
               key={name}
@@ -695,12 +702,11 @@ function AppContent() {
               onPress={() => switchTab(name)}
               activeOpacity={0.7}
             >
-              {/* Pill indicator per il tab attivo */}
-              <View style={[styles.tabPill, focused && { backgroundColor: C.violetBg }]}>
-                <Animated.Text style={[styles.tabEmoji, { transform: [{ scale: tabScales[name] }] }]}>
-                  {TAB_EMOJIS[name]}
-                </Animated.Text>
-              </View>
+              <Ionicons
+                name={iconName}
+                size={22}
+                color={focused ? Colors.violet : C.textTertiary}
+              />
               <Text style={[styles.tabLabel, { color: focused ? Colors.violet : C.textTertiary }, focused && styles.tabLabelActive]}>
                 {label}
               </Text>
@@ -771,15 +777,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 28,
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, paddingTop: 2 },
-  tabPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 20,
-    marginBottom: 1,
-  },
-  tabEmoji: { fontSize: 20 },
-  tabLabel: { fontSize: 11, color: Colors.textTertiary, letterSpacing: 0.1 },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, paddingTop: 4 },
+  tabLabel: { fontSize: 10, color: Colors.textTertiary, letterSpacing: 0.1, fontWeight: '500' },
   tabLabelActive: { color: Colors.violet, fontWeight: '700' },
 });
 

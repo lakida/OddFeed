@@ -9,6 +9,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+// @ts-ignore
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
@@ -243,68 +245,83 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           </View>
         )}
 
-        {/* ── Non dovresti leggerla ── */}
+        {/* ── NON DOVRESTI LEGGERE ── */}
         {!loading && (forbiddenNews.length > 0 || !isPremium) && (
-          <View style={[forbiddenStyles.section, { borderBottomColor: C.border }]}>
-            <Text style={forbiddenStyles.sectionTitle}>NON DOVRESTI LEGGERLA</Text>
+          <View style={ndlStyles.container}>
+            {/* Header */}
+            <View style={ndlStyles.header}>
+              <View style={ndlStyles.lockBox}>
+                <Ionicons name="lock-closed-outline" size={18} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={ndlStyles.headerTitle}>NON DOVRESTI LEGGERE ✨</Text>
+                <Text style={ndlStyles.headerSub}>Alcune storie sono troppo assurde per essere vere. O forse no.</Text>
+              </View>
+            </View>
 
-            {/* PREMIUM: articoli sempre visibili, nessun lock */}
+            {/* PREMIUM: articoli reali sbloccati */}
             {isPremium && forbiddenNews.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={forbiddenStyles.itemPremium}
+                style={ndlStyles.row}
                 onPress={() => onOpenArticle(item.id, item)}
                 activeOpacity={0.75}
               >
-                <View style={forbiddenStyles.badgeRow}>
-                  <View style={forbiddenStyles.badge}>
-                    <Text style={forbiddenStyles.badgeText}>🚫 NON DOVRESTI</Text>
-                  </View>
+                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
+                  <Text style={{ fontSize: 16 }}>{item.imageEmoji}</Text>
                 </View>
-                <Text style={forbiddenStyles.titlePremium} numberOfLines={2}>{item.title}</Text>
-                {!!item.description && (
-                  <Text style={forbiddenStyles.subtitlePremium} numberOfLines={2}>{item.description}</Text>
-                )}
-                <Text style={forbiddenStyles.sourcePremium}>{item.source}</Text>
+                <View style={ndlStyles.rowBody}>
+                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{item.title}</Text>
+                  {!!item.description && (
+                    <Text style={ndlStyles.rowBlur} numberOfLines={1}>{item.description}</Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
               </TouchableOpacity>
             ))}
 
-            {/* FREE + regalo onboarding sbloccato */}
+            {/* FREE + regalo sbloccato: primo articolo accessibile */}
             {!isPremium && freeUnlockActive && forbiddenNews.length > 0 && (
-              <View>
-                <View style={forbiddenStyles.giftBanner}>
-                  <Text style={forbiddenStyles.giftBannerText}>🎁 Il tuo articolo regalo è sbloccato!</Text>
+              <TouchableOpacity
+                style={ndlStyles.row}
+                onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
+                activeOpacity={0.75}
+              >
+                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
+                  <Text style={{ fontSize: 14 }}>🔓</Text>
                 </View>
-                <TouchableOpacity
-                  style={forbiddenStyles.itemPremium}
-                  onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
-                  activeOpacity={0.75}
-                >
-                  <View style={forbiddenStyles.badgeRow}>
-                    <View style={[forbiddenStyles.badge, forbiddenStyles.badgeGift]}>
-                      <Text style={forbiddenStyles.badgeText}>🔓 SBLOCCATO PER TE</Text>
-                    </View>
-                  </View>
-                  <Text style={forbiddenStyles.titlePremium} numberOfLines={2}>{forbiddenNews[0].title}</Text>
-                  <Text style={forbiddenStyles.sourcePremium}>{forbiddenNews[0].source}</Text>
-                </TouchableOpacity>
-              </View>
+                <View style={ndlStyles.rowBody}>
+                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{forbiddenNews[0].title}</Text>
+                  <Text style={[ndlStyles.rowBlur, { color: 'rgba(255,255,255,0.6)' }]}>🎁 Sbloccato per te</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
+              </TouchableOpacity>
             )}
 
-            {/* FREE senza regalo: dark overlay, sempre 2 card bloccate */}
-            {!isPremium && !freeUnlockActive && (
-              <View style={forbiddenStyles.lockedContainer}>
-                <View style={forbiddenStyles.darkCard}>
-                  <Text style={forbiddenStyles.lockIcon}>🔒</Text>
-                  <Text style={forbiddenStyles.blurredTitle}>{'█████████ ████ ███████████████ ████████'}</Text>
-                  <Text style={forbiddenStyles.lockedHint}>Contenuto riservato ai Premium</Text>
+            {/* FREE senza regalo: 2 righe bloccate con testo oscurato */}
+            {!isPremium && !freeUnlockActive && ([
+              'La scoperta che potrebbe cambiare tutto ciò che sappiamo',
+              'Il segreto che le aziende non vogliono che tu conosca',
+            ] as string[]).map((title, i) => (
+              <TouchableOpacity key={i} style={ndlStyles.row} onPress={onGoToPremium} activeOpacity={0.75}>
+                <View style={ndlStyles.rowLock}>
+                  <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.5)" />
                 </View>
-                <View style={forbiddenStyles.darkCard}>
-                  <Text style={forbiddenStyles.lockIcon}>🔒</Text>
-                  <Text style={forbiddenStyles.blurredTitle}>{'██████████████████ ████ █████████'}</Text>
-                  <Text style={forbiddenStyles.lockedHint}>Contenuto riservato ai Premium</Text>
+                <View style={ndlStyles.rowBody}>
+                  <Text style={ndlStyles.rowTitle}>{title}</Text>
+                  <Text style={ndlStyles.rowBlur}>{'██████████████████████████████████████████'}</Text>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
+              </TouchableOpacity>
+            ))}
+
+            {/* Gold CTA — solo per utenti free */}
+            {!isPremium && (
+              <TouchableOpacity style={ndlStyles.cta} onPress={onGoToPremium} activeOpacity={0.85}>
+                <Text style={{ fontSize: 20 }}>👑</Text>
+                <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
+                <Text style={{ fontSize: 11, color: '#1C1917', opacity: 0.75 }}>✦</Text>
+              </TouchableOpacity>
             )}
           </View>
         )}
@@ -354,7 +371,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
               </View>
-              {isRead && <View style={styles.readDot} />}
+              <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
             </TouchableOpacity>
           );
         })}
@@ -377,51 +394,29 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
               </View>
-              {isRead && <View style={styles.readDot} />}
+              <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
             </TouchableOpacity>
           );
         })}
 
-        {/* Banner premium per utenti free */}
-        {!loading && !isPremium && (
-          <TouchableOpacity
-            style={[styles.premiumBanner, { backgroundColor: C.premiumBannerBg, borderColor: C.premiumBannerBorder }]}
-            onPress={onGoToPremium}
-            activeOpacity={0.75}
-          >
-            <Text style={[styles.premiumBannerText, { color: C.premiumBannerText }]}>
-              {t.home.premiumBanner} →
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* CTA archivio */}
+        {/* ── I tuoi punti banner ── */}
         {!loading && (
-          <TouchableOpacity style={[styles.ctaArchive, { backgroundColor: C.text }]} onPress={onGoToArchive} activeOpacity={0.7}>
-            <Text style={styles.ctaText}>{t.common.allNews}</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Widget punti — nascosto per utenti Premium */}
-        {!isPremium && (
           <TouchableOpacity
-            style={[styles.pointsWidget, { backgroundColor: C.bg2, borderColor: C.border }]}
+            style={[ptsBannerStyles.container, { backgroundColor: C.bg2, borderColor: C.border }]}
             onPress={onGoToPoints}
             activeOpacity={0.75}
           >
-            <View style={styles.pwTop}>
-              <Text style={[styles.pwTitle, { color: C.textSecondary }]}>{currentLevel.emoji} {currentLevel.name} · {userStats.points} pt</Text>
-              <Text style={styles.pwStreak}>🔥 {userStats.streak}gg</Text>
+            <View style={ptsBannerStyles.body}>
+              <Text style={[ptsBannerStyles.label, { color: C.textSecondary }]}>I TUOI PUNTI</Text>
+              <Text style={ptsBannerStyles.value}>{userStats.points.toLocaleString('it')} pts</Text>
+              <Text style={[ptsBannerStyles.sub, { color: C.textSecondary }]}>
+                Accumula punti leggendo notizie e ottieni vantaggi esclusivi!
+              </Text>
             </View>
-            <View style={[styles.pwBarBg, { backgroundColor: C.border }]}>
-              <View style={[styles.pwBarFill, { flex: Math.min(Math.max(progress, 0), 1) }]} />
-              <View style={{ flex: Math.max(1 - progress, 0) }} />
+            <View style={ptsBannerStyles.btn}>
+              <Ionicons name="gift-outline" size={15} color="#fff" />
+              <Text style={ptsBannerStyles.btnText}>Scopri i premi</Text>
             </View>
-            <Text style={[styles.pwHint, { color: C.textTertiary }]}>
-              {nextLevel
-                ? `${nextLevel.minPoints - userStats.points} pt per diventare ${nextLevel.name} ${nextLevel.emoji}`
-                : 'Hai raggiunto il livello massimo! 🏆'}
-            </Text>
           </TouchableOpacity>
         )}
 
@@ -900,5 +895,154 @@ const forbiddenStyles = StyleSheet.create({
     fontWeight: '700',
     color: '#a5b4fc',
     textAlign: 'center',
+  },
+});
+
+// ── Stili NDL block (NON DOVRESTI LEGGERE) ──────────────────────────────────
+const ndlStyles = StyleSheet.create({
+  container: {
+    marginHorizontal: 14,
+    marginBottom: 16,
+    backgroundColor: '#1E1B4B',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255,255,255,0.10)',
+  },
+  lockBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(79,70,229,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  headerSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 17,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  rowLock: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  rowBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  rowBlur: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.3)',
+    lineHeight: 15,
+  },
+  cta: {
+    margin: 10,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: '#D97706',
+    borderRadius: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  ctaText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1C1917',
+    letterSpacing: 0.1,
+    flexShrink: 1,
+  },
+});
+
+// ── Stili banner punti ────────────────────────────────────────────────────────
+const ptsBannerStyles = StyleSheet.create({
+  container: {
+    marginHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 14,
+    borderWidth: 0.5,
+    padding: 13,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  body: {
+    flex: 1,
+    minWidth: 0,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  value: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: Colors.violet,
+    letterSpacing: -0.5,
+    lineHeight: 26,
+    marginBottom: 3,
+  },
+  sub: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  btn: {
+    backgroundColor: Colors.violet,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  btnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
