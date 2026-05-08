@@ -226,21 +226,21 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
         </View>
         <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
 
-          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSlot(true)}>
+          <TouchableOpacity style={[styles.settingsItem, { borderTopWidth: 0 }]} onPress={() => setShowSlot(true)}>
             <IconBox emoji="🔔" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notificationSlot}</Text>
             <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{notifSlot}</Text>
-            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowLanguage(true)}>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowLanguage(true)}>
             <IconBox emoji="🌐" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.language}</Text>
             <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{language === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}</Text>
-            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowInterests(true)}>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowInterests(true)}>
             <IconBox emoji="❤️" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.interests}</Text>
             <Text style={[styles.settingsValue, { color: C.textTertiary }]} numberOfLines={1}>
@@ -251,12 +251,12 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
                   }).join(' ')
                 : (language === 'it' ? 'Nessuno' : 'None')}
             </Text>
-            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
 
           {(userStats?.level ?? 0) >= 1 ? (
             // Switch libero in un View: nessun TouchableOpacity che intercetta i touch
-            <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
+            <View style={styles.settingsItem}>
               <IconBox emoji="🌙" />
               <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
               <CustomSwitch
@@ -269,7 +269,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           ) : (
             // Bloccato: tutta la riga è tappabile per mostrare il modal
             <TouchableOpacity
-              style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}
+              style={styles.settingsItem}
               onPress={() => setShowDarkModeLocked(true)}
             >
               <IconBox emoji="🌙" />
@@ -298,22 +298,22 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
         )}
         <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.premiumItem]} onPress={onGoToPremium}>
+          <TouchableOpacity style={[styles.settingsItem, styles.premiumItem, { borderTopWidth: 0 }]} onPress={onGoToPremium}>
             <IconBox emoji="💳" />
             <Text style={[styles.settingsLabel, { fontWeight: '600', color: C.text }]}>{t.profile.premium}</Text>
             <View style={styles.premiumBadge}>
               <Text style={styles.premiumBadgeText}>1,99 €/mese</Text>
             </View>
-            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowSources(true)}>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSources(true)}>
             <IconBox emoji="📰" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.sources}</Text>
-            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
 
-          <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
+          <View style={styles.settingsItem}>
             <IconBox emoji="🔔" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
             <CustomSwitch
@@ -332,18 +332,18 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             />
           </View>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowPrivacy(true)}>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowPrivacy(true)}>
             <IconBox emoji="🔒" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.privacyTerms}</Text>
-            <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowLogoutConfirm(true)}>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowLogoutConfirm(true)}>
             <IconBox emoji="🚪" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.logout}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowDeleteConfirm(true)}>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowDeleteConfirm(true)}>
             <IconBox emoji="🗑️" />
             <Text style={[styles.settingsLabel, { color: Colors.red }]}>{t.profile.deleteAccount}</Text>
           </TouchableOpacity>
@@ -820,20 +820,17 @@ const styles = StyleSheet.create({
     color: '#6366F1',
   },
   settingsGroup: {
-    marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.bg2,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+    marginHorizontal: 0,
   },
   settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    gap: 0,
     minHeight: 52,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.border,
   },
   itemBorder: {
     borderTopWidth: 1,
@@ -841,16 +838,18 @@ const styles = StyleSheet.create({
   },
   premiumItem: { backgroundColor: '#FFFCF0' },
   settingsLabel: {
-    fontSize: FontSize.base,
+    fontSize: 13,
     color: Colors.text,
+    fontWeight: '500',
     flex: 1,
   },
   settingsNote: { fontSize: FontSize.xs, color: Colors.textTertiary },
   settingsValue: {
-    fontSize: FontSize.base,
-    color: Colors.textTertiary,
+    fontSize: 12,
+    color: Colors.textSecondary,
     maxWidth: 140,
     textAlign: 'right',
+    marginRight: 4,
   },
   arrow: { fontSize: 18, color: Colors.textTertiary },
   comingSoonBadge: {

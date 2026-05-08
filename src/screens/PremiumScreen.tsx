@@ -53,7 +53,7 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
               {isPremium ? 'Abbonamento attivo' : 'Scegli il piano per te'}
             </Text>
           </View>
-          <Text style={styles.heroEmoji}>{isPremium ? '👑' : '⭐'}</Text>
+          <Text style={styles.heroEmoji}>{'👑'}</Text>
         </View>
       </View>
 
@@ -164,29 +164,6 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
             <Text style={styles.ctaBtnCancelText}>{t.premium.cancelSubscription}</Text>
           </TouchableOpacity>
         )}
-
-        {/* ─── COSA OTTIENI ─── */}
-        <Text style={styles.sectionTitle}>{t.premium.whatsIncluded}</Text>
-
-        <View style={styles.compareBlock}>
-          <Text style={styles.compareHeader}>{t.premium.free}</Text>
-          {t.premium.featuresFree.map((f, i) => (
-            <View key={i} style={[styles.featureRow, i > 0 && styles.featureBorder]}>
-              <Text style={styles.featureCheck}>✓</Text>
-              <Text style={styles.featureText}>{f}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={[styles.compareBlock, styles.compareBlockPremium]}>
-          <Text style={styles.compareHeaderPremium}>⭐ Premium</Text>
-          {t.premium.featuresPremium.map((f, i) => (
-            <View key={i} style={[styles.featureRow, i > 0 && styles.featureBorderPremium]}>
-              <Text style={styles.featureCheckPremium}>✓</Text>
-              <Text style={styles.featureTextPremium}>{f}</Text>
-            </View>
-          ))}
-        </View>
 
         <Text style={styles.legalNote}>{t.premium.legalNote}</Text>
 

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
+  Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 // @ts-ignore
@@ -23,6 +24,8 @@ import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
+
+const cleanCatLabel = (label: string) => label.replace(/^[^a-zA-ZÀ-ÿ]+/, '').trim();
 
 function StatusBadge({ read, t }: { read: boolean; t: any }) {
   return (
@@ -170,8 +173,13 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
         {!loading && currentNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
             <View style={currentStyles.secHdr}>
-              <Text style={currentStyles.secHdrIcon}>📰</Text>
-              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ATTUALITÀ</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                <Ionicons name="newspaper-outline" size={22} color={Colors.violet} />
+                <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ATTUALITÀ</Text>
+              </View>
+              <TouchableOpacity onPress={onGoToArchive}>
+                <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
+              </TouchableOpacity>
             </View>
             <ScrollView
               horizontal
@@ -186,10 +194,13 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                   activeOpacity={0.75}
                 >
                   {/* Immagine con pill categoria */}
-                  <View style={[currentStyles.cardImg, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF' }]}>
-                    <Text style={currentStyles.cardImgEmoji}>{item.imageEmoji}</Text>
+                  <View style={currentStyles.cardImgWrap}>
+                    <Image
+                      source={{ uri: `https://picsum.photos/seed/${item.id}/380/180` }}
+                      style={currentStyles.cardImg}
+                    />
                     <View style={currentStyles.cardPill}>
-                      <Text style={currentStyles.cardPillText}>{item.categoryLabel?.replace(/^[^\s]+\s/, '') ?? item.category}</Text>
+                      <Text style={currentStyles.cardPillText}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
                     </View>
                   </View>
                   <View style={currentStyles.cardBody}>
@@ -197,45 +208,6 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                       {item.title}
                     </Text>
                     <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
-                      {item.source} · {item.publishedAt}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ── Top Odd News ── */}
-        {!loading && topOddNews.length > 0 && (
-          <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <View style={currentStyles.secHdr}>
-              <Text style={currentStyles.secHdrIcon}>🔥</Text>
-              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>TOP ODD NEWS</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={currentStyles.row}
-            >
-              {topOddNews.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[currentStyles.card, { backgroundColor: '#fff5f5', borderColor: '#fca5a5' }]}
-                  onPress={() => onOpenArticle(item.id, item)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[currentStyles.cardImg, { backgroundColor: '#fef2f2' }]}>
-                    <Text style={currentStyles.cardImgEmoji}>{item.imageEmoji}</Text>
-                    <View style={[currentStyles.cardPill, { backgroundColor: '#dc2626' }]}>
-                      <Text style={currentStyles.cardPillText}>🔥 TOP{!isPremium ? ' 🔒' : ''}</Text>
-                    </View>
-                  </View>
-                  <View style={currentStyles.cardBody}>
-                    <Text style={[currentStyles.cardTitle, { color: '#1a1a2e' }]} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={[currentStyles.cardSource, { color: '#9ca3af' }]}>
                       {item.source} · {item.publishedAt}
                     </Text>
                   </View>
@@ -348,8 +320,10 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
         {/* ── Ultime Notizie ── */}
         {!loading && (todayNews.length > 0 || pastNews.length > 0) && (
           <View style={[currentStyles.secHdr, { paddingTop: 14, paddingBottom: 8 }]}>
-            <Text style={currentStyles.secHdrIcon}>🕐</Text>
-            <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE</Text>
+            <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B', flex: 1 }]}>ULTIME NOTIZIE</Text>
+            <TouchableOpacity onPress={onGoToArchive}>
+              <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -363,13 +337,14 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
               onPress={() => onOpenArticle(item.id, item)}
               activeOpacity={0.7}
             >
-              <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF', opacity: isRead ? 0.5 : 1 }]}>
-                <Text style={styles.unThumbEmoji}>{item.imageEmoji}</Text>
-              </View>
+              <Image
+                source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }}
+                style={[styles.unThumb, { opacity: isRead ? 0.5 : 1 }]}
+              />
               <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
                 <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{item.title}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
-                <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
+                <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               </View>
               <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
             </TouchableOpacity>
@@ -386,13 +361,14 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
               onPress={() => onOpenArticle(item.id, item)}
               activeOpacity={0.7}
             >
-              <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF', opacity: isRead ? 0.5 : 1 }]}>
-                <Text style={styles.unThumbEmoji}>{item.imageEmoji}</Text>
-              </View>
+              <Image
+                source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }}
+                style={[styles.unThumb, { opacity: isRead ? 0.5 : 1 }]}
+              />
               <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
                 <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{item.title}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
-                <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
+                <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               </View>
               <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
             </TouchableOpacity>
@@ -480,8 +456,6 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 10,
     flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
     overflow: 'hidden',
   },
   unThumbEmoji: {
@@ -677,17 +651,25 @@ const currentStyles = StyleSheet.create({
   secHdr: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
+    paddingVertical: 0,
     marginBottom: Spacing.md,
   },
   secHdrIcon: {
     fontSize: 13,
   },
   sectionTitle: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1E1B4B',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  secHdrLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.violet,
   },
   row: {
     paddingHorizontal: Spacing.lg,
@@ -699,11 +681,13 @@ const currentStyles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  cardImg: {
-    height: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardImgWrap: {
+    height: 90,
     position: 'relative',
+  },
+  cardImg: {
+    height: 90,
+    width: '100%',
   },
   cardImgEmoji: {
     fontSize: 36,
@@ -975,7 +959,7 @@ const ndlStyles = StyleSheet.create({
     margin: 10,
     marginHorizontal: 12,
     marginBottom: 12,
-    backgroundColor: '#D97706',
+    backgroundColor: '#FBBF24',
     borderRadius: 12,
     paddingVertical: 7,
     paddingHorizontal: 20,
@@ -983,6 +967,7 @@ const ndlStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    borderWidth: 0,
   },
   ctaText: {
     fontSize: 12,

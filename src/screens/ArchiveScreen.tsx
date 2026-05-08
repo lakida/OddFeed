@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
+  Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
@@ -19,6 +20,26 @@ import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
+
+const cleanCatLabel = (label: string) => label.replace(/^[^a-zA-ZÀ-ÿ]+/, '').trim();
+
+function formatArchiveDate(publishedAt: string): string {
+  if (!publishedAt) return '';
+  // If it's already a relative string like "3h fa", "Ieri", return as-is
+  if (!/^\d{4}-\d{2}-\d{2}/.test(publishedAt)) return publishedAt;
+
+  const date = new Date(publishedAt);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  const timeStr = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+  if (diffDays === 0) return `Oggi, ${timeStr}`;
+  if (diffDays === 1) return `Ieri, ${timeStr}`;
+  if (diffDays < 7) return `${diffDays} giorni fa`;
+  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+}
 
 interface ArchiveScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
@@ -86,7 +107,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
 
     return [
       { key: 'tutto', label: 'Tutto' },
-      { key: 'salvati', label: '🔖 Salvati' },
+      { key: 'salvati', label: 'Salvati' },
       { key: 'settimana', label: 'Questa settimana' },
       { key: currentMonth, label: currentMonth },
       ...cats,
@@ -128,11 +149,11 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
       <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
         <View style={styles.heroTop}>
           <View>
-            <Text style={styles.heroKicker}>ARCHIVIO · NOTIZIE</Text>
+            <Text style={styles.heroKicker}>Storico completo</Text>
             <Text style={styles.heroTitle}>{t.archive.title}</Text>
-            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Tutte le notizie passate, in un posto solo.</Text>
+            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Tutte le notizie assurde</Text>
           </View>
-          <Text style={styles.heroEmoji}>🗂️</Text>
+          <Text style={styles.heroEmoji}>🗄️</Text>
         </View>
       </View>
 
@@ -177,7 +198,6 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         {!loading && (
           <View style={styles.countRow}>
             <Text style={[styles.countText, { color: C.textTertiary }]}>{filteredNews.length} notizie trovate</Text>
-            <Text style={[styles.sortText, { color: Colors.violet }]}>Recenti ▾</Text>
           </View>
         )}
 
@@ -219,13 +239,11 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
             onPress={() => onOpenArticle(item.id, item)}
             activeOpacity={0.7}
           >
-            <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF' }]}>
-              <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '📰'}</Text>
-            </View>
+            <Image source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }} style={styles.unThumb} />
             <View style={styles.unBody}>
-              <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
+              <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{item.title}</Text>
-              <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {item.publishedAt}</Text>
+              <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {formatArchiveDate(item.publishedAt)}</Text>
             </View>
             <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
           </TouchableOpacity>
@@ -400,10 +418,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   countRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
-  countText: { fontSize: 11 },
+  countText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   sortText: { fontSize: 11, fontWeight: '700' },
   unRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
-  unThumb: { width: 58, height: 58, borderRadius: 10, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  unThumb: { width: 76, height: 64, borderRadius: 10, flexShrink: 0 },
   unThumbEmoji: { fontSize: 24 },
   unBody: { flex: 1, minWidth: 0 },
   unCat: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 3 },
