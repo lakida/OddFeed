@@ -59,129 +59,66 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Hero (sezione contenuto) */}
-        <View style={styles.hero}>
-          {isPremium ? (
-            <>
-              <Text style={styles.heroBigEmoji}>👑</Text>
-              <Text style={[styles.heroContentTitle, { color: C.text }]}>{t.premium.heroTitleActive}</Text>
-              <Text style={[styles.heroContentSub, { color: C.textSecondary }]}>{t.premium.heroSubActive}</Text>
-              <View style={styles.activeTag}>
-                <Text style={styles.activeTagText}>{t.premium.activeTag}</Text>
-              </View>
-            </>
-          ) : (
-            <>
-              <Text style={[styles.heroContentTitle, { color: C.text }]}>{t.premium.heroTitle}</Text>
-              <Text style={[styles.heroContentSub, { color: C.textSecondary }]}>{t.premium.heroSub}</Text>
-            </>
-          )}
-        </View>
-
-        {/* ─── SEZIONE FOMO (solo per free) ─── */}
-        {!isPremium && (
-          <View style={styles.fomoSection}>
-            {/* Top Odd News teaser */}
-            <View style={styles.fomoHeader}>
-              <Text style={styles.fomoSectionLabel}>🔥 TOP ODD NEWS</Text>
-              <View style={styles.fomoLockBadge}>
-                <Text style={styles.fomoLockBadgeText}>Solo Premium</Text>
-              </View>
-            </View>
-            <Text style={styles.fomoSectionSub}>
-              {language === 'it'
-                ? 'Le 3 storie più assurde del giorno. Bloccate.'
-                : 'The 3 most absurd stories of the day. Locked.'}
-            </Text>
-
-            {fomoCards.map((card, i) => (
-              <View key={i} style={styles.fomoCard}>
-                <View style={styles.fomoCardLeft}>
-                  <Text style={styles.fomoCardEmoji}>{card.emoji}</Text>
-                </View>
-                <View style={styles.fomoCardBody}>
-                  <Text style={styles.fomoCardCountry}>{card.country}</Text>
-                  <Text style={styles.fomoCardTitle} numberOfLines={2}>{card.title}</Text>
-                </View>
-                <View style={styles.fomoCardLock}>
-                  <Text style={styles.fomoCardLockIcon}>🔒</Text>
-                </View>
-              </View>
-            ))}
-
-            {/* Non dovresti leggerla teaser */}
-            <View style={[styles.fomoHeader, { marginTop: Spacing.lg }]}>
-              <Text style={styles.fomoSectionLabel}>🚫 NON DOVRESTI LEGGERLA</Text>
-              <View style={[styles.fomoLockBadge, styles.fomoLockBadgeDark]}>
-                <Text style={styles.fomoLockBadgeText}>Solo Premium</Text>
-              </View>
-            </View>
-            <Text style={styles.fomoSectionSub}>
-              {language === 'it'
-                ? 'Contenuti al limite. Quelli che non tutti hanno il coraggio di pubblicare.'
-                : 'Edge content. The kind most publishers don\'t dare to run.'}
-            </Text>
-
-            <View style={[styles.fomoCard, styles.fomoForbiddenCard]}>
-              <View style={[styles.fomoCardLeft, styles.fomoForbiddenLeft]}>
-                <Text style={styles.fomoCardEmoji}>{fomoForbidden.emoji}</Text>
-              </View>
-              <View style={styles.fomoCardBody}>
-                <Text style={[styles.fomoCardCountry, { color: '#a78bfa' }]}>
-                  {language === 'it' ? '🌍 Esclusiva Premium' : '🌍 Premium Exclusive'}
-                </Text>
-                <Text style={[styles.fomoCardTitle, { color: '#1e1b4b' }]} numberOfLines={2}>
-                  {fomoForbidden.title}
-                </Text>
-              </View>
-              <View style={styles.fomoCardLock}>
-                <Text style={styles.fomoCardLockIcon}>🔒</Text>
-              </View>
-            </View>
-
-            <Text style={styles.fomoHint}>
-              {language === 'it'
-                ? '↑ Ogni giorno ci sono nuove storie come queste. Solo per te.'
-                : '↑ Every day there are new stories like these. Just for you.'}
-            </Text>
+        {/* Tabella comparativa */}
+        <View style={[cmpStyles.wrap, { borderColor: C.border }]}>
+          {/* Header riga */}
+          <View style={[cmpStyles.headRow, { backgroundColor: C.bg2, borderBottomColor: C.border }]}>
+            <Text style={[cmpStyles.headFeat, { color: C.textTertiary }]}>Funzione</Text>
+            <Text style={[cmpStyles.headCol, { color: C.textSecondary }]}>FREE</Text>
+            <Text style={[cmpStyles.headColGold]}>PREMIUM</Text>
           </View>
-        )}
+          {/* Righe */}
+          {[
+            { feat: 'Feed giornaliero',      free: '5 art.',    prem: 'Illimitati', premGold: true },
+            { feat: 'Non dovresti leggerla', free: '—',         prem: '✓',          premGold: false },
+            { feat: 'Archivio storico',      free: '7 giorni',  prem: 'Completo',   premGold: true },
+            { feat: 'Pubblicità',            free: 'Sì',        prem: '✓',          premGold: false },
+            { feat: 'Notifiche breaking',    free: '—',         prem: '✓',          premGold: false },
+            { feat: 'Lettura offline',       free: '—',         prem: '✓',          premGold: false },
+          ].map((row, i, arr) => (
+            <View key={i} style={[cmpStyles.row, { borderBottomColor: C.border, borderBottomWidth: i < arr.length - 1 ? 0.5 : 0 }]}>
+              <Text style={[cmpStyles.cellFeat, { color: C.text }]}>{row.feat}</Text>
+              <Text style={[cmpStyles.cell, { color: C.textTertiary }]}>{row.free}</Text>
+              <View style={cmpStyles.cellGoldBg}>
+                {row.premGold
+                  ? <Text style={cmpStyles.cellGoldText}>{row.prem}</Text>
+                  : <View style={cmpStyles.checkCircle}><Text style={cmpStyles.checkMark}>✓</Text></View>
+                }
+              </View>
+            </View>
+          ))}
+        </View>
 
         {/* ─── PIANI PRICING ─── */}
         {!isPremium && (
           <>
             <View style={styles.plansRow}>
+              {/* Mensile */}
               <TouchableOpacity
-                style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'monthly' ? Colors.violet : C.border }, selected === 'monthly' && { backgroundColor: C.violetBg }]}
+                style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'monthly' ? Colors.violet : C.border }, selected === 'monthly' && { backgroundColor: '#EEF2FF' }]}
                 onPress={() => setSelected('monthly')}
               >
-                <Text style={[styles.planName, { color: selected === 'monthly' ? Colors.violet : C.text }]}>
-                  {t.premium.monthly}
-                </Text>
-                <Text style={[styles.planPrice, { color: selected === 'monthly' ? Colors.violet : C.text }]}>
-                  1,99 €
-                </Text>
-                <Text style={[styles.planPeriod, { color: selected === 'monthly' ? Colors.violet : C.textSecondary }]}>
-                  {t.premium.perMonth}
-                </Text>
+                <View style={[styles.planDot, selected === 'monthly' && styles.planDotActive]}>
+                  {selected === 'monthly' && <View style={styles.planDotInner} />}
+                </View>
+                <Text style={[styles.planName, { color: selected === 'monthly' ? Colors.violet : C.textSecondary }]}>MENSILE</Text>
+                <Text style={[styles.planPrice, { color: C.text }]}>1,99 €<Text style={[styles.planPriceSuffix, { color: C.textSecondary }]}>/mese</Text></Text>
+                <Text style={[styles.planSub, { color: C.textSecondary }]}>Rinnovo automatico</Text>
               </TouchableOpacity>
 
+              {/* Annuale */}
               <TouchableOpacity
-                style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'yearly' ? Colors.violet : C.border }, selected === 'yearly' && { backgroundColor: C.violetBg }]}
+                style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'yearly' ? Colors.violet : C.border }, selected === 'yearly' && { backgroundColor: '#EEF2FF' }]}
                 onPress={() => setSelected('yearly')}
               >
-                <View style={styles.bestValueBadge}>
-                  <Text style={styles.bestValueText}>{t.premium.bestOffer}</Text>
+                <View style={styles.planBestBadge}><Text style={styles.planBestText}>Più conveniente</Text></View>
+                <View style={[styles.planDot, selected === 'yearly' && styles.planDotActive]}>
+                  {selected === 'yearly' && <View style={styles.planDotInner} />}
                 </View>
-                <Text style={[styles.planName, { color: selected === 'yearly' ? Colors.violet : C.text }]}>
-                  {t.premium.yearly}
-                </Text>
-                <Text style={[styles.planPrice, { color: selected === 'yearly' ? Colors.violet : C.text }]}>
-                  14,99 €
-                </Text>
-                <Text style={[styles.planPeriod, { color: selected === 'yearly' ? Colors.violet : C.textSecondary }]}>
-                  {t.premium.perYear}
-                </Text>
+                <Text style={[styles.planName, { color: selected === 'yearly' ? Colors.violet : C.textSecondary }]}>ANNUALE</Text>
+                <Text style={[styles.planPrice, { color: C.text }]}>14,99 €<Text style={[styles.planPriceSuffix, { color: C.textSecondary }]}>/anno</Text></Text>
+                <Text style={[styles.planSub, { color: C.textSecondary }]}>Solo €1,25/mese</Text>
+                <Text style={styles.planSaving}>Risparmi il 37%</Text>
               </TouchableOpacity>
             </View>
 
@@ -205,11 +142,6 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
               </Text>
             </TouchableOpacity>
             <Text style={styles.ctaNote}>{t.premium.noCommitment}</Text>
-            <Text style={styles.coffeeHint}>
-              {language === 'it'
-                ? 'Meno di un caffè al mese. Le storie più assurde del mondo, ogni giorno.'
-                : 'Less than a coffee a month. The world\'s most absurd stories, every day.'}
-            </Text>
           </>
         )}
 
@@ -670,4 +602,28 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textDecorationLine: 'underline',
   },
+  planDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.bg, position: 'absolute', top: 12, right: 12, alignItems: 'center', justifyContent: 'center' },
+  planDotActive: { backgroundColor: Colors.violet, borderColor: Colors.violet },
+  planDotInner: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' },
+  planBestBadge: { position: 'absolute', top: -10, left: '25%', backgroundColor: Colors.violet, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  planBestText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.6, textTransform: 'uppercase' },
+  planPriceSuffix: { fontSize: 13, fontWeight: '500' },
+  planSub: { fontSize: 11 },
+  planSaving: { fontSize: 11, fontWeight: '700', color: Colors.violet, marginTop: 4 },
+});
+
+// Table
+const cmpStyles = StyleSheet.create({
+  wrap: { marginHorizontal: 16, marginVertical: 14, borderWidth: 0.5, borderRadius: 14, overflow: 'hidden' },
+  headRow: { flexDirection: 'row', borderBottomWidth: 0.5 },
+  headFeat: { flex: 1.5, padding: 10, fontSize: 11, fontWeight: '700', textAlign: 'left' },
+  headCol: { flex: 1, padding: 10, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  headColGold: { flex: 1, padding: 10, fontSize: 11, fontWeight: '700', textAlign: 'center', color: '#D97706', backgroundColor: '#FEF3C7' },
+  row: { flexDirection: 'row' },
+  cellFeat: { flex: 1.5, padding: 9, paddingHorizontal: 8, fontSize: 12, fontWeight: '500' },
+  cell: { flex: 1, padding: 9, fontSize: 12, textAlign: 'center' },
+  cellGoldBg: { flex: 1, padding: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(217,119,6,0.04)' },
+  cellGoldText: { fontSize: 12, fontWeight: '700', color: '#D97706' },
+  checkCircle: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  checkMark: { fontSize: 10, color: Colors.violet, fontWeight: '700' },
 });

@@ -17,6 +17,8 @@ import { fetchArchive } from '../services/newsService';
 import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
+// @ts-ignore
+import { Ionicons } from '@expo/vector-icons';
 
 interface ArchiveScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
@@ -144,13 +146,6 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
           />
         }
       >
-        {/* Banner premium per utenti free */}
-        {!isPremium && (
-          <View style={[styles.premiumBanner, { backgroundColor: C.premiumBannerBg, borderColor: C.premiumBannerBorder }]}>
-            <Text style={[styles.premiumBannerText, { color: C.premiumBannerText }]}>{t.archive.freeBanner}</Text>
-          </View>
-        )}
-
         {/* Filtri */}
         <ScrollView
           horizontal
@@ -163,20 +158,28 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
               style={[
                 styles.filterPill,
                 { borderColor: C.border },
-                activeFilter === f.key && { backgroundColor: C.text, borderColor: C.text },
+                activeFilter === f.key && { backgroundColor: '#EEF2FF', borderColor: Colors.violet },
               ]}
               onPress={() => setActiveFilter(f.key)}
             >
               <Text style={[
                 styles.filterPillText,
                 { color: C.textSecondary },
-                activeFilter === f.key && { color: '#fff', fontWeight: '600' },
+                activeFilter === f.key && { color: Colors.violet, fontWeight: '700' },
               ]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {/* Count row */}
+        {!loading && (
+          <View style={styles.countRow}>
+            <Text style={[styles.countText, { color: C.textTertiary }]}>{filteredNews.length} notizie trovate</Text>
+            <Text style={[styles.sortText, { color: Colors.violet }]}>Recenti ▾</Text>
+          </View>
+        )}
 
         {/* Skeleton mentre carica */}
         {loading && <SkeletonNewsList count={5} variant="card" />}
@@ -209,28 +212,22 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
             </Text>
           </View>
         )}
-        {!loading && filteredNews.map((item) => (
+        {!loading && filteredNews.map((item, idx) => (
           <TouchableOpacity
             key={item.id}
-            style={[styles.item, { borderBottomColor: C.border }]}
+            style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === filteredNews.length - 1 ? 0 : 0.5 }]}
             onPress={() => onOpenArticle(item.id, item)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.itemMeta, { color: C.textTertiary }]}>
-              {item.country} · {item.categoryLabel}
-            </Text>
-            <Text style={[styles.itemTitle, { color: C.text }]} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <View style={styles.itemFooter}>
-              <View style={styles.sourceDot} />
-              <Text style={[styles.itemSource, { color: C.textSecondary }]}>{item.source}</Text>
-              <Text style={[styles.itemDot, { color: C.textTertiary }]}>·</Text>
-              <Text style={[styles.itemTime, { color: C.textTertiary }]}>{item.publishedAt}</Text>
-              {savedIds.has(item.id) && (
-                <Text style={styles.savedBadge}>🔖</Text>
-              )}
+            <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#EEF2FF' }]}>
+              <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '📰'}</Text>
             </View>
+            <View style={styles.unBody}>
+              <Text style={[styles.unCat, { color: Colors.violet }]}>{item.categoryLabel}</Text>
+              <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{item.title}</Text>
+              <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {item.publishedAt}</Text>
+            </View>
+            <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
           </TouchableOpacity>
         ))}
 
@@ -402,4 +399,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
+  countRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
+  countText: { fontSize: 11 },
+  sortText: { fontSize: 11, fontWeight: '700' },
+  unRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
+  unThumb: { width: 58, height: 58, borderRadius: 10, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  unThumbEmoji: { fontSize: 24 },
+  unBody: { flex: 1, minWidth: 0 },
+  unCat: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 3 },
+  unTitle: { fontSize: 13, fontWeight: '600', lineHeight: 18, marginBottom: 3 },
+  unMeta: { fontSize: 11 },
 });

@@ -24,6 +24,8 @@ import { registerForPushNotifications } from '../services/notificationService';
 import { auth } from '../config/firebase';
 import { Category } from '../types';
 import { UserStats } from '../../App';
+// @ts-ignore
+import { Ionicons } from '@expo/vector-icons';
 
 const NOTIFICATION_SLOTS = ['Colazione', 'Pranzo', 'Pomeriggio', 'Cena'];
 
@@ -187,6 +189,12 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
     );
   };
 
+  const IconBox = ({ emoji }: { emoji: string }) => (
+    <View style={[profStyles.iconBox, { backgroundColor: C.bg2, borderColor: C.border }]}>
+      <Text style={profStyles.iconBoxEmoji}>{emoji}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
       <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
@@ -212,22 +220,28 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* Preferenze */}
-        <Text style={styles.sectionTitle}>{t.profile.preferences}</Text>
+        <View style={profStyles.secHdr}>
+          <View style={profStyles.secHdrIcon}><Ionicons name="settings-outline" size={22} color={Colors.violet} /></View>
+          <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>PREFERENZE</Text>
+        </View>
         <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
 
           <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSlot(true)}>
+            <IconBox emoji="🔔" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notificationSlot}</Text>
             <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{notifSlot}</Text>
             <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowLanguage(true)}>
+            <IconBox emoji="🌐" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.language}</Text>
             <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{language === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}</Text>
             <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowInterests(true)}>
+            <IconBox emoji="❤️" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.interests}</Text>
             <Text style={[styles.settingsValue, { color: C.textTertiary }]} numberOfLines={1}>
               {interests.length > 0
@@ -243,6 +257,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           {(userStats?.level ?? 0) >= 1 ? (
             // Switch libero in un View: nessun TouchableOpacity che intercetta i touch
             <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
+              <IconBox emoji="🌙" />
               <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
               <CustomSwitch
                 value={isDark}
@@ -257,6 +272,7 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
               style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}
               onPress={() => setShowDarkModeLocked(true)}
             >
+              <IconBox emoji="🌙" />
               <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
               <View style={[styles.comingSoonBadge, { backgroundColor: C.bg2, borderColor: C.border }]}>
                 <Text style={[styles.comingSoonText, { color: C.textTertiary }]}>🔒 Esploratore</Text>
@@ -266,10 +282,24 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
         </View>
 
-        <Text style={styles.sectionTitle}>{t.profile.account}</Text>
+        <View style={profStyles.secHdr}>
+          <View style={profStyles.secHdrIcon}><Ionicons name="person-outline" size={22} color={Colors.violet} /></View>
+          <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>ACCOUNT</Text>
+        </View>
+        {isPremium && (
+          <TouchableOpacity style={profStyles.goldBanner} onPress={onGoToPremium} activeOpacity={0.8}>
+            <Text style={{ fontSize: 18 }}>👑</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={profStyles.goldBannerTitle}>OddFeed Premium attivo</Text>
+              <Text style={profStyles.goldBannerSub}>Gestisci il tuo abbonamento</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={14} color="#D97706" />
+          </TouchableOpacity>
+        )}
         <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
 
           <TouchableOpacity style={[styles.settingsItem, styles.premiumItem]} onPress={onGoToPremium}>
+            <IconBox emoji="💳" />
             <Text style={[styles.settingsLabel, { fontWeight: '600', color: C.text }]}>{t.profile.premium}</Text>
             <View style={styles.premiumBadge}>
               <Text style={styles.premiumBadgeText}>1,99 €/mese</Text>
@@ -278,11 +308,13 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowSources(true)}>
+            <IconBox emoji="📰" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.sources}</Text>
             <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
           <View style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]}>
+            <IconBox emoji="🔔" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
             <CustomSwitch
               value={notifications}
@@ -301,15 +333,18 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           </View>
 
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowPrivacy(true)}>
+            <IconBox emoji="🔒" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.privacyTerms}</Text>
             <Text style={[styles.arrow, { color: C.textTertiary }]}>›</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowLogoutConfirm(true)}>
+            <IconBox emoji="🚪" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.logout}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.settingsItem, styles.itemBorder, { borderTopColor: C.border }]} onPress={() => setShowDeleteConfirm(true)}>
+            <IconBox emoji="🗑️" />
             <Text style={[styles.settingsLabel, { color: Colors.red }]}>{t.profile.deleteAccount}</Text>
           </TouchableOpacity>
 
@@ -846,4 +881,16 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     paddingTop: Spacing.xl,
   },
+});
+
+// Stili specifici profile mockup
+const profStyles = StyleSheet.create({
+  secHdr: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
+  secHdrIcon: { alignItems: 'center', justifyContent: 'center' },
+  secHdrTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 0.4, textTransform: 'uppercase', color: '#1E1B4B' },
+  iconBox: { width: 30, height: 30, borderRadius: 9, borderWidth: 0.5, alignItems: 'center', justifyContent: 'center', marginRight: 10, flexShrink: 0 },
+  iconBoxEmoji: { fontSize: 14 },
+  goldBanner: { marginHorizontal: 14, marginBottom: 8, backgroundColor: '#FEF3C7', borderRadius: 12, padding: 12, paddingHorizontal: 14, borderWidth: 0.5, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 10 },
+  goldBannerTitle: { fontSize: 13, fontWeight: '700', color: '#D97706' },
+  goldBannerSub: { fontSize: 11, color: '#92400E', marginTop: 1 },
 });
