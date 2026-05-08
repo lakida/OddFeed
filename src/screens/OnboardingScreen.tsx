@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   sbloccoBadge: {
     fontSize: FontSize.sm,
     fontWeight: '700',
-    color: '#6366F1',
+    color: '#4F46E5',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: Spacing.sm,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   sbloccoUnlockText: {
     fontSize: FontSize.sm,
     fontWeight: '600',
-    color: '#6366F1',
+    color: '#4F46E5',
   },
   sbloccoCta: {
     backgroundColor: '#4f46e5',

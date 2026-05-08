@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: 6,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#4F46E5',
     borderRadius: 3,
   },
   progressHint: {
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
     fontSize: FontSize.lg,
     fontWeight: '700',
-    color: '#6366F1',
+    color: '#4F46E5',
   },
   card: {
     marginHorizontal: Spacing.lg,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   doneCheck: {
     fontSize: FontSize.base,
-    color: '#6366F1',
+    color: '#4F46E5',
     fontWeight: '700',
     marginRight: 4,
   },

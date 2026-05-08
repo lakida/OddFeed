@@ -64,6 +64,7 @@ export interface NewsItem {
   isForbidden?: boolean; // sezione "Non dovresti leggerla"
   viewSeed?: number;    // base per il contatore social proof
   isPremium?: boolean;
+  readTime?: string;   // es. "3 min di lettura"
 }
 
 export interface UserLevel {

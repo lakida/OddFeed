@@ -4,29 +4,29 @@
 export const Colors = {
   // Sfondi
   bg: '#FFFFFF',
-  bg2: '#F7F7F8',
+  bg2: '#F9FAFB',
   bgDark: '#1C1C1E',
   bg2Dark: '#2C2C2E',
 
   // Testi
-  text: '#1A1A1A',
-  textSecondary: '#666666',
-  textTertiary: '#999999',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
   textDark: '#F5F5F7',
   textSecondaryDark: '#8E8E93',
 
   // Bordi
-  border: '#E5E5E5',
+  border: '#E5E7EB',
   borderDark: '#3A3A3C',
 
   // Accenti
   green: '#2D9E5F',
   greenBg: '#F0FAF4',
   greenBorder: '#B7E4C7',
-  gold: '#C9A227',
+  gold: '#D97706',
   red: '#E63946',
-  violet: '#6366F1',
-  violetDark: '#4F52D3',
+  violet: '#4F46E5',
+  violetDark: '#4338CA',
   violetBg: '#EEF2FF',
 
   // Tag colori
@@ -43,12 +43,12 @@ export const Colors = {
 export function getColors(isDark: boolean) {
   return {
     bg:             isDark ? '#1C1C1E' : '#FFFFFF',
-    bg2:            isDark ? '#2C2C2E' : '#F7F7F8',
+    bg2:            isDark ? '#2C2C2E' : '#F9FAFB',
     bg3:            isDark ? '#3A3A3C' : '#EFEFEF',
-    text:           isDark ? '#F5F5F7' : '#1A1A1A',
-    textSecondary:  isDark ? '#8E8E93' : '#666666',
-    textTertiary:   isDark ? '#636366' : '#999999',
-    border:         isDark ? '#3A3A3C' : '#E5E5E5',
+    text:           isDark ? '#F5F5F7' : '#111827',
+    textSecondary:  isDark ? '#8E8E93' : '#6B7280',
+    textTertiary:   isDark ? '#636366' : '#9CA3AF',
+    border:         isDark ? '#3A3A3C' : '#E5E7EB',
     hero:           isDark ? '#2D2A6E' : '#4F46E5',
     heroText:       '#FFFFFF',
     heroSubtext:    'rgba(255,255,255,0.65)',
@@ -60,9 +60,9 @@ export function getColors(isDark: boolean) {
     green:          '#2D9E5F',
     greenBg:        isDark ? '#0D2E1C' : '#F0FAF4',
     greenBorder:    isDark ? '#1D5C38' : '#B7E4C7',
-    gold:           '#C9A227',
+    gold:           '#D97706',
     red:            '#E63946',
-    violet:         '#6366F1',
+    violet:         '#4F46E5',
     violetBg:       isDark ? '#1E1B4B' : '#EEF2FF',
     // Banner premium
     premiumBannerBg:     isDark ? '#2C2510' : '#FFFCF0',
