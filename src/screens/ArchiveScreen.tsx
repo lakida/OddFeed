@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   RefreshControl,
   Image,
+  TextInput,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
@@ -21,6 +22,16 @@ import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 
+const cleanTitle = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/[☀-➿]/g, '')
+    .replace(/[⬀-⯿]/g, '')
+    .replace(/️/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 const cleanCatLabel = (label: string) => label.replace(/^[^a-zA-ZÀ-ÿ]+/, '').trim();
 
 function formatArchiveDate(publishedAt: string): string {
@@ -60,6 +71,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
     ? PREMIUM_NEWS_LIMIT
     : (DAILY_NEWS_LIMITS[userStats?.level ?? 0] ?? 1);
   const [activeFilter, setActiveFilter] = useState('tutto');
+  const [searchQuery, setSearchQuery] = useState('');
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,33 +128,34 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
 
   // Applica il filtro attivo agli articoli
   const filteredNews = React.useMemo(() => {
-    if (activeFilter === 'tutto') return archiveNews;
-
-    if (activeFilter === 'salvati') return savedArticles;
-
-    if (activeFilter === 'settimana') {
+    const q = searchQuery.toLowerCase().trim();
+    let base: NewsItem[];
+    if (activeFilter === 'tutto') base = archiveNews;
+    else if (activeFilter === 'salvati') base = savedArticles;
+    else if (activeFilter === 'settimana') {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const cutoff = weekAgo.toISOString().split('T')[0];
-      return archiveNews.filter(n => (n.publishedAt ?? '') >= cutoff);
+      base = archiveNews.filter(n => (n.publishedAt ?? '') >= cutoff);
+    } else {
+      const monthNames2: Record<string, string> = {
+        'gennaio':'01','febbraio':'02','marzo':'03','aprile':'04',
+        'maggio':'05','giugno':'06','luglio':'07','agosto':'08',
+        'settembre':'09','ottobre':'10','novembre':'11','dicembre':'12',
+      };
+      const monthMatch2 = activeFilter.match(/^(\w+)\s+(\d{4})$/);
+      if (monthMatch2) {
+        const m2 = monthNames2[monthMatch2[1].toLowerCase()];
+        const y2 = monthMatch2[2];
+        base = m2 ? archiveNews.filter(n => n.publishedAt?.startsWith(`${y2}-${m2}`)) : archiveNews;
+      } else {
+        base = archiveNews.filter(n => n.category === activeFilter);
+      }
     }
+    if (!q) return base;
+    return base.filter(n => (n.title ?? '').toLowerCase().includes(q) || (n.source ?? '').toLowerCase().includes(q));
+  }, [archiveNews, activeFilter, savedArticles, searchQuery]);
 
-    // Filtro per mese (es. "Aprile 2026")
-    const monthNames: Record<string, string> = {
-      'gennaio':'01','febbraio':'02','marzo':'03','aprile':'04',
-      'maggio':'05','giugno':'06','luglio':'07','agosto':'08',
-      'settembre':'09','ottobre':'10','novembre':'11','dicembre':'12',
-    };
-    const monthMatch = activeFilter.match(/^(\w+)\s+(\d{4})$/);
-    if (monthMatch) {
-      const m = monthNames[monthMatch[1].toLowerCase()];
-      const y = monthMatch[2];
-      if (m) return archiveNews.filter(n => n.publishedAt?.startsWith(`${y}-${m}`));
-    }
-
-    // Filtro per categoria
-    return archiveNews.filter(n => n.category === activeFilter);
-  }, [archiveNews, activeFilter]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
@@ -167,6 +180,23 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
           />
         }
       >
+        {/* Search bar */}
+        <View style={[styles.searchRow, { borderColor: C.border, backgroundColor: C.bg2 }]}>
+          <Text style={[styles.searchIcon, { color: C.textTertiary }]}>🔍</Text>
+          <TextInput
+            style={[styles.searchInput, { color: C.text }]}
+            placeholder="Cerca notizie..."
+            placeholderTextColor={C.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={{ fontSize: 16, color: C.textTertiary, paddingRight: 4 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Filtri */}
         <ScrollView
           horizontal
@@ -198,6 +228,10 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         {!loading && (
           <View style={styles.countRow}>
             <Text style={[styles.countText, { color: C.textTertiary }]}>{filteredNews.length} notizie trovate</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <Text style={[styles.sortText, { color: Colors.violet }]}>Recenti</Text>
+              <Ionicons name="chevron-down" size={10} color={Colors.violet} />
+            </View>
           </View>
         )}
 
@@ -241,9 +275,9 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
           >
             <Image source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }} style={styles.unThumb} />
             <View style={styles.unBody}>
-              <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
-              <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{item.title}</Text>
+              <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
               <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {formatArchiveDate(item.publishedAt)}</Text>
+              <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
             </View>
             <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
           </TouchableOpacity>
@@ -262,8 +296,8 @@ const styles = StyleSheet.create({
   },
   heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   heroTop: {
     flexDirection: 'row',
@@ -309,6 +343,25 @@ const styles = StyleSheet.create({
     color: '#7A6010',
     fontWeight: '500',
     lineHeight: 18,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    gap: 8,
+  },
+  searchIcon: { fontSize: 14 },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    padding: 0,
   },
   filtersRow: {
     paddingHorizontal: Spacing.lg,
@@ -418,13 +471,13 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   countRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
-  countText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  countText: { fontSize: 11, fontWeight: '500', color: Colors.textSecondary },
   sortText: { fontSize: 11, fontWeight: '700' },
   unRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
   unThumb: { width: 76, height: 64, borderRadius: 10, flexShrink: 0 },
   unThumbEmoji: { fontSize: 24 },
   unBody: { flex: 1, minWidth: 0 },
-  unCat: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 3 },
-  unTitle: { fontSize: 13, fontWeight: '600', lineHeight: 18, marginBottom: 3 },
+  unCat: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 3 },
+  unTitle: { fontSize: 14, fontWeight: '700', lineHeight: 19, marginBottom: 3 },
   unMeta: { fontSize: 11 },
 });

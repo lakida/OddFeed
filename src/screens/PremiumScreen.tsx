@@ -111,7 +111,11 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
                 style={[styles.planCard, { backgroundColor: C.bg, borderColor: selected === 'yearly' ? Colors.violet : C.border }, selected === 'yearly' && { backgroundColor: '#EEF2FF' }]}
                 onPress={() => setSelected('yearly')}
               >
-                <View style={styles.planBestBadge}><Text style={styles.planBestText}>Più conveniente</Text></View>
+                <View style={styles.planBestBadge}>
+                  <View style={{ backgroundColor: Colors.violet, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
+                    <Text style={styles.planBestText}>Più conveniente</Text>
+                  </View>
+                </View>
                 <View style={[styles.planDot, selected === 'yearly' && styles.planDotActive]}>
                   {selected === 'yearly' && <View style={styles.planDotInner} />}
                 </View>
@@ -204,8 +208,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
   heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   heroTop: {
     flexDirection: 'row',
@@ -273,7 +277,7 @@ const styles = StyleSheet.create({
   activeTagText: {
     fontSize: FontSize.sm,
     fontWeight: '600',
-    color: '#6366F1',
+    color: '#4F46E5',
   },
 
   // ─── FOMO ───
@@ -295,7 +299,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   fomoLockBadge: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#4F46E5',
     borderRadius: Radius.full,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -375,45 +379,45 @@ const styles = StyleSheet.create({
   // ─── PIANI ───
   plansRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: 10,
     marginHorizontal: Spacing.lg,
-    marginTop: Spacing.xl,
+    marginTop: 14,
   },
   planCard: {
     flex: 1,
-    padding: Spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: Radius.lg,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.bg2,
-    alignItems: 'center',
     gap: 4,
   },
   planCardActive: {
-    borderColor: '#6366F1',
+    borderColor: '#4F46E5',
     backgroundColor: '#EEF2FF',
   },
   planName: {
     fontSize: FontSize.sm,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
-  planNameActive: { color: '#6366F1' },
+  planNameActive: { color: '#4F46E5' },
   planPrice: {
     fontSize: FontSize.xxl,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textSecondary,
   },
-  planPriceActive: { color: '#6366F1' },
+  planPriceActive: { color: '#4F46E5' },
   planPeriod: {
     fontSize: FontSize.xs,
     color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 14,
   },
-  planPeriodActive: { color: '#6366F1' },
+  planPeriodActive: { color: '#4F46E5' },
   bestValueBadge: {
     backgroundColor: Colors.text,
     paddingHorizontal: Spacing.sm,
@@ -431,8 +435,9 @@ const styles = StyleSheet.create({
   ctaBtn: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    paddingVertical: 16,
-    borderRadius: Radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: Radius.lg,
     backgroundColor: '#4f46e5',
     alignItems: 'center',
     shadowColor: '#4f46e5',
@@ -443,9 +448,9 @@ const styles = StyleSheet.create({
   },
   ctaBtnText: {
     fontSize: FontSize.base,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#fff',
-    letterSpacing: 0.2,
+    letterSpacing: -0.2,
   },
   ctaNote: {
     textAlign: 'center',
@@ -542,7 +547,7 @@ const styles = StyleSheet.create({
   },
   featureCheckPremium: {
     fontSize: FontSize.base,
-    color: '#6366F1',
+    color: '#4F46E5',
     fontWeight: '700',
     width: 20,
     marginTop: 1,
@@ -582,7 +587,7 @@ const styles = StyleSheet.create({
   planDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.bg, position: 'absolute', top: 12, right: 12, alignItems: 'center', justifyContent: 'center' },
   planDotActive: { backgroundColor: Colors.violet, borderColor: Colors.violet },
   planDotInner: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' },
-  planBestBadge: { position: 'absolute', top: -10, left: '25%', backgroundColor: Colors.violet, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  planBestBadge: { position: 'absolute', top: -10, left: 0, right: 0, alignItems: 'center', zIndex: 1 },
   planBestText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.6, textTransform: 'uppercase' },
   planPriceSuffix: { fontSize: 13, fontWeight: '500' },
   planSub: { fontSize: 11 },

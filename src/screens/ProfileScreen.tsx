@@ -219,59 +219,21 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Preferenze */}
+        {/* ── PREFERENZE ── */}
         <View style={profStyles.secHdr}>
           <View style={profStyles.secHdrIcon}><Ionicons name="settings-outline" size={22} color={Colors.violet} /></View>
           <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>PREFERENZE</Text>
         </View>
-        <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
-
-          <TouchableOpacity style={[styles.settingsItem, { borderTopWidth: 0 }]} onPress={() => setShowSlot(true)}>
-            <IconBox emoji="🔔" />
-            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notificationSlot}</Text>
-            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{notifSlot}</Text>
-            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowLanguage(true)}>
-            <IconBox emoji="🌐" />
-            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.language}</Text>
-            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{language === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}</Text>
-            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowInterests(true)}>
-            <IconBox emoji="❤️" />
-            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.interests}</Text>
-            <Text style={[styles.settingsValue, { color: C.textTertiary }]} numberOfLines={1}>
-              {interests.length > 0
-                ? interests.map(id => {
-                    const config = CATEGORY_CONFIG.find(c => c.id === id);
-                    return config ? config.emoji : id;
-                  }).join(' ')
-                : (language === 'it' ? 'Nessuno' : 'None')}
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
-          </TouchableOpacity>
+        <View style={styles.settingsGroup}>
 
           {(userStats?.level ?? 0) >= 1 ? (
-            // Switch libero in un View: nessun TouchableOpacity che intercetta i touch
-            <View style={styles.settingsItem}>
+            <View style={[styles.settingsItem, { borderTopWidth: 0 }]}>
               <IconBox emoji="🌙" />
               <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
-              <CustomSwitch
-                value={isDark}
-                onValueChange={(val) => setIsDark(val)}
-                activeColor={C.violet}
-                inactiveColor={C.border}
-              />
+              <CustomSwitch value={isDark} onValueChange={(val) => setIsDark(val)} activeColor={C.violet} inactiveColor={C.border} />
             </View>
           ) : (
-            // Bloccato: tutta la riga è tappabile per mostrare il modal
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => setShowDarkModeLocked(true)}
-            >
+            <TouchableOpacity style={[styles.settingsItem, { borderTopWidth: 0 }]} onPress={() => setShowDarkModeLocked(true)}>
               <IconBox emoji="🌙" />
               <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.darkMode}</Text>
               <View style={[styles.comingSoonBadge, { backgroundColor: C.bg2, borderColor: C.border }]}>
@@ -280,8 +242,33 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             </TouchableOpacity>
           )}
 
+          <View style={styles.settingsItem}>
+            <IconBox emoji="🔔" />
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
+            <CustomSwitch
+              value={notifications}
+              onValueChange={async (val) => {
+                setNotifications(val);
+                if (val) {
+                  const user = auth.currentUser;
+                  if (user) { registerForPushNotifications(user.uid).catch(() => {}); }
+                }
+              }}
+              activeColor={C.violet}
+              inactiveColor={C.border}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowLanguage(true)}>
+            <IconBox emoji="🌐" />
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.language}</Text>
+            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{language === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
+          </TouchableOpacity>
+
         </View>
 
+        {/* ── ACCOUNT ── */}
         <View style={profStyles.secHdr}>
           <View style={profStyles.secHdrIcon}><Ionicons name="person-outline" size={22} color={Colors.violet} /></View>
           <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>ACCOUNT</Text>
@@ -296,59 +283,85 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             <Ionicons name="chevron-forward-outline" size={14} color="#D97706" />
           </TouchableOpacity>
         )}
-        <View style={[styles.settingsGroup, { backgroundColor: C.bg2, borderColor: C.border }]}>
-
+        <View style={styles.settingsGroup}>
           <TouchableOpacity style={[styles.settingsItem, styles.premiumItem, { borderTopWidth: 0 }]} onPress={onGoToPremium}>
             <IconBox emoji="💳" />
             <Text style={[styles.settingsLabel, { fontWeight: '600', color: C.text }]}>{t.profile.premium}</Text>
-            <View style={styles.premiumBadge}>
-              <Text style={styles.premiumBadgeText}>1,99 €/mese</Text>
-            </View>
+            <View style={styles.premiumBadge}><Text style={styles.premiumBadgeText}>1,99 €/mese</Text></View>
             <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
-
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSlot(true)}>
+            <IconBox emoji="🔔" />
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notificationSlot}</Text>
+            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{notifSlot}</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSources(true)}>
             <IconBox emoji="📰" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.sources}</Text>
             <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
+        </View>
 
-          <View style={styles.settingsItem}>
-            <IconBox emoji="🔔" />
-            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notifications}</Text>
-            <CustomSwitch
-              value={notifications}
-              onValueChange={async (val) => {
-                setNotifications(val);
-                if (val) {
-                  const user = auth.currentUser;
-                  if (user) {
-                    registerForPushNotifications(user.uid).catch(() => {});
-                  }
-                }
-              }}
-              activeColor={C.violet}
-              inactiveColor={C.border}
-            />
+        {/* ── INTERESSI (inline grid) ── */}
+        <View style={profStyles.secHdr}>
+          <View style={profStyles.secHdrIcon}><Ionicons name="heart-outline" size={22} color={Colors.violet} /></View>
+          <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>INTERESSI</Text>
+        </View>
+        {freeSelected < 3 && (
+          <View style={[profStyles.interestWarning, { backgroundColor: '#FFF3CD', borderColor: '#F0D98A' }]}>
+            <Text style={{ fontSize: 12, color: '#7A6010', fontWeight: '500' }}>{t.profile.interestsMin(freeSelected)}</Text>
           </View>
+        )}
+        <View style={profStyles.interestGrid}>
+          {CATEGORY_CONFIG.map((config) => {
+            const active = interests.includes(config.id);
+            const locked = config.premiumOnly && !isPremium;
+            return (
+              <TouchableOpacity
+                key={config.id}
+                style={[
+                  profStyles.intChip,
+                  { borderColor: C.border, backgroundColor: C.bg },
+                  active && { backgroundColor: '#EEF2FF', borderColor: Colors.violet },
+                  locked && { opacity: 0.5 },
+                ]}
+                onPress={() => toggleInterest(config.id, !!config.premiumOnly)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  profStyles.intChipText,
+                  { color: C.textSecondary },
+                  active && { color: Colors.violet },
+                ]} numberOfLines={1}>
+                  {config.emoji} {getCatLabel(config)}{locked ? ' 🔒' : ''}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowPrivacy(true)}>
+        {/* ── PRIVACY E DATI ── */}
+        <View style={profStyles.secHdr}>
+          <View style={profStyles.secHdrIcon}><Ionicons name="shield-outline" size={22} color={Colors.violet} /></View>
+          <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>PRIVACY E DATI</Text>
+        </View>
+        <View style={styles.settingsGroup}>
+          <TouchableOpacity style={[styles.settingsItem, { borderTopWidth: 0 }]} onPress={() => setShowPrivacy(true)}>
             <IconBox emoji="🔒" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.privacyTerms}</Text>
             <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowLogoutConfirm(true)}>
-            <IconBox emoji="🚪" />
-            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.logout}</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.settingsItem} onPress={() => setShowDeleteConfirm(true)}>
             <IconBox emoji="🗑️" />
             <Text style={[styles.settingsLabel, { color: Colors.red }]}>{t.profile.deleteAccount}</Text>
           </TouchableOpacity>
-
         </View>
+
+        {/* Logout */}
+        <TouchableOpacity style={profStyles.logoutRow} onPress={() => setShowLogoutConfirm(true)}>
+          <Text style={profStyles.logoutText}>{t.profile.logout}</Text>
+        </TouchableOpacity>
 
         <Text style={[styles.footer, { color: C.textTertiary }]}>{t.profile.version}</Text>
         <View style={{ height: 24 }} />
@@ -767,8 +780,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
   heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   heroTop: {
     flexDirection: 'row',
@@ -817,7 +830,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
     fontSize: FontSize.lg,
     fontWeight: '700',
-    color: '#6366F1',
+    color: '#4F46E5',
   },
   settingsGroup: {
     marginHorizontal: 0,
@@ -892,4 +905,46 @@ const profStyles = StyleSheet.create({
   goldBanner: { marginHorizontal: 14, marginBottom: 8, backgroundColor: '#FEF3C7', borderRadius: 12, padding: 12, paddingHorizontal: 14, borderWidth: 0.5, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 10 },
   goldBannerTitle: { fontSize: 13, fontWeight: '700', color: '#D97706' },
   goldBannerSub: { fontSize: 11, color: '#92400E', marginTop: 1 },
+  // Inline interests grid
+  interestGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    paddingTop: 6,
+  },
+  intChip: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '31.5%',
+    overflow: 'hidden',
+  },
+  intChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  interestWarning: {
+    marginHorizontal: 14,
+    marginBottom: 6,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+  },
+  logoutRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.border,
+  },
+  logoutText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
 });

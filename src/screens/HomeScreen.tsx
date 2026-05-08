@@ -25,6 +25,17 @@ import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
 
+// Rimuove emoji e simboli dai titoli (surrogate pairs + simboli BMP comuni)
+const cleanTitle = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/[☀-➿]/g, '')
+    .replace(/[⬀-⯿]/g, '')
+    .replace(/️/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 const cleanCatLabel = (label: string) => label.replace(/^[^a-zA-ZÀ-ÿ]+/, '').trim();
 
 function StatusBadge({ read, t }: { read: boolean; t: any }) {
@@ -205,7 +216,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                   </View>
                   <View style={currentStyles.cardBody}>
                     <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={2}>
-                      {item.title}
+                      {cleanTitle(item.title)}
                     </Text>
                     <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
                       {item.source} · {item.publishedAt}
@@ -243,7 +254,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                   <Text style={{ fontSize: 16 }}>{item.imageEmoji}</Text>
                 </View>
                 <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{item.title}</Text>
+                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                   {!!item.description && (
                     <Text style={ndlStyles.rowBlur} numberOfLines={1}>{item.description}</Text>
                   )}
@@ -320,7 +331,10 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
         {/* ── Ultime Notizie ── */}
         {!loading && (todayNews.length > 0 || pastNews.length > 0) && (
           <View style={[currentStyles.secHdr, { paddingTop: 14, paddingBottom: 8 }]}>
-            <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B', flex: 1 }]}>ULTIME NOTIZIE</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <Ionicons name="time-outline" size={22} color={Colors.violet} />
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE</Text>
+            </View>
             <TouchableOpacity onPress={onGoToArchive}>
               <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
             </TouchableOpacity>
@@ -342,7 +356,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 style={[styles.unThumb, { opacity: isRead ? 0.5 : 1 }]}
               />
               <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
-                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               </View>
@@ -366,7 +380,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 style={[styles.unThumb, { opacity: isRead ? 0.5 : 1 }]}
               />
               <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
-                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               </View>
@@ -409,8 +423,8 @@ const styles = StyleSheet.create({
   },
   heroArea: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   heroTop: {
     flexDirection: 'row',
@@ -490,17 +504,14 @@ const styles = StyleSheet.create({
   },
   itemMeta: {
     fontSize: FontSize.xs,
-    fontWeight: '600',
     color: Colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
     marginBottom: Spacing.xs,
   },
   itemTitle: {
-    fontSize: FontSize.lg,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.text,
-    lineHeight: 24,
+    lineHeight: 20,
     marginBottom: Spacing.xs,
   },
   itemDescription: {
@@ -620,7 +631,7 @@ const styles = StyleSheet.create({
   pwStreak: {
     fontSize: FontSize.sm,
     fontWeight: '700',
-    color: '#6366F1',
+    color: '#4F46E5',
   },
   pwBarBg: {
     height: 4,
@@ -632,7 +643,7 @@ const styles = StyleSheet.create({
   },
   pwBarFill: {
     height: 4,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#4F46E5',
     borderRadius: 2,
   },
   pwHint: {
@@ -676,9 +687,9 @@ const currentStyles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 200,
+    width: 190,
     borderRadius: Radius.md,
-    borderWidth: 1,
+    borderWidth: 0.5,
     overflow: 'hidden',
   },
   cardImgWrap: {
@@ -694,12 +705,12 @@ const currentStyles = StyleSheet.create({
   },
   cardPill: {
     position: 'absolute',
-    bottom: 8,
-    left: 10,
+    top: 8,
+    left: 8,
     backgroundColor: Colors.violet,
     borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
   },
   cardPillText: {
     fontSize: 9,
@@ -709,13 +720,16 @@ const currentStyles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   cardBody: {
-    padding: Spacing.md,
+    paddingTop: 10,
+    paddingHorizontal: 11,
+    paddingBottom: 12,
     gap: 4,
   },
   cardTitle: {
-    fontSize: FontSize.base,
-    fontWeight: '600',
-    lineHeight: 21,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 4,
   },
   cardSource: {
     fontSize: FontSize.xs,
@@ -959,7 +973,7 @@ const ndlStyles = StyleSheet.create({
     margin: 10,
     marginHorizontal: 12,
     marginBottom: 12,
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#FFD340',
     borderRadius: 12,
     paddingVertical: 7,
     paddingHorizontal: 20,

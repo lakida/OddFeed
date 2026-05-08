@@ -12,10 +12,22 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 const SCREEN_W = Dimensions.get('window').width;
+
+const cleanTitle = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/[☀-➿]/g, '')
+    .replace(/[⬀-⯿]/g, '')
+    .replace(/️/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 // @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
@@ -153,16 +165,37 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
         <TouchableOpacity style={styles.articleBackBtn} onPress={onBack}>
           <Text style={styles.articleBackArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.articleHeaderTitle} numberOfLines={1}>{article.categoryLabel ?? article.category}</Text>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.articleHeaderKicker} numberOfLines={1}>
+            {article.categoryLabel ?? article.category} · {article.readTime ?? '3 min di lettura'}
+          </Text>
+          <Text style={styles.articleHeaderSrc} numberOfLines={1}>
+            {article.source}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleShare} style={{ flexShrink: 0, paddingLeft: 8 }}>
+          <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Hero image con category pill */}
+        <View style={styles.heroImgWrap}>
+          <Image
+            source={{ uri: `https://picsum.photos/seed/${article.id}/800/380` }}
+            style={styles.heroImg}
+          />
+          <View style={styles.heroImgPill}>
+            <Text style={styles.heroImgPillText}>{article.categoryLabel ?? article.category}</Text>
+          </View>
+        </View>
+
         <View style={[styles.body, { backgroundColor: C.bg }]}>
           {/* Tags */}
           <Text style={[styles.tags, { color: C.textTertiary }]}>{article.country} · {article.categoryLabel}</Text>
 
           {/* Titolo */}
-          <Text style={[styles.title, { color: C.text }]}>{article.title}</Text>
+          <Text style={[styles.title, { color: C.text }]}>{cleanTitle(article.title)}</Text>
 
           {/* Fonte */}
           <View style={styles.sourceRow}>
@@ -265,6 +298,24 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
 const styles = StyleSheet.create({
   swipeContainer: { flex: 1, backgroundColor: Colors.bg },
   safe: { flex: 1, backgroundColor: Colors.bg },
+  heroImgWrap: { height: 190, position: 'relative' },
+  heroImg: { width: '100%', height: 190 },
+  heroImgPill: {
+    position: 'absolute',
+    bottom: 10,
+    left: 14,
+    backgroundColor: '#4F46E5',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  heroImgPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
   // Violet article header
   articleHeader: {
     flexDirection: 'row',
@@ -283,14 +334,20 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   articleBackArrow: { fontSize: 18, color: '#fff' },
-  articleHeaderTitle: {
-    fontSize: FontSize.base,
+  articleHeaderKicker: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  articleHeaderSrc: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#fff',
-    flex: 1,
-    letterSpacing: 0.1,
   },
-  body: { padding: Spacing.lg },
+  body: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 10 },
   tags: {
     fontSize: FontSize.xs,
     fontWeight: '600',
@@ -300,11 +357,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   title: {
-    fontSize: FontSize.xxl,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: Colors.text,
-    lineHeight: 32,
-    marginBottom: Spacing.md,
+    lineHeight: 23,
+    letterSpacing: -0.3,
+    marginBottom: 7,
   },
   sourceRow: {
     flexDirection: 'row',
@@ -332,9 +390,9 @@ const styles = StyleSheet.create({
   },
   verifiedText: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.green },
   articleText: {
-    fontSize: FontSize.lg,
-    color: Colors.text,
-    lineHeight: 28,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 24,
     marginBottom: Spacing.md,
   },
 
