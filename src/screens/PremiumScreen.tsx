@@ -145,7 +145,11 @@ export default function PremiumScreen({ isPremium, onUpgrade, onDowngrade }: Pre
                 {selected === 'monthly' ? t.premium.ctaMonthly : t.premium.ctaYearly}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.ctaNote}>{t.premium.noCommitment}</Text>
+            <Text style={styles.ctaNote}>
+              {selected === 'monthly'
+                ? (language === 'it' ? '7 giorni gratis · poi €1,99/mese · annulla quando vuoi' : '7 days free · then €1.99/month · cancel anytime')
+                : (language === 'it' ? '7 giorni gratis · poi €14,99/anno · annulla quando vuoi' : '7 days free · then €14.99/year · cancel anytime')}
+            </Text>
           </>
         )}
 

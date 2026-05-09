@@ -313,10 +313,10 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
             <Text style={{ fontSize: 12, color: '#7A6010', fontWeight: '500' }}>{t.profile.interestsMin(freeSelected)}</Text>
           </View>
         )}
+        {/* Categorie gratuite */}
         <View style={profStyles.interestGrid}>
-          {CATEGORY_CONFIG.map((config) => {
+          {CATEGORY_CONFIG.filter(c => !c.premiumOnly).map((config) => {
             const active = interests.includes(config.id);
-            const locked = config.premiumOnly && !isPremium;
             return (
               <TouchableOpacity
                 key={config.id}
@@ -324,9 +324,8 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
                   profStyles.intChip,
                   { borderColor: C.border, backgroundColor: C.bg },
                   active && { backgroundColor: '#EEF2FF', borderColor: Colors.violet },
-                  locked && { opacity: 0.5 },
                 ]}
-                onPress={() => toggleInterest(config.id, !!config.premiumOnly)}
+                onPress={() => toggleInterest(config.id, false)}
                 activeOpacity={0.7}
               >
                 <Text style={[
@@ -334,7 +333,45 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
                   { color: C.textSecondary },
                   active && { color: Colors.violet },
                 ]} numberOfLines={1}>
-                  {config.emoji} {getCatLabel(config)}{locked ? ' 🔒' : ''}
+                  {getCatLabel(config)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Divider categorie Premium */}
+        <View style={profStyles.premiumCatHdr}>
+          <View style={profStyles.premiumCatLine} />
+          <View style={profStyles.premiumCatBadge}>
+            <Text style={profStyles.premiumCatBadgeText}>👑 PREMIUM</Text>
+          </View>
+          <View style={profStyles.premiumCatLine} />
+        </View>
+
+        {/* Categorie premium */}
+        <View style={[profStyles.interestGrid, { paddingBottom: 14 }]}>
+          {CATEGORY_CONFIG.filter(c => c.premiumOnly).map((config) => {
+            const active = interests.includes(config.id);
+            const locked = !isPremium;
+            return (
+              <TouchableOpacity
+                key={config.id}
+                style={[
+                  profStyles.intChip,
+                  profStyles.intChipPremium,
+                  active && !locked && { backgroundColor: '#FEF3C7', borderColor: '#D97706' },
+                  locked && { opacity: 0.55 },
+                ]}
+                onPress={() => toggleInterest(config.id, true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  profStyles.intChipText,
+                  { color: '#92400E' },
+                  active && !locked && { color: '#B45309', fontWeight: '700' },
+                ]} numberOfLines={1}>
+                  {getCatLabel(config)}{locked ? ' 🔒' : ''}
                 </Text>
               </TouchableOpacity>
             );
@@ -916,8 +953,8 @@ const profStyles = StyleSheet.create({
   },
   intChip: {
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: '#C8C8CE',
     alignItems: 'center',
@@ -925,9 +962,40 @@ const profStyles = StyleSheet.create({
     width: '31.5%',
     overflow: 'hidden',
   },
+  intChipPremium: {
+    borderColor: '#F0C060',
+    backgroundColor: '#FFFBEB',
+  },
   intChipText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  premiumCatHdr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 14,
+    marginTop: 6,
+    marginBottom: 8,
+    gap: 8,
+  },
+  premiumCatLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#F0C060',
+  },
+  premiumCatBadge: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#F0C060',
+  },
+  premiumCatBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#B45309',
+    letterSpacing: 0.6,
   },
   interestWarning: {
     marginHorizontal: 14,

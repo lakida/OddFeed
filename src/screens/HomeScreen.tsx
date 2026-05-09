@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
@@ -302,10 +303,11 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 </View>
                 <View style={ndlStyles.rowBody}>
                   <Text style={ndlStyles.rowTitle}>{title}</Text>
-                  <View style={{ gap: 5, marginTop: 3 }}>
-                    <View style={{ height: 7, width: '95%', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 3 }} />
-                    <View style={{ height: 7, width: '72%', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 3 }} />
-                  </View>
+                  <Text style={ndlStyles.rowBlurText} numberOfLines={2}>
+                    {i === 0
+                      ? 'Una scoperta sconvolgente che sta cambiando tutto quello che credevamo di sapere...'
+                      : 'Il dettaglio nascosto che nessuno vuole che tu conosca davvero fino in fondo...'}
+                  </Text>
                 </View>
                 <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
               </TouchableOpacity>
@@ -314,9 +316,17 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
             {/* Gold CTA — solo per utenti free */}
             {!isPremium && (
               <TouchableOpacity style={ndlStyles.cta} onPress={onGoToPremium} activeOpacity={0.85}>
-                <Text style={{ fontSize: 20 }}>👑</Text>
-                <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
-                <Text style={{ fontSize: 11, color: '#1C1917', opacity: 0.75 }}>✦</Text>
+                <LinearGradient
+                  colors={['#C47D0A', '#F5B800', '#FFE566', '#FFD340', '#F5B800', '#C47D0A']}
+                  locations={[0, 0.2, 0.48, 0.52, 0.8, 1]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={ndlStyles.ctaGradient}
+                >
+                  <Text style={{ fontSize: 20 }}>👑</Text>
+                  <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
+                  <Text style={{ fontSize: 11, color: '#5C3A00', opacity: 0.75 }}>✦</Text>
+                </LinearGradient>
               </TouchableOpacity>
             )}
           </View>
@@ -982,24 +992,34 @@ const ndlStyles = StyleSheet.create({
     color: 'rgba(255,255,255,0.3)',
     lineHeight: 15,
   },
+  rowBlurText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.42)',
+    lineHeight: 17,
+    marginTop: 3,
+    textShadowColor: 'rgba(255,255,255,0.85)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 9,
+  },
   cta: {
     margin: 10,
     marginHorizontal: 12,
     marginBottom: 12,
-    backgroundColor: '#F5B800',
     borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#D4900F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  ctaGradient: {
     paddingVertical: 7,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    borderWidth: 0,
-    shadowColor: '#D4900F',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
   },
   ctaText: {
     fontSize: 12,
