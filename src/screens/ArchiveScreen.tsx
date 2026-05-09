@@ -32,7 +32,17 @@ const cleanTitle = (text: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
-const cleanCatLabel = (label: string) => label.replace(/^[^a-zA-ZÀ-ÿ]+/, '').trim();
+const cleanCatLabel = (label: string) => {
+  if (!label) return '';
+  return label
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/[☀-➿]/g, '')
+    .replace(/[⬀-⯿]/g, '')
+    .replace(/️/g, '')
+    .replace(/^[a-z]{1,3}\.\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 function formatArchiveDate(publishedAt: string): string {
   if (!publishedAt) return '';
@@ -59,9 +69,10 @@ interface ArchiveScreenProps {
   userStats?: { level: number; points: number; streak: number; readArticleIds: string[] };
   savedIds?: Set<string>;
   savedArticles?: NewsItem[];
+  onToggleSave?: (id: string, article: NewsItem) => void;
 }
 
-export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [], userStats, savedIds = new Set(), savedArticles = [] }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [], userStats, savedIds = new Set(), savedArticles = [], onToggleSave }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -228,10 +239,6 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         {!loading && (
           <View style={styles.countRow}>
             <Text style={[styles.countText, { color: C.textTertiary }]}>{filteredNews.length} notizie trovate</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              <Text style={[styles.sortText, { color: Colors.violet }]}>Recenti</Text>
-              <Ionicons name="chevron-down" size={10} color={Colors.violet} />
-            </View>
           </View>
         )}
 
@@ -266,22 +273,35 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
             </Text>
           </View>
         )}
-        {!loading && filteredNews.map((item, idx) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === filteredNews.length - 1 ? 0 : 0.5 }]}
-            onPress={() => onOpenArticle(item.id, item)}
-            activeOpacity={0.7}
-          >
-            <Image source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }} style={styles.unThumb} />
-            <View style={styles.unBody}>
-              <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-              <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {formatArchiveDate(item.publishedAt)}</Text>
-              <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
-            </View>
-            <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
-          </TouchableOpacity>
-        ))}
+        {!loading && filteredNews.map((item, idx) => {
+          const isSaved = savedIds.has(item.id);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === filteredNews.length - 1 ? 0 : 0.5 }]}
+              onPress={() => onOpenArticle(item.id, item)}
+              activeOpacity={0.7}
+            >
+              <Image source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }} style={styles.unThumb} />
+              <View style={styles.unBody}>
+                <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {formatArchiveDate(item.publishedAt)}</Text>
+                <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => onToggleSave?.(item.id, item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                  size={18}
+                  color={isSaved ? Colors.violet : C.textTertiary}
+                />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          );
+        })}
 
         <View style={{ height: 24 }} />
       </ScrollView>

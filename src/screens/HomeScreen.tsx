@@ -36,7 +36,17 @@ const cleanTitle = (text: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
-const cleanCatLabel = (label: string) => label.replace(/^[^a-zA-ZÀ-ÿ]+/, '').trim();
+const cleanCatLabel = (label: string) => {
+  if (!label) return '';
+  return label
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/[☀-➿]/g, '')
+    .replace(/[⬀-⯿]/g, '')
+    .replace(/️/g, '')
+    .replace(/^[a-z]{1,3}\.\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 function StatusBadge({ read, t }: { read: boolean; t: any }) {
   return (
@@ -292,7 +302,10 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 </View>
                 <View style={ndlStyles.rowBody}>
                   <Text style={ndlStyles.rowTitle}>{title}</Text>
-                  <Text style={ndlStyles.rowBlur}>{'██████████████████████████████████████████'}</Text>
+                  <View style={{ gap: 5, marginTop: 3 }}>
+                    <View style={{ height: 7, width: '95%', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 3 }} />
+                    <View style={{ height: 7, width: '72%', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 3 }} />
+                  </View>
                 </View>
                 <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
               </TouchableOpacity>
@@ -353,9 +366,9 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
             >
               <Image
                 source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }}
-                style={[styles.unThumb, { opacity: isRead ? 0.5 : 1 }]}
+                style={styles.unThumb}
               />
-              <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
+              <View style={styles.unBody}>
                 <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
@@ -377,9 +390,9 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
             >
               <Image
                 source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }}
-                style={[styles.unThumb, { opacity: isRead ? 0.5 : 1 }]}
+                style={styles.unThumb}
               />
-              <View style={[styles.unBody, isRead && { opacity: 0.55 }]}>
+              <View style={styles.unBody}>
                 <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
@@ -973,7 +986,7 @@ const ndlStyles = StyleSheet.create({
     margin: 10,
     marginHorizontal: 12,
     marginBottom: 12,
-    backgroundColor: '#FFD340',
+    backgroundColor: '#F5B800',
     borderRadius: 12,
     paddingVertical: 7,
     paddingHorizontal: 20,
@@ -982,6 +995,11 @@ const ndlStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderWidth: 0,
+    shadowColor: '#D4900F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   ctaText: {
     fontSize: 12,

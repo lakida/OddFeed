@@ -653,6 +653,7 @@ function AppContent() {
             userStats={userStats}
             savedIds={savedIds}
             savedArticles={savedArticles}
+            onToggleSave={handleToggleSave}
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
