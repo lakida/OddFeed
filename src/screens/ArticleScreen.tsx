@@ -30,6 +30,7 @@ const cleanTitle = (text: string): string => {
 };
 // @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
+import { formatDate } from '../utils/date';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
@@ -203,7 +204,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
               <View style={styles.sourceDot} />
               <Text style={[styles.sourceName, { color: C.textSecondary }]}>{article.source}</Text>
               <Text style={[styles.timeDot, { color: C.textTertiary }]}>·</Text>
-              <Text style={[styles.time, { color: C.textTertiary }]}>{article.publishedAt}</Text>
+              <Text style={[styles.time, { color: C.textTertiary }]}>{formatDate(article.publishedAt)}</Text>
             </View>
             <View style={[styles.verifiedBadge, { backgroundColor: C.greenBg, borderColor: C.greenBorder }]}>
               <Text style={styles.verifiedText}>✓ Verificata</Text>

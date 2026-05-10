@@ -21,6 +21,7 @@ import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { UserStats } from '../../App';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
+import { formatDate } from '../utils/date';
 
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
@@ -262,7 +263,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           <View style={[currentStyles.secHdr, { paddingTop: 14, paddingBottom: 8 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
               <Ionicons name="time-outline" size={22} color={Colors.violet} />
-              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE</Text>
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE BIZZARRE DAL MONDO</Text>
             </View>
             <TouchableOpacity onPress={onGoToArchive}>
               <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
@@ -286,7 +287,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
               />
               <View style={styles.unBody}>
                 <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
+                <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
                 <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               </View>
               <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
@@ -294,65 +295,26 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           );
         })}
 
-        {/* Notizie dai giorni precedenti — raggruppate per data */}
-        {!loading && (() => {
-          if (pastNews.length === 0) return null;
-          // Raggruppa per data
-          const groups: Record<string, NewsItem[]> = {};
-          for (const item of pastNews) {
-            const d = item.publishedAt ?? 'Recente';
-            if (!groups[d]) groups[d] = [];
-            groups[d].push(item);
-          }
-          const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-          return dates.map((date) => (
-            <React.Fragment key={date}>
-              <View style={[styles.dateDivider, { borderBottomColor: C.border, backgroundColor: C.bg2 }]}>
-                <Text style={[styles.dateDividerText, { color: C.textTertiary }]}>{date}</Text>
-              </View>
-              {groups[date].map((item, idx) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === groups[date].length - 1 ? 0 : 0.5 }]}
-                  onPress={() => onOpenArticle(item.id, item)}
-                  activeOpacity={0.7}
-                >
-                  <Image
-                    source={{ uri: item.imageUrl || `https://picsum.photos/seed/${item.id}/152/128` }}
-                    style={styles.unThumb}
-                  />
-                  <View style={styles.unBody}>
-                    <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                    <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source}</Text>
-                    <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
-                  </View>
-                  <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
-                </TouchableOpacity>
-              ))}
-            </React.Fragment>
-          ));
-        })()}
-
-        {/* ── I tuoi punti banner ── */}
-        {!loading && (
+        {/* Notizie dai giorni precedenti */}
+        {!loading && pastNews.map((item, idx) => (
           <TouchableOpacity
-            style={[ptsBannerStyles.container, { backgroundColor: C.bg2, borderColor: C.border }]}
-            onPress={onGoToPoints}
-            activeOpacity={0.75}
+            key={item.id}
+            style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === pastNews.length - 1 ? 0 : 0.5 }]}
+            onPress={() => onOpenArticle(item.id, item)}
+            activeOpacity={0.7}
           >
-            <View style={ptsBannerStyles.body}>
-              <Text style={[ptsBannerStyles.label, { color: C.textSecondary }]}>I TUOI PUNTI</Text>
-              <Text style={ptsBannerStyles.value}>{userStats.points.toLocaleString('it')} pts</Text>
-              <Text style={[ptsBannerStyles.sub, { color: C.textSecondary }]}>
-                Accumula punti leggendo notizie e ottieni vantaggi esclusivi!
-              </Text>
+            <Image
+              source={{ uri: item.imageUrl || `https://picsum.photos/seed/${item.id}/152/128` }}
+              style={styles.unThumb}
+            />
+            <View style={styles.unBody}>
+              <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+              <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
+              <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
             </View>
-            <View style={ptsBannerStyles.btn}>
-              <Ionicons name="gift-outline" size={15} color="#fff" />
-              <Text style={ptsBannerStyles.btnText}>Scopri i premi</Text>
-            </View>
+            <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
           </TouchableOpacity>
-        )}
+        ))}
 
         {/* ── NON DOVRESTI LEGGERE ── */}
         {!loading && (forbiddenNews.length > 0 || !isPremium) && (
@@ -449,6 +411,27 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           </View>
         )}
 
+        {/* ── I tuoi punti banner ── */}
+        {!loading && (
+          <TouchableOpacity
+            style={[ptsBannerStyles.container, { backgroundColor: C.bg2, borderColor: C.border }]}
+            onPress={onGoToPoints}
+            activeOpacity={0.75}
+          >
+            <View style={ptsBannerStyles.body}>
+              <Text style={[ptsBannerStyles.label, { color: C.textSecondary }]}>I TUOI PUNTI</Text>
+              <Text style={ptsBannerStyles.value}>{userStats.points.toLocaleString('it')} pts</Text>
+              <Text style={[ptsBannerStyles.sub, { color: C.textSecondary }]}>
+                Accumula punti leggendo notizie e ottieni vantaggi esclusivi!
+              </Text>
+            </View>
+            <View style={ptsBannerStyles.btn}>
+              <Ionicons name="gift-outline" size={15} color="#fff" />
+              <Text style={ptsBannerStyles.btnText}>Scopri i premi</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
@@ -514,11 +497,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
+    paddingVertical: 13,
   },
   unThumb: {
-    width: 76,
-    height: 64,
+    width: 99,
+    height: 83,
     borderRadius: 10,
     flexShrink: 0,
     overflow: 'hidden',
@@ -708,7 +691,6 @@ const currentStyles = StyleSheet.create({
   section: {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.lg,
-    borderBottomWidth: 1,
   },
   secHdr: {
     flexDirection: 'row',

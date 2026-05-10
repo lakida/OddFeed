@@ -19,6 +19,7 @@ import { fetchArchive } from '../services/newsService';
 import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
+import { formatDate } from '../utils/date';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 
@@ -45,21 +46,7 @@ const cleanCatLabel = (label: string) => {
 };
 
 function formatArchiveDate(publishedAt: string): string {
-  if (!publishedAt) return '';
-  // If it's already a relative string like "3h fa", "Ieri", return as-is
-  if (!/^\d{4}-\d{2}-\d{2}/.test(publishedAt)) return publishedAt;
-
-  const date = new Date(publishedAt);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  const timeStr = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-
-  if (diffDays === 0) return `Oggi, ${timeStr}`;
-  if (diffDays === 1) return `Ieri, ${timeStr}`;
-  if (diffDays < 7) return `${diffDays} giorni fa`;
-  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+  return formatDate(publishedAt);
 }
 
 interface ArchiveScreenProps {
