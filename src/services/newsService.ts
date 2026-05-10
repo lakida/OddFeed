@@ -166,12 +166,14 @@ export async function fetchTodayNews(
 }
 
 // Carica le notizie recenti dei giorni precedenti (per la Home).
-// Prioritizza le categorie preferite dall'utente.
+// Restituisce perDay articoli × days giorni (default: 2 × 3 = 6 articoli su 3 giorni).
 export async function fetchRecentPastNews(
   language: 'it' | 'en',
   isPremium: boolean,
-  count = 2,
-  interests: string[] = []
+  _count = 2,         // mantenuto per compatibilità, non più usato
+  interests: string[] = [],
+  perDay = 2,
+  days = 3,
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
@@ -189,7 +191,19 @@ export async function fetchRecentPastNews(
     })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
-  return filterAndSort(all, interests, language).slice(0, count).map(x => x.item);
+  // Raggruppa per data, prendi perDay articoli per i `days` giorni più recenti
+  const byDate: Record<string, typeof all> = {};
+  for (const a of all) {
+    if (!byDate[a.date]) byDate[a.date] = [];
+    byDate[a.date].push(a);
+  }
+  const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a)).slice(0, days);
+  const result: NewsItem[] = [];
+  for (const date of sortedDates) {
+    const dayItems = filterAndSort(byDate[date], interests, language).slice(0, perDay);
+    result.push(...dayItems.map(x => x.item));
+  }
+  return result;
 }
 
 // Carica l'archivio (ultimi 7 giorni free, tutto per premium).

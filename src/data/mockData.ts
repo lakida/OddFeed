@@ -191,7 +191,6 @@ export const LEADERBOARD: LeaderboardUser[] = [
 export const HOW_TO_EARN = [
   { icon: '📱', label: 'Apri l\'app ogni giorno', points: 5, doneToday: true },
   { icon: '📰', label: 'Leggi una notizia', points: 10, doneToday: true },
-  { icon: '😮', label: 'Reagisci a una notizia', points: 3, doneToday: true },
   { icon: '↗', label: 'Condividi una notizia', points: 25, doneToday: false },
   { icon: '🔥', label: '7 giorni consecutivi', points: 75, doneToday: true },
 ];

@@ -123,7 +123,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
     else setLoading(true);
     setHasError(false);
     Promise.all([
-      fetchTodayNews(language, isPremium, interests, newsLimit).catch(() => []),
+      fetchTodayNews(language, isPremium, interests, Math.max(2, newsLimit)).catch(() => []),
       fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
       fetchCurrentNews(language).catch(() => []),
       fetchTopOddNews(language).catch(() => []),
@@ -135,7 +135,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
       const remaining = Math.max(0, newsLimit - today.length);
       const past = pastArr.filter((n) => !topOddIds.has(n.id)).slice(0, remaining);
       setTodayNews(today);
-      setPastNews(past);
+      setPastNews(pastArr.filter((n) => !topOddIds.has(n.id)));
       setCurrentNews(currentArr);
       setTopOddNews(topOddArr);
       setForbiddenNews(forbiddenArr);
@@ -238,91 +238,6 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           </View>
         )}
 
-        {/* ── NON DOVRESTI LEGGERE ── */}
-        {!loading && (forbiddenNews.length > 0 || !isPremium) && (
-          <View style={ndlStyles.container}>
-            {/* Header */}
-            <View style={ndlStyles.header}>
-              <View style={ndlStyles.lockBox}>
-                <Ionicons name="lock-closed-outline" size={18} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={ndlStyles.headerTitle}>NON DOVRESTI LEGGERE ✨</Text>
-                <Text style={ndlStyles.headerSub}>Alcune storie sono troppo assurde per essere vere. O forse no.</Text>
-              </View>
-            </View>
-
-            {/* PREMIUM: articoli reali sbloccati */}
-            {isPremium && forbiddenNews.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={ndlStyles.row}
-                onPress={() => onOpenArticle(item.id, item)}
-                activeOpacity={0.75}
-              >
-                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
-                  <Text style={{ fontSize: 16 }}>{item.imageEmoji}</Text>
-                </View>
-                <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                  {!!item.description && (
-                    <Text style={ndlStyles.rowBlur} numberOfLines={1}>{item.description}</Text>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
-              </TouchableOpacity>
-            ))}
-
-            {/* FREE + regalo sbloccato: primo articolo accessibile */}
-            {!isPremium && freeUnlockActive && forbiddenNews.length > 0 && (
-              <TouchableOpacity
-                style={ndlStyles.row}
-                onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
-                activeOpacity={0.75}
-              >
-                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
-                  <Text style={{ fontSize: 14 }}>🔓</Text>
-                </View>
-                <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{forbiddenNews[0].title}</Text>
-                  <Text style={[ndlStyles.rowBlur, { color: 'rgba(255,255,255,0.6)' }]}>🎁 Sbloccato per te</Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
-              </TouchableOpacity>
-            )}
-
-            {/* FREE senza regalo: 2 righe bloccate con testo oscurato */}
-            {!isPremium && !freeUnlockActive && ([
-              'La scoperta che potrebbe cambiare tutto ciò che sappiamo',
-              'Il segreto che le aziende non vogliono che tu conosca',
-            ] as string[]).map((title, i) => (
-              <TouchableOpacity key={i} style={ndlStyles.row} onPress={onGoToPremium} activeOpacity={0.75}>
-                <View style={ndlStyles.rowLock}>
-                  <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.5)" />
-                </View>
-                <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle}>{title}</Text>
-                  <Text style={ndlStyles.rowBlurText} numberOfLines={2}>
-                    {i === 0
-                      ? 'Una scoperta sconvolgente che sta cambiando tutto quello che credevamo di sapere...'
-                      : 'Il dettaglio nascosto che nessuno vuole che tu conosca davvero fino in fondo...'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
-              </TouchableOpacity>
-            ))}
-
-            {/* Gold CTA — solo per utenti free */}
-            {!isPremium && (
-              <TouchableOpacity style={ndlStyles.cta} onPress={onGoToPremium} activeOpacity={0.85}>
-                <Text style={{ fontSize: 20 }}>👑</Text>
-                <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
-                <Text style={{ fontSize: 11, color: '#5C3A00', opacity: 0.75 }}>✦</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
         {/* Skeleton mentre carica */}
         {loading && <SkeletonNewsList count={4} variant="row" />}
 
@@ -379,29 +294,44 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           );
         })}
 
-        {/* Notizie dai giorni precedenti */}
-        {!loading && pastNews.map((item, idx) => {
-          const isRead = readIds.has(item.id);
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === pastNews.length - 1 ? 0 : 0.5 }]}
-              onPress={() => onOpenArticle(item.id, item)}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }}
-                style={styles.unThumb}
-              />
-              <View style={styles.unBody}>
-                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {item.publishedAt}</Text>
-                <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+        {/* Notizie dai giorni precedenti — raggruppate per data */}
+        {!loading && (() => {
+          if (pastNews.length === 0) return null;
+          // Raggruppa per data
+          const groups: Record<string, NewsItem[]> = {};
+          for (const item of pastNews) {
+            const d = item.publishedAt ?? 'Recente';
+            if (!groups[d]) groups[d] = [];
+            groups[d].push(item);
+          }
+          const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+          return dates.map((date) => (
+            <React.Fragment key={date}>
+              <View style={[styles.dateDivider, { borderBottomColor: C.border, backgroundColor: C.bg2 }]}>
+                <Text style={[styles.dateDividerText, { color: C.textTertiary }]}>{date}</Text>
               </View>
-              <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
-            </TouchableOpacity>
-          );
-        })}
+              {groups[date].map((item, idx) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === groups[date].length - 1 ? 0 : 0.5 }]}
+                  onPress={() => onOpenArticle(item.id, item)}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={{ uri: item.imageUrl || `https://picsum.photos/seed/${item.id}/152/128` }}
+                    style={styles.unThumb}
+                  />
+                  <View style={styles.unBody}>
+                    <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                    <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source}</Text>
+                    <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+                  </View>
+                  <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
+                </TouchableOpacity>
+              ))}
+            </React.Fragment>
+          ));
+        })()}
 
         {/* ── I tuoi punti banner ── */}
         {!loading && (
@@ -422,6 +352,101 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
               <Text style={ptsBannerStyles.btnText}>Scopri i premi</Text>
             </View>
           </TouchableOpacity>
+        )}
+
+        {/* ── NON DOVRESTI LEGGERE ── */}
+        {!loading && (forbiddenNews.length > 0 || !isPremium) && (
+          <View style={[ndlStyles.container, { marginTop: 8 }]}>
+            <View style={ndlStyles.header}>
+              <View style={ndlStyles.lockBox}>
+                <Ionicons name="lock-closed-outline" size={18} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={ndlStyles.headerTitle}>NON DOVRESTI LEGGERE ✨</Text>
+                <Text style={ndlStyles.headerSub}>Alcune storie sono troppo assurde per essere vere. O forse no.</Text>
+              </View>
+            </View>
+
+            {/* PREMIUM: articoli reali leggibili */}
+            {isPremium && forbiddenNews.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={ndlStyles.row}
+                onPress={() => onOpenArticle(item.id, item)}
+                activeOpacity={0.75}
+              >
+                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
+                  <Text style={{ fontSize: 16 }}>{item.imageEmoji}</Text>
+                </View>
+                <View style={ndlStyles.rowBody}>
+                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                  {!!item.description && (
+                    <Text style={ndlStyles.rowBlur} numberOfLines={1}>{item.description}</Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
+              </TouchableOpacity>
+            ))}
+
+            {/* FREE + regalo sbloccato */}
+            {!isPremium && freeUnlockActive && forbiddenNews.length > 0 && (
+              <TouchableOpacity
+                style={ndlStyles.row}
+                onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
+                activeOpacity={0.75}
+              >
+                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
+                  <Text style={{ fontSize: 14 }}>🔓</Text>
+                </View>
+                <View style={ndlStyles.rowBody}>
+                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{forbiddenNews[0].title}</Text>
+                  <Text style={[ndlStyles.rowBlur, { color: 'rgba(255,255,255,0.6)' }]}>🎁 Sbloccato per te</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
+              </TouchableOpacity>
+            )}
+
+            {/* FREE senza regalo: titoli reali da Firestore, bloccati */}
+            {!isPremium && !freeUnlockActive && forbiddenNews.slice(0, 2).map((item, i) => (
+              <TouchableOpacity key={item.id} style={ndlStyles.row} onPress={onGoToPremium} activeOpacity={0.75}>
+                <View style={ndlStyles.rowLock}>
+                  <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.5)" />
+                </View>
+                <View style={ndlStyles.rowBody}>
+                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                  <Text style={ndlStyles.rowBlurText} numberOfLines={2}>{item.description}</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
+              </TouchableOpacity>
+            ))}
+
+            {/* Fallback placeholder se Firestore non ha ancora articoli forbidden */}
+            {!isPremium && !freeUnlockActive && forbiddenNews.length === 0 && (
+              ['🚫 La scoperta che tutti vogliono nasconderti', '🚫 Il segreto che nessuno osa raccontare'].map((title, i) => (
+                <TouchableOpacity key={i} style={ndlStyles.row} onPress={onGoToPremium} activeOpacity={0.75}>
+                  <View style={ndlStyles.rowLock}>
+                    <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.5)" />
+                  </View>
+                  <View style={ndlStyles.rowBody}>
+                    <Text style={ndlStyles.rowTitle} numberOfLines={2}>{title}</Text>
+                    <Text style={ndlStyles.rowBlurText} numberOfLines={2}>
+                      {i === 0 ? 'Una storia sconvolgente che sta cambiando tutto...' : 'Il dettaglio che nessuno vuole che tu sappia...'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
+                </TouchableOpacity>
+              ))
+            )}
+
+            {/* Gold CTA — solo free */}
+            {!isPremium && (
+              <TouchableOpacity style={ndlStyles.cta} onPress={onGoToPremium} activeOpacity={0.85}>
+                <Text style={{ fontSize: 20 }}>👑</Text>
+                <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
+                <Text style={{ fontSize: 11, color: '#5C3A00', opacity: 0.75 }}>✦</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         <View style={{ height: 24 }} />
@@ -472,6 +497,18 @@ const styles = StyleSheet.create({
   },
 
   // Ultime Notizie rows
+  dateDivider: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 6,
+    borderBottomWidth: 0.5,
+    marginTop: 4,
+  },
+  dateDividerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
   unRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -701,17 +738,17 @@ const currentStyles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 190,
+    width: 248,
     borderRadius: Radius.md,
     borderWidth: 0.5,
     overflow: 'hidden',
   },
   cardImgWrap: {
-    height: 90,
+    height: 130,
     position: 'relative',
   },
   cardImg: {
-    height: 90,
+    height: 130,
     width: '100%',
   },
   cardImgEmoji: {
