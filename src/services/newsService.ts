@@ -250,16 +250,16 @@ export async function fetchCurrentNews(language: 'it' | 'en'): Promise<NewsItem[
       .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
       .map(d => docToNewsItem(d, language));
   }
-  // Fallback: articoli più recenti disponibili (script non ancora girato oggi)
+  // Fallback: nessun orderBy (evita indice composito) — sort client-side per data
   const qFallback = query(
     collection(db, 'articles'),
     where('articleType', '==', 'current'),
-    orderBy('date', 'desc'),
-    limit(6),
+    limit(30),
   );
   const snapFallback = await getDocs(qFallback);
   return snapFallback.docs
-    .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+    .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
+    .slice(0, 6)
     .map(d => docToNewsItem(d, language));
 }
 
@@ -277,16 +277,16 @@ export async function fetchTopOddNews(language: 'it' | 'en'): Promise<NewsItem[]
       .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
       .map(d => docToNewsItem(d, language));
   }
-  // Fallback: top odd più recenti disponibili
+  // Fallback: nessun orderBy — sort client-side per data
   const qFallback = query(
     collection(db, 'articles'),
     where('isTopOdd', '==', true),
-    orderBy('date', 'desc'),
-    limit(3),
+    limit(20),
   );
   const snapFallback = await getDocs(qFallback);
   return snapFallback.docs
-    .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+    .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
+    .slice(0, 3)
     .map(d => docToNewsItem(d, language));
 }
 
@@ -304,16 +304,16 @@ export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsIte
       .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
       .map(d => docToNewsItem(d, language));
   }
-  // Fallback: forbidden più recenti disponibili
+  // Fallback: nessun orderBy — sort client-side per data
   const qFallback = query(
     collection(db, 'articles'),
     where('articleType', '==', 'forbidden'),
-    orderBy('date', 'desc'),
-    limit(2),
+    limit(15),
   );
   const snapFallback = await getDocs(qFallback);
   return snapFallback.docs
-    .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+    .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
+    .slice(0, 2)
     .map(d => docToNewsItem(d, language));
 }
 
