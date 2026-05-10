@@ -28,6 +28,17 @@ const cleanTitle = (text: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
+const cleanCatLabel = (label: string) => {
+  if (!label) return '';
+  return label
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .replace(/[☀-➿]/g, '')
+    .replace(/[⬀-⯿]/g, '')
+    .replace(/️/g, '')
+    .replace(/^[a-zA-Z]{1,4}\.\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 // @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '../utils/date';
@@ -167,15 +178,12 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           <Text style={styles.articleBackArrow}>←</Text>
         </TouchableOpacity>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.articleHeaderKicker} numberOfLines={1}>
-            {article.categoryLabel ?? article.category} · {article.readTime ?? '3 min di lettura'}
-          </Text>
           <Text style={styles.articleHeaderSrc} numberOfLines={1}>
             {article.source}
           </Text>
         </View>
         <TouchableOpacity onPress={handleShare} style={{ flexShrink: 0, paddingLeft: 8 }}>
-          <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.8)" />
+          <Ionicons name="share-outline" size={26} color="rgba(255,255,255,0.9)" />
         </TouchableOpacity>
       </View>
 
@@ -187,13 +195,13 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
             style={styles.heroImg}
           />
           <View style={styles.heroImgPill}>
-            <Text style={styles.heroImgPillText}>{article.categoryLabel ?? article.category}</Text>
+            <Text style={styles.heroImgPillText}>{cleanCatLabel(article.categoryLabel ?? article.category)}</Text>
           </View>
         </View>
 
         <View style={[styles.body, { backgroundColor: C.bg }]}>
           {/* Tags */}
-          <Text style={[styles.tags, { color: C.textTertiary }]}>{article.country} · {article.categoryLabel}</Text>
+          <Text style={[styles.tags, { color: C.textTertiary }]}>{article.country} · {cleanCatLabel(article.categoryLabel ?? article.category)}</Text>
 
           {/* Titolo */}
           <Text style={[styles.title, { color: C.text }]}>{cleanTitle(article.title)}</Text>
@@ -278,15 +286,16 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
               }}
               activeOpacity={0.7}
             >
-              <Animated.Text
-                style={[
-                  styles.shareActionText,
-                  { color: isSaved ? Colors.violet : C.textSecondary },
-                  { transform: [{ scale: saveScale }] },
-                ]}
-              >
-                {isSaved ? '🔖 Salvato' : '🔖 Salva'}
-              </Animated.Text>
+              <Animated.View style={[styles.saveRow, { transform: [{ scale: saveScale }] }]}>
+                <Ionicons
+                  name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                  size={18}
+                  color={isSaved ? Colors.violet : C.textSecondary}
+                />
+                <Text style={[styles.shareActionText, { color: isSaved ? Colors.violet : C.textSecondary }]}>
+                  {isSaved ? 'Salvato' : 'Salva'}
+                </Text>
+              </Animated.View>
             </TouchableOpacity>
           </View>
         </View>
@@ -440,6 +449,11 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '500',
     color: Colors.textSecondary,
+  },
+  saveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
 
   // Paywall

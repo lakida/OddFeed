@@ -125,7 +125,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
     setHasError(false);
     Promise.all([
       fetchTodayNews(language, isPremium, interests, Math.max(2, newsLimit)).catch(() => []),
-      fetchRecentPastNews(language, isPremium, newsLimit, interests).catch(() => []),
+      fetchRecentPastNews(language, isPremium, newsLimit, interests, 2, 7).catch(() => []),
       fetchCurrentNews(language).catch(() => []),
       fetchTopOddNews(language).catch(() => []),
       fetchForbiddenNews(language).catch(() => []),
@@ -260,14 +260,16 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
 
         {/* ── Ultime Notizie ── */}
         {!loading && (todayNews.length > 0 || pastNews.length > 0) && (
-          <View style={[currentStyles.secHdr, { paddingTop: 14, paddingBottom: 8 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-              <Ionicons name="time-outline" size={22} color={Colors.violet} />
-              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE BIZZARRE DAL MONDO</Text>
+          <View style={currentStyles.section}>
+            <View style={currentStyles.secHdr}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                <Ionicons name="time-outline" size={22} color={Colors.violet} />
+                <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE BIZZARRE</Text>
+              </View>
+              <TouchableOpacity onPress={onGoToArchive}>
+                <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={onGoToArchive}>
-              <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -281,10 +283,13 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
               onPress={() => onOpenArticle(item.id, item)}
               activeOpacity={0.7}
             >
-              <Image
-                source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }}
-                style={styles.unThumb}
-              />
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
+              ) : (
+                <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '🌍'}</Text>
+                </View>
+              )}
               <View style={styles.unBody}>
                 <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
@@ -303,10 +308,13 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
             onPress={() => onOpenArticle(item.id, item)}
             activeOpacity={0.7}
           >
-            <Image
-              source={{ uri: item.imageUrl || `https://picsum.photos/seed/${item.id}/152/128` }}
-              style={styles.unThumb}
-            />
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
+            ) : (
+              <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '🌍'}</Text>
+              </View>
+            )}
             <View style={styles.unBody}>
               <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
               <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
@@ -507,7 +515,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   unThumbEmoji: {
-    fontSize: 28,
+    fontSize: 34,
   },
   unBody: {
     flex: 1,
