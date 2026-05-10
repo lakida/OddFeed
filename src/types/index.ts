@@ -49,6 +49,7 @@ export interface NewsItem {
   fullText: string;          // completo, per il dettaglio
   imageEmoji: string;        // emoji placeholder immagine
   imageColor: string[];      // gradiente sfondo immagine
+  imageUrl?: string | null;  // URL immagine reale dall'RSS (opzionale)
   country: string;           // es. "🇯🇵 Giappone"
   countryCode: string;       // es. "JP"
   category: Category;

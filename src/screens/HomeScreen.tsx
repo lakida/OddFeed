@@ -10,7 +10,6 @@ import {
   Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
@@ -218,7 +217,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                   {/* Immagine con pill categoria */}
                   <View style={currentStyles.cardImgWrap}>
                     <Image
-                      source={{ uri: `https://picsum.photos/seed/${item.id}/380/180` }}
+                      source={{ uri: item.imageUrl || `https://picsum.photos/seed/${item.id}/380/180` }}
                       style={currentStyles.cardImg}
                     />
                     <View style={currentStyles.cardPill}>
@@ -316,17 +315,9 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
             {/* Gold CTA — solo per utenti free */}
             {!isPremium && (
               <TouchableOpacity style={ndlStyles.cta} onPress={onGoToPremium} activeOpacity={0.85}>
-                <LinearGradient
-                  colors={['#C47D0A', '#F5B800', '#FFE566', '#FFD340', '#F5B800', '#C47D0A']}
-                  locations={[0, 0.2, 0.48, 0.52, 0.8, 1]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={ndlStyles.ctaGradient}
-                >
-                  <Text style={{ fontSize: 20 }}>👑</Text>
-                  <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
-                  <Text style={{ fontSize: 11, color: '#5C3A00', opacity: 0.75 }}>✦</Text>
-                </LinearGradient>
+                <Text style={{ fontSize: 20 }}>👑</Text>
+                <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
+                <Text style={{ fontSize: 11, color: '#5C3A00', opacity: 0.75 }}>✦</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1005,21 +996,19 @@ const ndlStyles = StyleSheet.create({
     margin: 10,
     marginHorizontal: 12,
     marginBottom: 12,
+    backgroundColor: '#FFD340',
     borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#D4900F',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  ctaGradient: {
     paddingVertical: 7,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    shadowColor: '#C47D0A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 5,
   },
   ctaText: {
     fontSize: 12,

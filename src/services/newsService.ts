@@ -2,6 +2,8 @@ import {
   collection,
   query,
   where,
+  orderBy,
+  limit,
   getDocs,
   doc,
   updateDoc,
@@ -73,6 +75,7 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
     fullText: isIt ? d.fullTextIt : d.fullTextEn,
     imageEmoji: d.imageEmoji ?? '🌍',
     imageColor: d.imageColor ?? ['#1a1a2e', '#16213e'],
+    imageUrl: d.imageUrl ?? null,
     country: d.country ?? '🌍 Mondo',
     countryCode: d.countryCode ?? 'WD',
     category: d.category ?? 'curiosità',
@@ -235,13 +238,27 @@ export async function fetchArchive(
 // Carica le 3 notizie di attualità di oggi (visibili a tutti).
 export async function fetchCurrentNews(language: 'it' | 'en'): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
+  // Prima prova: articoli di oggi
   const q = query(
     collection(db, 'articles'),
     where('date', '==', today),
     where('articleType', '==', 'current'),
   );
   const snap = await getDocs(q);
-  return snap.docs
+  if (!snap.empty) {
+    return snap.docs
+      .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+      .map(d => docToNewsItem(d, language));
+  }
+  // Fallback: articoli più recenti disponibili (script non ancora girato oggi)
+  const qFallback = query(
+    collection(db, 'articles'),
+    where('articleType', '==', 'current'),
+    orderBy('date', 'desc'),
+    limit(6),
+  );
+  const snapFallback = await getDocs(qFallback);
+  return snapFallback.docs
     .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
     .map(d => docToNewsItem(d, language));
 }
@@ -255,7 +272,20 @@ export async function fetchTopOddNews(language: 'it' | 'en'): Promise<NewsItem[]
     where('isTopOdd', '==', true),
   );
   const snap = await getDocs(q);
-  return snap.docs
+  if (!snap.empty) {
+    return snap.docs
+      .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+      .map(d => docToNewsItem(d, language));
+  }
+  // Fallback: top odd più recenti disponibili
+  const qFallback = query(
+    collection(db, 'articles'),
+    where('isTopOdd', '==', true),
+    orderBy('date', 'desc'),
+    limit(3),
+  );
+  const snapFallback = await getDocs(qFallback);
+  return snapFallback.docs
     .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
     .map(d => docToNewsItem(d, language));
 }
@@ -269,7 +299,20 @@ export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsIte
     where('articleType', '==', 'forbidden'),
   );
   const snap = await getDocs(q);
-  return snap.docs
+  if (!snap.empty) {
+    return snap.docs
+      .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+      .map(d => docToNewsItem(d, language));
+  }
+  // Fallback: forbidden più recenti disponibili
+  const qFallback = query(
+    collection(db, 'articles'),
+    where('articleType', '==', 'forbidden'),
+    orderBy('date', 'desc'),
+    limit(2),
+  );
+  const snapFallback = await getDocs(qFallback);
+  return snapFallback.docs
     .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
     .map(d => docToNewsItem(d, language));
 }

@@ -161,6 +161,14 @@ const BORING_KEYWORDS = [
 
 const rssParser = new RSSParser({
   timeout: 10000,
+  customFields: {
+    item: [
+      ['media:content',   'mediaContent',   { keepArray: false }],
+      ['media:thumbnail', 'mediaThumbnail', { keepArray: false }],
+      ['enclosure',       'enclosure',      { keepArray: false }],
+      ['media:group',     'mediaGroup',     { keepArray: false }],
+    ],
+  },
   requestOptions: {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -168,6 +176,51 @@ const rssParser = new RSSParser({
     },
   },
 });
+
+// ─── Estrae URL immagine dall'item RSS (vari formati) ────────────
+function getArticleImageUrl(item) {
+  // media:content (standard RSS 2.0 + Media RSS)
+  const mc = item.mediaContent;
+  if (mc) {
+    if (mc.$?.url) return mc.$.url;
+    if (Array.isArray(mc) && mc[0]?.$?.url) return mc[0].$.url;
+  }
+  // media:thumbnail
+  const mt = item.mediaThumbnail;
+  if (mt?.$?.url) return mt.$.url;
+  // media:group > media:content
+  const mg = item.mediaGroup?.['media:content'];
+  if (mg?.$?.url) return mg.$.url;
+  if (Array.isArray(mg) && mg[0]?.$?.url) return mg[0].$.url;
+  // enclosure (solo immagini, non audio/video)
+  const enc = item.enclosure;
+  if (enc?.url && /\.(jpe?g|png|webp|gif)/i.test(enc.url)) return enc.url;
+  return null;
+}
+
+// ─── Colori per categoria (sfondo gradient card/NDL) ─────────────
+const CATEGORY_COLORS = {
+  animali:           ['#14532d', '#15803d'],
+  tecnologia:        ['#1e3a8a', '#3730a3'],
+  record:            ['#1e1b4b', '#4f46e5'],
+  leggi:             ['#1c1917', '#44403c'],
+  scienza:           ['#164e63', '#0e7490'],
+  gastronomia:       ['#7f1d1d', '#b91c1c'],
+  cultura:           ['#1e3a5f', '#1d4ed8'],
+  luoghi:            ['#052e16', '#166534'],
+  sesso_relazioni:   ['#831843', '#be185d'],
+  gossip:            ['#4c1d95', '#7c3aed'],
+  crimini_strani:    ['#1c1917', '#292524'],
+  storie_assurde:    ['#7C2D12', '#b45309'],
+  psicologia_strana: ['#2e1065', '#6d28d9'],
+  soldi_folli:       ['#713f12', '#b45309'],
+  coincidenze:       ['#0f172a', '#334155'],
+  attualita:         ['#1e3a5f', '#2563eb'],
+  gossip_spettacolo: ['#7c3aed', '#a855f7'],
+};
+function getCategoryColor(category) {
+  return CATEGORY_COLORS[category] ?? ['#1e3a5f', '#2563eb'];
+}
 
 // ─── Pre-filtro anti-noia ──────────────────────────────────────────
 // Elimina articoli che contengono parole chiave di argomenti noiosi.
@@ -200,6 +253,7 @@ async function fetchFromFeeds(feeds, maxPerFeed = 10) {
         _suggestedCategory: feed.category ?? 'storie_assurde',
         _isItalian: feed.isItalian ?? false,
         _source: feed.source,
+        _imageUrl: getArticleImageUrl(item),
         sectionName: feed.isItalian ? 'Italian' : 'World',
       }));
       const flag = feed.isItalian ? '🇮🇹' : '🌍';
@@ -346,6 +400,7 @@ Rispondi SOLO con un JSON valido:
   "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
   "categoryLabelIt": "es. 🐾 Animali",
   "categoryLabelEn": "es. 🐾 Animals",
+  "imageEmoji": "1-2 emoji che rappresentano visivamente il soggetto principale (es: 🐊 per coccodrillo, 💰🔥 per soldi bruciati, 🧬🔬 per scoperta scientifica, 🍕😱 per cibo assurdo)",
   "engagementLevel": "high|medium|low"
 }`;
 
@@ -512,7 +567,7 @@ Rispondi SOLO con JSON:
   "category": "attualita o gossip_spettacolo",
   "categoryLabelIt": "es. 📰 Attualità",
   "categoryLabelEn": "es. 📰 News",
-  "imageEmoji": "emoji rilevante"
+  "imageEmoji": "1-2 emoji che rappresentano visivamente il soggetto principale (es: 🏛️ per politica, 🔬 per scienza, 🌊 per ambiente, 🎭 per gossip/spettacolo)"
 }`;
 
     try {
@@ -539,7 +594,8 @@ Rispondi SOLO con JSON:
         categoryLabelIt: ai.categoryLabelIt ?? (isGossip ? '🌟 Gossip' : '📰 Attualità'),
         categoryLabelEn: ai.categoryLabelEn ?? (isGossip ? '🌟 Gossip' : '📰 News'),
         imageEmoji: ai.imageEmoji ?? (isGossip ? '🌟' : '📰'),
-        imageColor: isGossip ? ['#7c3aed', '#a855f7'] : ['#1e3a5f', '#2563eb'],
+        imageColor: getCategoryColor(ai.category ?? (isGossip ? 'gossip_spettacolo' : 'attualita')),
+        imageUrl: article._imageUrl ?? null,
         country: '🇮🇹 Italia',
         countryCode: 'IT',
         source: article._source ?? 'ANSA',
@@ -701,7 +757,8 @@ Rispondi SOLO con JSON:
         categoryLabelIt: ai.categoryLabelIt ?? '🚫 Non dovresti',
         categoryLabelEn: ai.categoryLabelEn ?? '🚫 Forbidden',
         imageEmoji: '🚫',
-        imageColor: ['#1a0a0a', '#3d0000'],
+        imageColor: getCategoryColor(category),
+        imageUrl: article._imageUrl ?? null,
         country: guessCountry(article),
         source: article._source ?? 'OddFeed',
         sourceUrl: article.webUrl ?? '',
@@ -885,6 +942,9 @@ async function main() {
         categoryLabelIt: ai.categoryLabelIt,
         categoryLabelEn: ai.categoryLabelEn,
         engagementLevel: ai.engagementLevel ?? 'medium',
+        imageEmoji: ai.imageEmoji ?? '🌍',
+        imageColor: getCategoryColor(category),
+        imageUrl: article._imageUrl ?? null,
         country: guessCountry(article),
         source: article._source ?? 'The Guardian',
         sourceUrl: article.webUrl,

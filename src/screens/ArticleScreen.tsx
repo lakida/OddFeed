@@ -182,7 +182,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
         {/* Hero image con category pill */}
         <View style={styles.heroImgWrap}>
           <Image
-            source={{ uri: `https://picsum.photos/seed/${article.id}/800/380` }}
+            source={{ uri: article.imageUrl || `https://picsum.photos/seed/${article.id}/800/380` }}
             style={styles.heroImg}
           />
           <View style={styles.heroImgPill}>
