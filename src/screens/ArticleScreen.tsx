@@ -42,6 +42,7 @@ const cleanCatLabel = (label: string) => {
 // @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '../utils/date';
+import BannerAdSlot from '../components/ads/BannerAdSlot';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
@@ -152,14 +153,15 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
 
   const handleShare = async () => {
     try {
+      const watermark = '\n\n🌍 Scopri OddFeed → https://oddfeed.app';
       // Su iOS, `url` viene aggiunto automaticamente dopo `message`,
       // quindi non va incluso nel testo per evitare il doppio link.
       // Usiamo il web URL come URL primario; il deep link è nel testo per Android
       // così chi ha OddFeed installato può aprirlo direttamente.
       await Share.share(
         Platform.OS === 'ios'
-          ? { message: article.title, url: articleUrl }
-          : { message: `${article.title}\n\n${articleUrl}\n\n(Apri in OddFeed: ${articleDeepLink})` }
+          ? { message: `${article.title}${watermark}`, url: articleUrl }
+          : { message: `${article.title}\n\n${articleUrl}\n\n(Apri in OddFeed: ${articleDeepLink})${watermark}` }
       );
       if (userId) onPointsChange('share');
     } catch (e) {}
@@ -258,6 +260,9 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
               </View>
             </>
           )}
+
+          {/* Banner ad — fondo articolo, sopra la shareBar (solo utenti free) */}
+          {!showPaywall && <BannerAdSlot isPremium={isPremium} style={{ marginTop: 4, marginBottom: 4 }} />}
 
           <View style={{ height: 12 }} />
         </View>

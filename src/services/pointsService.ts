@@ -99,6 +99,21 @@ export async function awardReactPoints(uid: string, currentPoints: number): Prom
   return POINTS_CONFIG.react;
 }
 
+// ─── Annuncio video ──────────────────────────────────────────────────────────
+// +N pt quando l'utente guarda un rewarded ad (default 100 pt).
+export async function awardAdPoints(uid: string, currentPoints: number, delta: number): Promise<number> {
+  const newPoints = currentPoints + delta;
+  const newLevel = getLevelForPoints(newPoints);
+
+  await setDoc(
+    doc(db, 'users', uid),
+    { points: increment(delta), level: newLevel },
+    { merge: true },
+  );
+
+  return delta;
+}
+
 // ─── Condivisione ────────────────────────────────────────────────────────────
 // +25 pt quando l'utente condivide un articolo.
 export async function awardSharePoints(uid: string, currentPoints: number): Promise<number> {

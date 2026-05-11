@@ -20,6 +20,7 @@ import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
+import BannerAdSlot from '../components/ads/BannerAdSlot';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 
@@ -289,6 +290,9 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
             </TouchableOpacity>
           );
         })}
+
+        {/* Banner ad — fondo archivio (solo utenti free) */}
+        {!loading && <BannerAdSlot isPremium={isPremium} />}
 
         <View style={{ height: 24 }} />
       </ScrollView>

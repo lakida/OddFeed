@@ -17,6 +17,7 @@ import {
   awardReadPoints,
   awardReactPoints,
   awardSharePoints,
+  awardAdPoints,
   getLevelForPoints,
 } from './src/services/pointsService';
 import { User } from 'firebase/auth';
@@ -396,6 +397,23 @@ function AppContent() {
     }
   }, [currentUser, userStats.points, userStats.readArticleIds]);
 
+  // ─── Reward da annuncio video ─────────────────────────────────────────────
+  const handleAdReward = useCallback(async (points: number) => {
+    const uid = currentUser?.uid;
+    if (!uid) return;
+    // Aggiornamento ottimistico locale
+    setUserStats(prev => {
+      const newPoints = prev.points + points;
+      return { ...prev, points: newPoints, level: getLevelForPoints(newPoints) };
+    });
+    // Persistenza su Firestore in background
+    try {
+      await awardAdPoints(uid, userStats.points, points);
+    } catch {
+      // Silently fail — i punti locali rimangono comunque
+    }
+  }, [currentUser, userStats.points]);
+
   // ─── Auth listener ───────────────────────────────────────────────────────
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user) => {
@@ -657,7 +675,7 @@ function AppContent() {
           />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Punti' ? 'flex' : 'none' }}>
-          <PointsScreen userStats={userStats} userName={userName} isPremium={isPremium} />
+          <PointsScreen userStats={userStats} userName={userName} isPremium={isPremium} onAdReward={handleAdReward} />
         </View>
         <View style={{ flex: 1, display: activeTab === 'Premium' ? 'flex' : 'none' }}>
           <PremiumScreen

@@ -11,14 +11,17 @@ import { USER_LEVELS, HOW_TO_EARN } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { UserStats } from '../../App';
+import BannerAdSlot from '../components/ads/BannerAdSlot';
+import RewardedAdButton from '../components/ads/RewardedAdButton';
 
 interface PointsScreenProps {
   userStats: UserStats;
   userName: string;
   isPremium?: boolean;
+  onAdReward?: (points: number) => void;
 }
 
-export default function PointsScreen({ userStats, userName, isPremium = false }: PointsScreenProps) {
+export default function PointsScreen({ userStats, userName, isPremium = false, onAdReward }: PointsScreenProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -163,6 +166,15 @@ export default function PointsScreen({ userStats, userName, isPremium = false }:
             );
           })}
         </View>
+
+        {/* Guadagna guardando un video (solo utenti free) */}
+        <RewardedAdButton
+          isPremium={isPremium}
+          onReward={(pts) => onAdReward?.(pts)}
+        />
+
+        {/* Banner ad — fondo schermata punti (solo utenti free) */}
+        <BannerAdSlot isPremium={isPremium} style={{ marginHorizontal: 16, marginBottom: 8 }} />
 
         <View style={{ height: 24 }} />
       </ScrollView>

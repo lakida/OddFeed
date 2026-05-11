@@ -883,12 +883,12 @@ async function main() {
     console.log(`   ⚠️  Pre-filtro troppo aggressivo (${filtered.length} rimasti) — uso pool completo`);
   }
 
-  // ⭐ Scoring AI: seleziona le 5 storie più virali/bizzarre dal pool
-  const MAX_ARTICLES = 5;
+  // ⭐ Scoring AI: seleziona le 6 storie più virali/bizzarre dal pool
+  const MAX_ARTICLES = 6;
   console.log('\n⭐ Selezione AI delle storie più virali...');
   const selected = await scoreAndSelectArticles(pool, MAX_ARTICLES);
 
-  // Riordina: categorie non-premium prima, così il primo articolo (free) non è mai premium
+  // Riordina: categorie non-premium prima, così i primi 2 articoli (free) non sono mai premium
   const PREMIUM_CATS = new Set(['sesso_relazioni', 'gossip', 'crimini_strani']);
   selected.sort((a, b) => {
     const aPremium = PREMIUM_CATS.has(a._suggestedCategory ?? '') ? 1 : 0;
@@ -922,8 +922,8 @@ async function main() {
 
       // Usa la categoria suggerita dalla query se AI non è sicura
       const category = ai.category ?? article._suggestedCategory ?? 'storie_assurde';
-      // isPremium = true se non è il primo articolo OPPURE se è in una categoria premium
-      const isPremiumArticle = i > 0 || PREMIUM_CATS.has(category);
+      // isPremium = true se non sono i primi 2 articoli OPPURE se è in una categoria premium
+      const isPremiumArticle = i > 1 || PREMIUM_CATS.has(category);
       // Top Odd News: i 3 articoli più assurdi (i primi dopo ordinamento AI per bizarreness)
       const isTopOdd = i < 3;
 

@@ -22,6 +22,8 @@ import { NewsItem } from '../types';
 import { UserStats } from '../../App';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
+import NativeAdCard from '../components/ads/NativeAdCard';
+import { NATIVE_AD_EVERY_N } from '../ads/adConfig';
 
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
@@ -273,56 +275,41 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           </View>
         )}
 
-        {/* Notizie di oggi */}
-        {!loading && todayNews.map((item, idx) => {
-          const isRead = readIds.has(item.id);
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === todayNews.length - 1 && pastNews.length === 0 ? 0 : 0.5 }]}
-              onPress={() => onOpenArticle(item.id, item)}
-              activeOpacity={0.7}
-            >
-              {item.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
-              ) : (
-                <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '🌍'}</Text>
-                </View>
-              )}
-              <View style={styles.unBody}>
-                <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
-                <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
-              </View>
-              <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
-            </TouchableOpacity>
-          );
-        })}
-
-        {/* Notizie dai giorni precedenti */}
-        {!loading && pastNews.map((item, idx) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: idx === pastNews.length - 1 ? 0 : 0.5 }]}
-            onPress={() => onOpenArticle(item.id, item)}
-            activeOpacity={0.7}
-          >
-            {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
-            ) : (
-              <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '🌍'}</Text>
-              </View>
-            )}
-            <View style={styles.unBody}>
-              <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-              <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
-              <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
-            </View>
-            <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
-          </TouchableOpacity>
-        ))}
+        {/* Notizie (oggi + giorni precedenti) con NativeAdCard ogni N items */}
+        {!loading && (() => {
+          const allNews = [...todayNews, ...pastNews];
+          return allNews.map((item, idx) => {
+            const isLast = idx === allNews.length - 1;
+            // Inserisce un'ad card dopo ogni NATIVE_AD_EVERY_N° articolo
+            const showAdAfter = !isPremium && (idx + 1) % NATIVE_AD_EVERY_N === 0 && !isLast;
+            return (
+              <React.Fragment key={item.id}>
+                <TouchableOpacity
+                  style={[styles.unRow, { borderBottomColor: C.border, borderBottomWidth: isLast && !showAdAfter ? 0 : 0.5 }]}
+                  onPress={() => onOpenArticle(item.id, item)}
+                  activeOpacity={0.7}
+                >
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
+                  ) : (
+                    <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
+                      <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '🌍'}</Text>
+                    </View>
+                  )}
+                  <View style={styles.unBody}>
+                    <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                    <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
+                    <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+                  </View>
+                  <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
+                </TouchableOpacity>
+                {showAdAfter && (
+                  <NativeAdCard isPremium={isPremium} />
+                )}
+              </React.Fragment>
+            );
+          });
+        })()}
 
         {/* ── NON DOVRESTI LEGGERE ── */}
         {!loading && (forbiddenNews.length > 0 || !isPremium) && (
