@@ -110,7 +110,8 @@ const en: Translations = {
     deleteAccount: 'Delete account',
     language: 'Language',
     darkModeComingSoon: 'Dark mode is on! The dark theme will be available throughout the app in the next version.',
-    notifSlotTitle: 'When do you want to receive your news?',
+    notifSlotTitle: 'When do you want your news?',
+    whatsNew: 'What\'s new',
     interestsTitle: 'Choose your interests',
     interestsMin: (n: number) => `Select at least 3 categories (${n}/3)`,
     interestsCount: (n: number) => `${n} selected`,
@@ -126,7 +127,7 @@ const en: Translations = {
     deleteFinalBody: 'This action is irreversible. Confirm you want to delete everything?',
     deleteFinalConfirm: 'Delete permanently',
     version: 'OddFeed v1.0 · April 2026',
-    slots: ['Breakfast', 'Lunch', 'Afternoon', 'Dinner'],
+    slots: ['Breakfast', 'Lunch', 'Dinner'],
   },
 
   login: {

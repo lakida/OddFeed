@@ -33,6 +33,7 @@ import PointsScreen from './src/screens/PointsScreen';
 import PremiumScreen from './src/screens/PremiumScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AccountDeletedScreen from './src/screens/AccountDeletedScreen';
+import WhatsNewModal from './src/components/WhatsNewModal';
 import { Colors } from './src/theme/colors';
 
 type Tab = 'Notizie' | 'Archivio' | 'Punti' | 'Premium' | 'Profilo';
@@ -262,6 +263,9 @@ function AppContent() {
   // Flag per intercettare onAuthStateChanged dopo eliminazione account
   const accountJustDeleted = React.useRef(false);
 
+  // ─── WhatsNew modal (forzato da ProfileScreen) ───────────────────────────
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+
   // ─── Carica articoli salvati da AsyncStorage ────────────────────────────
   useEffect(() => {
     AsyncStorage.getItem('oddFeedSavedArticles').then(data => {
@@ -353,6 +357,46 @@ function AppContent() {
       }
     } catch {
       // Firestore non raggiungibile — rimane su EMPTY_STATS
+    }
+  }, []);
+
+  // ─── In-app review prompt (dopo la 3ª apertura) ─────────────────────────
+  const checkAndPromptReview = useCallback(async () => {
+    try {
+      const REVIEW_KEY = '@oddFeed_reviewRequested';
+      const COUNT_KEY  = '@oddFeed_appOpenCount';
+
+      const [alreadyAsked, countRaw] = await Promise.all([
+        AsyncStorage.getItem(REVIEW_KEY),
+        AsyncStorage.getItem(COUNT_KEY),
+      ]);
+      if (alreadyAsked) return; // già richiesto in precedenza
+
+      const count = parseInt(countRaw ?? '0', 10) + 1;
+      await AsyncStorage.setItem(COUNT_KEY, String(count));
+
+      if (count >= 3) {
+        await AsyncStorage.setItem(REVIEW_KEY, '1');
+        // Aspetta 2s per non interrompere l'apertura
+        setTimeout(() => {
+          Alert.alert(
+            '⭐ Ti piace OddFeed?',
+            'Lasciaci una recensione — ci aiuta moltissimo a crescere!',
+            [
+              { text: 'Adesso no', style: 'cancel' },
+              {
+                text: 'Valuta ora',
+                onPress: () => {
+                  const url = 'https://apps.apple.com/app/id6504889599?action=write-review';
+                  Linking.openURL(url).catch(() => {});
+                },
+              },
+            ],
+          );
+        }, 2000);
+      }
+    } catch {
+      // Silently fail
     }
   }, []);
 
@@ -454,6 +498,7 @@ function AppContent() {
             setIsPremium(profile.isPremium ?? false);
             setAppScreen('Tabs');
             loadUserStats(user.uid);
+            checkAndPromptReview();
           } else {
             setAppScreen('Onboarding');
           }
@@ -476,7 +521,7 @@ function AppContent() {
       }
     });
     return unsubscribe;
-  }, [loadUserStats]);
+  }, [loadUserStats, checkAndPromptReview]);
 
   // Ref all'ultima versione di openArticle — usato da handler esterni (notifiche, deep link)
   const openArticleRef = useRef<(id: string, article?: NewsItem) => void>(() => {});
@@ -702,6 +747,7 @@ function AppContent() {
             onAccountDeleted={handleAccountDeleted}
             userName={userName}
             userStats={userStats}
+            onShowWhatsNew={() => setShowWhatsNew(true)}
           />
         </View>
       </Animated.View>
@@ -759,6 +805,12 @@ function AppContent() {
           />
         </Animated.View>
       )}
+
+      {/* WhatsNew modal — auto (versione cambiata) + manuale da Profilo */}
+      <WhatsNewModal
+        forceVisible={showWhatsNew}
+        onClose={() => setShowWhatsNew(false)}
+      />
     </View>
   );
 }

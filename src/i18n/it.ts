@@ -116,7 +116,8 @@ const it = {
     deleteAccount: 'Elimina account',
     language: 'Lingua',
     darkModeComingSoon: 'La dark mode è attiva! Il tema scuro sarà disponibile in tutta l\'app a partire dalla prossima versione.',
-    notifSlotTitle: 'Quando vuoi ricevere le notizie?',
+    notifSlotTitle: 'A che ora vuoi le notizie?',
+    whatsNew: 'Cosa c\'è di nuovo',
     interestsTitle: 'Scegli i tuoi interessi',
     interestsMin: (n: number) => `Seleziona almeno 3 categorie (${n}/3)`,
     interestsCount: (n: number) => `${n} selezionate`,
@@ -132,7 +133,7 @@ const it = {
     deleteFinalBody: 'Questa azione è irreversibile. Confermi di voler cancellare tutto?',
     deleteFinalConfirm: 'Elimina definitivamente',
     version: 'OddFeed v1.0 · Aprile 2026',
-    slots: ['Colazione', 'Pranzo', 'Pomeriggio', 'Cena'],
+    slots: ['Colazione', 'Pranzo', 'Cena'],
   },
 
   // Login

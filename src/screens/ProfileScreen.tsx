@@ -27,7 +27,12 @@ import { UserStats } from '../../App';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 
-const NOTIFICATION_SLOTS = ['Colazione', 'Pranzo', 'Pomeriggio', 'Cena'];
+// Mappa slot → icona + orario (compatibile con SLOT_LABELS del backend)
+const SLOT_META: Record<string, { icon: string; time: string; labelEn: string }> = {
+  Colazione: { icon: '🌅', time: '7:30',  labelEn: 'Breakfast' },
+  Pranzo:    { icon: '☀️', time: '13:00', labelEn: 'Lunch'     },
+  Cena:      { icon: '🌙', time: '20:00', labelEn: 'Dinner'    },
+};
 
 // Componente bottom sheet generico
 function BottomSheet({ visible, onClose, title, children }: {
@@ -105,9 +110,10 @@ interface ProfileScreenProps {
   onAccountDeleted: () => void;
   userName?: string;
   userStats?: UserStats;
+  onShowWhatsNew?: () => void;
 }
 
-export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAccountDeleted, userName = '', userStats }: ProfileScreenProps) {
+export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAccountDeleted, userName = '', userStats, onShowWhatsNew }: ProfileScreenProps) {
   const { t, language, setLanguage } = useTranslation();
   const { isDark, setIsDark } = useTheme();
   const C = getColors(isDark);
@@ -293,7 +299,9 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSlot(true)}>
             <IconBox emoji="🔔" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.notificationSlot}</Text>
-            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>{notifSlot}</Text>
+            <Text style={[styles.settingsValue, { color: C.textTertiary }]}>
+              {SLOT_META[notifSlot]?.icon ?? '🔔'} {language === 'it' ? notifSlot : (SLOT_META[notifSlot]?.labelEn ?? notifSlot)} · {SLOT_META[notifSlot]?.time ?? ''}
+            </Text>
             <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingsItem} onPress={() => setShowSources(true)}>
@@ -384,7 +392,12 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
           <Text style={[profStyles.secHdrTitle, { color: '#1E1B4B' }]}>PRIVACY E DATI</Text>
         </View>
         <View style={styles.settingsGroup}>
-          <TouchableOpacity style={[styles.settingsItem, { borderTopWidth: 0 }]} onPress={() => setShowPrivacy(true)}>
+          <TouchableOpacity style={[styles.settingsItem, { borderTopWidth: 0 }]} onPress={onShowWhatsNew}>
+            <IconBox emoji="🆕" />
+            <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.whatsNew}</Text>
+            <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.settingsItem} onPress={() => setShowPrivacy(true)}>
             <IconBox emoji="🔒" />
             <Text style={[styles.settingsLabel, { color: C.text }]}>{t.profile.privacyTerms}</Text>
             <Ionicons name="chevron-forward" size={14} color={C.textTertiary} />
@@ -406,23 +419,34 @@ export default function ProfileScreen({ isPremium, onGoToPremium, onLogout, onAc
 
       {/* Modal fascia notifiche */}
       <BottomSheet visible={showSlot} onClose={() => setShowSlot(false)} title={t.profile.notifSlotTitle}>
-        {t.profile.slots.map((slot) => (
-          <TouchableOpacity
-            key={slot}
-            style={[modalStyles.option, notifSlot === slot && modalStyles.optionActive]}
-            onPress={() => {
-              setNotifSlot(slot);
-              setShowSlot(false);
-              const user = auth.currentUser;
-              if (user) updateUserPreferences(user.uid, { notificationSlot: slot }).catch(() => {});
-            }}
-          >
-            <Text style={[modalStyles.optionText, notifSlot === slot && modalStyles.optionTextActive]}>
-              {slot}
-            </Text>
-            {notifSlot === slot && <Text style={modalStyles.check}>✓</Text>}
-          </TouchableOpacity>
-        ))}
+        {t.profile.slots.map((slot) => {
+          const meta = SLOT_META[slot];
+          const isActive = notifSlot === slot;
+          return (
+            <TouchableOpacity
+              key={slot}
+              style={[slotStyles.card, isActive && slotStyles.cardActive]}
+              onPress={() => {
+                setNotifSlot(slot);
+                setShowSlot(false);
+                const user = auth.currentUser;
+                if (user) updateUserPreferences(user.uid, { notificationSlot: slot }).catch(() => {});
+              }}
+              activeOpacity={0.75}
+            >
+              <Text style={slotStyles.icon}>{meta?.icon ?? '🔔'}</Text>
+              <View style={slotStyles.slotBody}>
+                <Text style={[slotStyles.slotLabel, isActive && slotStyles.slotLabelActive]}>
+                  {language === 'it' ? slot : (meta?.labelEn ?? slot)}
+                </Text>
+                <Text style={[slotStyles.slotTime, isActive && slotStyles.slotTimeActive]}>
+                  Ogni giorno alle {meta?.time ?? ''}
+                </Text>
+              </View>
+              {isActive && <Ionicons name="checkmark-circle" size={20} color={Colors.violet} />}
+            </TouchableOpacity>
+          );
+        })}
       </BottomSheet>
 
       {/* Modal interessi */}
@@ -811,6 +835,30 @@ const modalStyles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingBottom: Spacing.sm,
   },
+});
+
+const slotStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bg2,
+    marginBottom: 8,
+  },
+  cardActive: {
+    borderColor: Colors.violet,
+    backgroundColor: '#EEF2FF',
+  },
+  icon: { fontSize: 24, width: 32, textAlign: 'center' },
+  slotBody: { flex: 1 },
+  slotLabel: { fontSize: 15, fontWeight: '600', color: Colors.text },
+  slotLabelActive: { color: Colors.violet },
+  slotTime: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  slotTimeActive: { color: Colors.violet, opacity: 0.75 },
 });
 
 const styles = StyleSheet.create({
