@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
-import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { fetchArchive } from '../services/newsService';
@@ -270,7 +269,13 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
               onPress={() => onOpenArticle(item.id, item)}
               activeOpacity={0.7}
             >
-              <Image source={{ uri: `https://picsum.photos/seed/${item.id}/152/128` }} style={styles.unThumb} />
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
+              ) : (
+                <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ fontSize: 22 }}>{item.imageEmoji ?? '🌍'}</Text>
+                </View>
+              )}
               <View style={styles.unBody}>
                 <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {formatArchiveDate(item.publishedAt)}</Text>

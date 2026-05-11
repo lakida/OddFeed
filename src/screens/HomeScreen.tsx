@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
-import { MOCK_NEWS, USER_LEVELS } from '../data/mockData';
+import { USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews, fetchTopOddNews, fetchForbiddenNews } from '../services/newsService';
@@ -219,10 +219,13 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                 >
                   {/* Immagine con pill categoria */}
                   <View style={currentStyles.cardImgWrap}>
-                    <Image
-                      source={{ uri: item.imageUrl || `https://picsum.photos/seed/${item.id}/380/180` }}
-                      style={currentStyles.cardImg}
-                    />
+                    {item.imageUrl ? (
+                      <Image source={{ uri: item.imageUrl }} style={currentStyles.cardImg} />
+                    ) : (
+                      <View style={[currentStyles.cardImg, { backgroundColor: item.imageColor?.[0] ?? '#1e3a5f', alignItems: 'center', justifyContent: 'center' }]}>
+                        <Text style={{ fontSize: 40 }}>{item.imageEmoji ?? '📰'}</Text>
+                      </View>
+                    )}
                     <View style={currentStyles.cardPill}>
                       <Text style={currentStyles.cardPillText}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
                     </View>
@@ -232,7 +235,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                       {cleanTitle(item.title)}
                     </Text>
                     <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
-                      {item.source} · {item.publishedAt}
+                      {item.source} · {formatDate(item.publishedAt)}
                     </Text>
                   </View>
                 </TouchableOpacity>

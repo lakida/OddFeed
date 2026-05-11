@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../../theme/colors';
+import { Colors, getColors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
 import {
   getRewardedAdUnitId,
   REWARDED_COOLDOWN_MS,
@@ -43,6 +44,8 @@ export default function RewardedAdButton({ isPremium = false, onReward }: Reward
   const [cooldownLeft, setCooldownLeft] = useState('');
   const rewardedRef = useRef<any>(null);
   const listenersRef = useRef<(() => void)[]>([]);
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
 
   // Pulisce i listener precedenti
   const cleanupListeners = () => {
@@ -147,12 +150,18 @@ export default function RewardedAdButton({ isPremium = false, onReward }: Reward
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      {
+        backgroundColor: isDark ? '#1e1b4b' : '#F0F4FF',
+        borderColor: isDark ? '#3730a3' : '#C7D2FE',
+      },
+    ]}>
       <View style={styles.header}>
         <Text style={styles.emoji}>🎬</Text>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Guadagna guardando un video</Text>
-          <Text style={styles.sub}>
+          <Text style={[styles.title, { color: C.text }]}>Guadagna guardando un video</Text>
+          <Text style={[styles.sub, { color: C.textSecondary }]}>
             {state === 'cooldown'
               ? `Hai già guadagnato i tuoi punti oggi.`
               : `+${REWARDED_POINTS} punti · max 1 video al giorno`}
@@ -161,15 +170,21 @@ export default function RewardedAdButton({ isPremium = false, onReward }: Reward
       </View>
 
       <TouchableOpacity
-        style={[styles.btn, isDisabled && styles.btnDisabled]}
+        style={[
+          styles.btn,
+          isDisabled && { backgroundColor: isDark ? '#374151' : '#E5E7EB' },
+        ]}
         onPress={showAd}
         activeOpacity={0.75}
         disabled={isDisabled}
       >
         {state === 'loading' ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={isDark ? '#9ca3af' : '#fff'} />
         ) : null}
-        <Text style={[styles.btnText, isDisabled && styles.btnTextDisabled]}>
+        <Text style={[
+          styles.btnText,
+          isDisabled && { color: isDark ? '#6B7280' : '#9CA3AF' },
+        ]}>
           {buttonLabel()}
         </Text>
       </TouchableOpacity>
@@ -181,10 +196,8 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: '#F0F4FF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
     padding: 14,
     gap: 12,
   },
@@ -204,11 +217,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E1B4B',
   },
   sub: {
     fontSize: 12,
-    color: '#6B7280',
     lineHeight: 17,
   },
   btn: {
@@ -221,15 +232,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  btnDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
   btnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
-  },
-  btnTextDisabled: {
-    color: '#9CA3AF',
   },
 });

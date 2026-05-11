@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors } from '../../theme/colors';
+import { Colors, getColors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
 import { getNativeAdUnitId } from '../../ads/adConfig';
 
 /**
@@ -34,18 +35,20 @@ interface NativeAdCardProps {
 export default function NativeAdCard({ isPremium = false, style }: NativeAdCardProps) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const { isDark } = useTheme();
+  const C = getColors(isDark);
 
   if (isPremium) return null;
   if (!BannerAd || !BannerAdSize) return null;
   if (failed) return null;
 
   return (
-    <View style={[styles.container, !loaded && styles.hidden, style]}>
+    <View style={[styles.container, { backgroundColor: C.bg2, borderColor: C.border }, !loaded && styles.hidden, style]}>
       {/* Badge sponsor */}
       {loaded && (
         <View style={styles.sponsorRow}>
-          <View style={styles.sponsorBadge}>
-            <Text style={styles.sponsorText}>SPONSOR</Text>
+          <View style={[styles.sponsorBadge, { backgroundColor: C.bg3, borderColor: C.border }]}>
+            <Text style={[styles.sponsorText, { color: C.textTertiary }]}>SPONSOR</Text>
           </View>
         </View>
       )}
@@ -70,8 +73,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 12,
     borderWidth: 0.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.bg2,
     overflow: 'hidden',
   },
   hidden: {
@@ -86,17 +87,14 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   sponsorBadge: {
-    backgroundColor: '#F3F4F6',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 0.5,
-    borderColor: Colors.border,
   },
   sponsorText: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textTertiary,
     letterSpacing: 0.8,
   },
   adWrap: {

@@ -47,24 +47,30 @@ const BIZARRE_RSS_FEEDS = [
   { url: 'https://rss.upi.com/news/Odd_News.rss',                      source: 'UPI Odd News',    category: 'storie_assurde', isItalian: false },
   { url: 'https://nypost.com/weird-but-true/feed/',                     source: 'NY Post',         category: 'storie_assurde', isItalian: false },
   { url: 'https://www.odditycentral.com/feed',                          source: 'Oddity Central',  category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.thesun.co.uk/news/weird/feed/',                   source: 'The Sun',         category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.dailystar.co.uk/weird-news/rss.xml',              source: 'Daily Star',      category: 'storie_assurde', isItalian: false },
   { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',     category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.huffpost.com/section/weird-news/feed',            source: 'HuffPost Weird',  category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.unilad.com/rss',                                  source: 'UNILAD',          category: 'storie_assurde', isItalian: false },
+  // Mirror Weird (sostituisce Daily Star 404)
+  { url: 'https://www.mirror.co.uk/news/weird-news/rss.xml',            source: 'Mirror Weird',    category: 'storie_assurde', isItalian: false },
+  // Metro UK Weird (sostituisce The Sun — 0 articoli)
+  { url: 'https://metro.co.uk/weird/feed/',                             source: 'Metro Weird',     category: 'storie_assurde', isItalian: false },
+  // Fark — aggregatore di notizie bizzarre (sostituisce UNILAD 404)
+  { url: 'https://www.fark.com/fark.rss',                               source: 'Fark',            category: 'storie_assurde', isItalian: false },
+  // Mental Floss (sostituisce HuffPost Weird — 0 articoli)
+  { url: 'https://www.mentalfloss.com/rss.xml',                         source: 'Mental Floss',    category: 'storie_assurde', isItalian: false },
 ];
 
 // ─── Fonti RSS attualità (notizie del giorno + gossip) ────────────
 // Usate per la sezione "In primo piano" in Home — visibile a tutti.
 const CURRENT_NEWS_FEEDS = [
-  // Attualità italiana
-  { url: 'https://www.ansa.it/sito/notizie/mondo/rss.xml',            source: 'ANSA',        category: 'attualita' },
+  // Attualità italiana — URL ANSA aggiornato (il vecchio /mondo/rss.xml dava 404)
+  { url: 'https://www.ansa.it/sito/ansait_rss.xml',                   source: 'ANSA',        category: 'attualita' },
   { url: 'https://www.corriere.it/rss/homepage.xml',                  source: 'Corriere',    category: 'attualita' },
   { url: 'https://www.repubblica.it/rss/homepage/rss2.0.xml',         source: 'Repubblica',  category: 'attualita' },
   // Gossip / Spettacolo
-  { url: 'https://www.tgcom24.mediaset.it/spettacolo/rss.xml',        source: 'TGcom24 TV',  category: 'gossip_spettacolo' },
-  { url: 'https://www.tvblog.it/feed/',                               source: 'TvBlog',      category: 'gossip_spettacolo' },
-  { url: 'https://www.gossip.it/feed/',                               source: 'Gossip.it',   category: 'gossip_spettacolo' },
+  { url: 'https://www.tgcom24.mediaset.it/spettacolo/rss.xml',        source: 'TGcom24 TV',        category: 'gossip_spettacolo' },
+  { url: 'https://www.gossip.it/feed/',                               source: 'Gossip.it',         category: 'gossip_spettacolo' },
+  { url: 'https://www.adnkronos.com/RSS_Spettacolo.xml',              source: 'Adnkronos Spettacolo', category: 'gossip_spettacolo' },
+  // TvBlog sostituito con La Stampa (TvBlog dava 403)
+  { url: 'https://www.lastampa.it/rss/copertina.xml',                 source: 'La Stampa',   category: 'attualita' },
 ];
 
 // ─── Fonti RSS italiane ed europee ────────────────────────────────
@@ -72,14 +78,44 @@ const CURRENT_NEWS_FEEDS = [
 // RIMOSSI: ANSA cronaca e Corriere cronache — portano omicidi e crimini seri.
 // AGGIUNTO: ANSA "Strani ma veri" — sezione dedicata alle notizie bizzarre.
 const ITALIAN_RSS_FEEDS = [
-  { url: 'https://www.ansa.it/sito/notizie/mondo/strani_ma_veri/rss.xml',               source: 'ANSA Strani ma veri', category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.ansa.it/sito/notizie/cultura_e_spettacoli/curiosita/rss.xml',     source: 'ANSA Curiosità',      category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.fanpage.it/feed/',                                                 source: 'Fanpage.it',          category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.today.it/feed/',                                                   source: 'Today.it',            category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',                                source: 'TGcom24',             category: null,             isItalian: true },
-  { url: 'https://www.wired.it/feed/',                                                   source: 'Wired Italia',        category: 'tecnologia',     isItalian: true },
-  { url: 'https://www.leggo.it/feed/',                                                   source: 'Leggo.it',            category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.ilfattoquotidiano.it/category/societa/feed/',                      source: 'Il Fatto Quotidiano', category: 'storie_assurde', isItalian: true },
+  // ANSA Lifestyle (sostituisce ANSA Strani ma veri — 404)
+  { url: 'https://www.ansa.it/canale_lifestyle/notizie/lifestyle_rss.xml',               source: 'ANSA Lifestyle',      category: 'storie_assurde', isItalian: true },
+  // ANSA Cultura (sostituisce ANSA Curiosità — 404)
+  { url: 'https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml',                     source: 'ANSA Cultura',        category: 'storie_assurde', isItalian: true },
+  // Libero Quotidiano (sostituisce Fanpage.it — 403)
+  { url: 'https://www.liberoquotidiano.it/rss.xml',                                      source: 'Libero Quotidiano',   category: 'storie_assurde', isItalian: true },
+  // Il Tempo (sostituisce Today.it — 404)
+  { url: 'https://www.iltempo.it/rss.xml',                                               source: 'Il Tempo',            category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.tgcom24.mediaset.it/rss/home.xml',                                 source: 'TGcom24',             category: null,             isItalian: true },
+  // ANSA Tecnologia (sostituisce Wired Italia — 400)
+  { url: 'https://www.ansa.it/canale_tecnologia/notizie/tecnologia_rss.xml',             source: 'ANSA Tecnologia',     category: 'tecnologia',     isItalian: true },
+  // Il Messaggero (sostituisce Leggo.it — 404)
+  { url: 'https://www.ilmessaggero.it/rss/home.xml',                                     source: 'Il Messaggero',       category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.ilfattoquotidiano.it/category/societa/feed/',                       source: 'Il Fatto Quotidiano', category: 'storie_assurde', isItalian: true },
+  // Adnkronos Cultura — notizie di cultura, spettacolo, curiosità
+  { url: 'https://www.adnkronos.com/RSS_Cultura.xml',                                    source: 'Adnkronos Cultura',   category: 'storie_assurde', isItalian: true },
+];
+
+// ─── Fonti RSS sesso & relazioni ──────────────────────────────────
+// Feed internazionali/italiani specializzati in sesso, amore, relazioni.
+// Gli articoli vengono pre-filtrati per keyword prima di essere passati all'AI.
+const SEX_RELATIONS_FEEDS = [
+  { url: 'https://www.cosmopolitan.com/rss/all.xml',          source: 'Cosmopolitan',    isItalian: false },
+  { url: 'https://www.menshealth.com/rss/all.xml',            source: 'Men\'s Health',   isItalian: false },
+  { url: 'https://www.womenshealthmag.com/rss/all.xml',       source: 'Women\'s Health', isItalian: false },
+  { url: 'https://www.donnamoderna.com/feed',                 source: 'Donna Moderna',   isItalian: true  },
+  { url: 'https://www.iodonna.it/feed/',                      source: 'io Donna',        isItalian: true  },
+];
+
+// Keyword che segnalano un articolo di sesso/relazioni — usate per pre-filtrare
+// il pool ampio (Cosmo, MH, WH pubblicano anche fitness, beauty, ecc.)
+const SEX_KEYWORDS = [
+  'sex', 'sexual', 'sexuality', 'orgasm', 'libido', 'erotic', 'intimate', 'intimacy',
+  'relationship', 'dating', 'romance', 'romantic', 'affair', 'hookup', 'flirt',
+  'condom', 'contraception', 'pleasure', 'foreplay', 'kink', 'fetish',
+  'sesso', 'sessuale', 'sessualità', 'orgasmo', 'libido', 'erotico', 'intimità',
+  'relazione', 'appuntamento', 'romantico', 'relazioni', 'coppia', 'tradimento',
+  'fedeltà', 'infedeltà', 'desiderio', 'piacere',
 ];
 
 // ─── Fetch testo completo dell'articolo ───────────────────────────
@@ -378,6 +414,10 @@ Se il testo originale ha dettagli specifici (nomi, numeri, luoghi, citazioni), u
 - Max 70 caratteri, emoji iniziale obbligatoria
 - Cattura il fatto più assurdo/curioso con tono ironico
 - Usa numeri reali se presenti ("47 gatti", "3 anni di prigione", ecc.)
+- Tecniche che funzionano: gap di curiosità ("scopri perché…"), contrasto assurdo, superlativo reale
+- EVITA titoli generici o giornalistici — punta allo stupore immediato
+- ✗ MALE: "🐊 Coccodrillo trovato in appartamento a Miami"
+- ✓ BENE: "🐊 Viveva con un coccodrillo da 9 anni senza dirlo al padrone di casa"
 
 ═══ TESTO ═══
 Scrivi 3-4 paragrafi sostanziosi (non liste, non bullet). Ogni paragrafo almeno 3-4 frasi.
@@ -548,15 +588,31 @@ Rispondi SOLO con JSON: {"selected": [i1, i2, i3, i4, i5, i6], "reasoning": "...
     const article = selectedArticles[i];
     process.stdout.write(`   [${i + 1}/${selectedArticles.length}] ${(article.webTitle ?? '').substring(0, 55)}... `);
 
-    const rewritePrompt = `Sei un giornalista di OddFeed. Riscrivi questa notizia in italiano in modo chiaro e coinvolgente.
+    const rewritePrompt = `Sei il giornalista-star di OddFeed. Riscrivi questa notizia in italiano per un pubblico giovane e curioso — deve essere impossibile non leggerla.
 
 Titolo originale: ${article.webTitle}
 Sommario: ${article.fields?.trailText ?? ''}
 
-Scrivi:
-- Un titolo accattivante (max 70 caratteri, emoji iniziale appropriata)
-- Una descrizione di 2 frasi (max 160 caratteri)
-- 2 paragrafi sostanziosi che spiegano la notizia con contesto e dettagli
+═══ TITOLO (max 70 caratteri) ═══
+Emoji iniziale obbligatoria + titolo che cattura l'attenzione in 2 secondi.
+Scegli UNA di queste tecniche:
+  • Gap di curiosità: rivela solo metà ("Il motivo dietro X ti sorprenderà")
+  • Contrasto/ironia: accosta due elementi che non ti aspetti insieme
+  • Cifra concreta: usa il numero preciso se c'è ("in 48 ore", "per €3")
+  • Conseguenza shock: inizia dall'effetto, non dalla causa
+
+ESEMPI:
+  ✗ "📰 Il governo approva la nuova legge sul lavoro"
+  ✓ "📰 La legge che potrebbe cambiare come lavori già da lunedì"
+  ✗ "🌟 Il cantante X ha rilasciato una dichiarazione"
+  ✓ "🌟 X ha detto in diretta TV ciò che tutti pensavano ma nessuno osava dire"
+
+═══ DESCRIZIONE (max 160 caratteri) ═══
+2 frasi. Prima: il fatto core. Seconda: la svolta o il dettaglio che incuriosisce.
+
+═══ TESTO ═══
+2 paragrafi. Paragrafo 1: chi/cosa/dove/quando + il punto più interessante.
+Paragrafo 2: contesto, conseguenze, o reazione pubblica rilevante.
 
 Rispondi SOLO con JSON:
 {
@@ -567,7 +623,7 @@ Rispondi SOLO con JSON:
   "category": "attualita o gossip_spettacolo",
   "categoryLabelIt": "es. 📰 Attualità",
   "categoryLabelEn": "es. 📰 News",
-  "imageEmoji": "1-2 emoji che rappresentano visivamente il soggetto principale (es: 🏛️ per politica, 🔬 per scienza, 🌊 per ambiente, 🎭 per gossip/spettacolo)"
+  "imageEmoji": "1-2 emoji che rappresentano visivamente il soggetto (es: 🏛️ politica, 🔬 scienza, 🌊 ambiente, 🎭 gossip)"
 }`;
 
     try {
@@ -700,20 +756,37 @@ Rispondi SOLO con JSON: {"selected": [i1, i2], "reasoning": "..."}`;
       article._fullText = await fetchFullText(article.webUrl);
     }
 
-    const rewritePrompt = `Sei il redattore della sezione "Non dovresti leggerla" di OddFeed.
-Riscrivi questa notizia con tono intrigante e leggermente misterioso, come se stessi rivelando un segreto.
-Il lettore deve sentirsi come se leggesse qualcosa che "non dovrebbe sapere".
+    const rewritePrompt = `Sei il redattore capo della sezione "Non dovresti leggerla" di OddFeed.
+Questa è la sezione più cliccata dell'app — il titolo deve essere irresistibile.
+Il lettore deve sentirsi come se stesse per scoprire qualcosa che "non avrebbe dovuto sapere".
 
 ARTICOLO ORIGINALE:
 Titolo: ${article.webTitle}
 Sommario: ${article.fields?.trailText ?? ''}
 ${article._fullText ? `Testo: ${article._fullText.substring(0, 2000)}` : ''}
 
-REGOLE:
-- Titolo: inizia con "🚫" + max 65 caratteri, tono misterioso/intrigante
-- 3 paragrafi sostanziosi, tono narrativo
-- Rimani sui fatti reali — il mistero viene dal modo di raccontare
-- Categoria: sesso_relazioni, gossip, crimini_strani, o storie_assurde
+═══ TITOLO ═══
+Inizia SEMPRE con "🚫" + max 65 caratteri. Tono: rivelazione segreta, confessione, tabù.
+Il titolo deve creare una tensione insopportabile — il lettore DEVE aprirlo.
+Tecniche:
+  • Confessione: "🚫 Ha ammesso di farlo ogni giorno per 10 anni"
+  • Tabù rotto: "🚫 Il dettaglio che nessun manuale ti dirà mai"
+  • Rivelazione shock: "🚫 La verità dietro X che cambia tutto quello che pensavi"
+  • Contraddizione: "🚫 Ha fatto X — e tutti continuano a dargli ragione"
+
+EVITA titoli generici, descrittivi o che sembrino un comunicato stampa.
+✗ "🚫 Uomo scoperto a fare qualcosa di strano in un supermercato"
+✓ "🚫 È stato fermato 12 volte nello stesso supermercato — nessuno sa perché continuasse"
+
+═══ DESCRIZIONE (max 160 caratteri) ═══
+Prima frase: l'hook intrigante. Seconda frase: il dettaglio che lascia a bocca aperta.
+
+═══ TESTO ═══
+3 paragrafi narrativi. Apri con il dettaglio più scioccante, poi costruisci il contesto,
+poi chiudi con la conseguenza o la rivelazione finale. Tono: giornalismo tabloide di qualità.
+
+Rimani SEMPRE sui fatti reali — il mistero viene solo dal modo di raccontare.
+Categoria: sesso_relazioni, gossip, crimini_strani, o storie_assurde
 
 Rispondi SOLO con JSON:
 {
@@ -783,6 +856,165 @@ Rispondi SOLO con JSON:
 
   await batch.commit();
   console.log(`   ✅ ${selectedArticles.length} articoli "Non dovresti leggerla" salvati.`);
+}
+
+// ─── Sesso & Relazioni: 2 articoli al giorno (Premium) ────────────
+// Fetcha da Cosmopolitan, Men's Health, Women's Health, Donna Moderna, io Donna.
+// Pre-filtra per keyword, poi GPT seleziona i 2 più interessanti.
+// Salvati come articleType: 'current', category: 'sesso_relazioni', isPremium: true.
+async function fetchAndSaveSexNews(today, db) {
+  console.log('\n💋 Recupero notizie sesso & relazioni...');
+
+  const existing = await db.collection('articles')
+    .where('date', '==', today)
+    .where('category', '==', 'sesso_relazioni')
+    .get();
+
+  if (!existing.empty && !process.argv.includes('--force')) {
+    console.log('   ℹ️  Articoli sesso & relazioni già presenti, skip.');
+    return;
+  }
+  if (!existing.empty) {
+    const del = db.batch();
+    existing.docs.forEach(d => del.delete(d.ref));
+    await del.commit();
+  }
+
+  // Fetch dal pool di feed
+  const raw = await fetchFromFeeds(SEX_RELATIONS_FEEDS, 15);
+
+  // Pre-filtro: tieni solo articoli che contengono almeno una keyword sesso/relazioni
+  const pool = raw.filter(a => {
+    const text = [a.webTitle ?? '', a.fields?.trailText ?? ''].join(' ').toLowerCase();
+    return SEX_KEYWORDS.some(kw => text.includes(kw));
+  });
+
+  console.log(`   → ${raw.length} articoli totali → ${pool.length} dopo filtro per keyword`);
+
+  if (pool.length === 0) {
+    console.log('   ⚠️  Nessun articolo sesso & relazioni trovato.');
+    return;
+  }
+
+  // Selezione AI: i 2 articoli più curiosi/interessanti/provocatori
+  const summaries = pool.map((a, i) =>
+    `[${i}] ${a.webTitle ?? ''} (${a._source ?? ''}) | ${(a.fields?.trailText ?? '').substring(0, 100)}`
+  ).join('\n');
+
+  const selPrompt = `Sei il curatore della sezione "Sesso & Relazioni" di OddFeed, app di notizie per un pubblico italiano adulto.
+Seleziona i 2 articoli più interessanti, sorprendenti o provocatori su sesso, amore e relazioni da questa lista.
+Privilegia studi scientifici insoliti, tendenze culturali, curiosità o rivelazioni inaspettate. Evita contenuto banale o di routine.
+
+Lista:
+${summaries}
+
+Rispondi SOLO con JSON: {"selected": [i1, i2], "reasoning": "..."}`;
+
+  let selectedArticles = [];
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: selPrompt }],
+      temperature: 0.3,
+      max_tokens: 150,
+    });
+    const raw2 = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(raw2);
+    console.log(`   Selezione AI: ${result.reasoning}`);
+    selectedArticles = (result.selected ?? []).slice(0, 2).map(i => pool[i]).filter(Boolean);
+  } catch (e) {
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 2`);
+    selectedArticles = pool.slice(0, 2);
+  }
+
+  const batch = db.batch();
+  for (let i = 0; i < selectedArticles.length; i++) {
+    const article = selectedArticles[i];
+    process.stdout.write(`   [${i + 1}/${selectedArticles.length}] ${(article.webTitle ?? '').substring(0, 55)}... `);
+
+    const rewritePrompt = `Sei il giornalista della sezione "Sesso & Relazioni" di OddFeed — la sezione più letta dell'app.
+Riscrivi questa notizia per un pubblico italiano adulto: diretto, curioso, senza tabù ma mai volgare.
+
+Titolo originale: ${article.webTitle}
+Sommario: ${article.fields?.trailText ?? ''}
+Fonte: ${article._source ?? ''}
+
+═══ TITOLO (max 70 caratteri) ═══
+Emoji iniziale: 💋 ❤️ 🔥 😏 🫦 o altra coerente con il contenuto.
+Il titolo deve far pensare "devo assolutamente leggere questo". Tecniche:
+  • Studio scientifico sorprendente: cita il dato concreto
+  • Contrasto inaspettato: "Chi fa X fa anche Y — lo dice la scienza"
+  • Rivelazione culturale: "Perché X nazione è la più soddisfatta al mondo"
+  • Curiosità comportamentale: "Il dettaglio che dice tutto sulla coppia"
+
+✗ "❤️ Nuovi consigli per migliorare la vita sessuale"
+✓ "🔥 Lo studio che spiega perché le coppie soddisfatte litigano di più"
+
+═══ DESCRIZIONE (max 160 caratteri) ═══
+2 frasi. Tono diretto e incuriosente — invoglia ad aprire l'articolo.
+
+═══ TESTO ═══
+2 paragrafi sostanziosi. Paragrafo 1: il dato/fatto più interessante + contesto.
+Paragrafo 2: implicazioni, variabili, reazione degli esperti o della comunità.
+
+Rispondi SOLO con JSON:
+{
+  "titleIt": "...", "titleEn": "...",
+  "descriptionIt": "...", "descriptionEn": "...",
+  "fullTextIt": "paragrafo 1\\n\\nparagrafo 2",
+  "fullTextEn": "paragraph 1\\n\\nparagraph 2",
+  "imageEmoji": "1-2 emoji (es: 💋❤️ oppure 🔥😏)"
+}`;
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: rewritePrompt }],
+        temperature: 0.6,
+        max_tokens: 800,
+      });
+      const raw3 = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const ai = JSON.parse(raw3);
+
+      const docRef = db.collection('articles').doc();
+      batch.set(docRef, {
+        articleType: 'current',
+        titleIt: ai.titleIt,
+        titleEn: ai.titleEn,
+        descriptionIt: ai.descriptionIt,
+        descriptionEn: ai.descriptionEn,
+        fullTextIt: ai.fullTextIt,
+        fullTextEn: ai.fullTextEn,
+        category: 'sesso_relazioni',
+        categoryLabelIt: '💋 Sesso & Relazioni',
+        categoryLabelEn: '💋 Sex & Relationships',
+        imageEmoji: ai.imageEmoji ?? '💋',
+        imageColor: getCategoryColor('sesso_relazioni'),
+        imageUrl: article._imageUrl ?? null,
+        country: article._isItalian ? '🇮🇹 Italia' : '🌍 Mondo',
+        countryCode: article._isItalian ? 'IT' : 'WORLD',
+        source: article._source ?? 'Cosmopolitan',
+        sourceUrl: article.webUrl ?? '',
+        date: today,
+        order: 100 + i, // ordine alto → appaiono dopo le notizie standard
+        isPremium: true,
+        reactions: [
+          { emoji: '🤯', count: 0, label: 'Sconvolto' },
+          { emoji: '😮', count: 0, label: 'Sorpreso' },
+          { emoji: '😂', count: 0, label: 'Divertente' },
+          { emoji: '🤔', count: 0, label: 'Interessante' },
+          { emoji: '❤️', count: 0, label: 'Adoro' },
+        ],
+        createdAt: new Date(),
+      });
+      process.stdout.write('✓\n');
+    } catch (e) {
+      process.stdout.write(`✗ (${e.message})\n`);
+    }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  await batch.commit();
+  console.log(`   ✅ ${selectedArticles.length} articoli sesso & relazioni salvati.`);
 }
 
 // ─── Funzione principale ───────────────────────────────────────────
@@ -983,6 +1215,7 @@ async function main() {
 
   // Genera le notizie di attualità ("In primo piano")
   await fetchAndSaveCurrentNews(today, db);
+  await fetchAndSaveSexNews(today, db);
 
   // Genera gli articoli "Non dovresti leggerla" dal pool già scaricato
   await fetchAndSaveForbiddenNews(today, db, selected);
@@ -1030,14 +1263,29 @@ const SLOT_ARTICLE_INDEX = {
 };
 
 async function sendPersonalizedNotifications(articles, slot = 'morning') {
+  // ── Query: utenti con notifiche abilitate ──────────────────────────────────
+  // notificationsEnabled viene scritto su Firestore da registerForPushNotifications
+  // nell'app (richiede build nativo + dispositivo fisico).
+  // Se il campo non esiste ancora, la query restituisce 0 documenti — è normale
+  // finché nessun utente ha installato l'app da un build EAS/produzione.
   const usersSnap = await db.collection('users')
     .where('notificationsEnabled', '==', true)
     .get();
 
   if (usersSnap.empty) {
-    console.log('   Nessun utente con notifiche attive.');
+    // Conta quanti utenti esistono in totale per distinguere "nessun utente" da "utenti senza token"
+    const totalSnap = await db.collection('users').count().get();
+    const total = totalSnap.data().count;
+    if (total === 0) {
+      console.log('   ℹ️  Nessun utente registrato — notifiche non inviate.');
+    } else {
+      console.log(`   ℹ️  ${total} utenti trovati, ma nessuno ha ancora abilitato le notifiche push.`);
+      console.log('   ℹ️  Le notifiche si attivano dopo la prima installazione da build EAS/produzione.');
+    }
     return;
   }
+
+  console.log(`   👤 ${usersSnap.docs.length} utenti con notifiche attive.`);
 
   const today = new Date().toISOString().split('T')[0];
   const messages = [];
@@ -1045,24 +1293,26 @@ async function sendPersonalizedNotifications(articles, slot = 'morning') {
   const slotField  = SLOT_FIELD[slot]  ?? SLOT_FIELD.morning;
   const articleIdx = SLOT_ARTICLE_INDEX[slot] ?? 0;
 
+  let skippedNoToken = 0, skippedDisabled = 0, skippedWrongSlot = 0, skippedAlready = 0;
+
   for (const userDoc of usersSnap.docs) {
     const user = userDoc.data();
-    if (!user.expoPushToken) continue;
+    if (!user.expoPushToken) { skippedNoToken++; continue; }
 
     const isPremium = user.isPremium ?? false;
     const prefs = user.notificationPrefs ?? {};
-    if (prefs.enabled === false) continue;
+    if (prefs.enabled === false) { skippedDisabled++; continue; }
 
     const interests = user.interests ?? [];
     const userSlot  = user.notificationSlot ?? 'Colazione'; // stringa salvata
 
     if (isPremium) {
       // Premium: notifica ad ogni fascia, purché non già ricevuta oggi per questo slot
-      if (user[slotField] === today) continue;
+      if (user[slotField] === today) { skippedAlready++; continue; }
     } else {
       // Free: notifica solo nella fascia scelta, una volta al giorno
-      if (!slotLabels.includes(userSlot)) continue;
-      if (user.lastNotifDate === today) continue;
+      if (!slotLabels.includes(userSlot)) { skippedWrongSlot++; continue; }
+      if (user.lastNotifDate === today) { skippedAlready++; continue; }
     }
 
     // Seleziona l'articolo: premium riceve quello al suo indice-slot, free il migliore
@@ -1096,7 +1346,12 @@ async function sendPersonalizedNotifications(articles, slot = 'morning') {
   }
 
   if (messages.length === 0) {
-    console.log('   Nessuna notifica da inviare oggi.');
+    const reasons = [];
+    if (skippedNoToken)    reasons.push(`${skippedNoToken} senza token`);
+    if (skippedDisabled)   reasons.push(`${skippedDisabled} con notifiche disabilitate`);
+    if (skippedWrongSlot)  reasons.push(`${skippedWrongSlot} fascia diversa (slot: ${slot})`);
+    if (skippedAlready)    reasons.push(`${skippedAlready} già notificati oggi`);
+    console.log(`   ℹ️  Nessuna notifica da inviare (${reasons.join(', ') || 'nessun articolo disponibile'}).`);
     return;
   }
 

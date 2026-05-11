@@ -192,10 +192,17 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero image con category pill */}
         <View style={styles.heroImgWrap}>
-          <Image
-            source={{ uri: article.imageUrl || `https://picsum.photos/seed/${article.id}/800/380` }}
-            style={styles.heroImg}
-          />
+          {article.imageUrl ? (
+            <Image source={{ uri: article.imageUrl }} style={styles.heroImg} />
+          ) : (
+            <View style={[styles.heroImg, {
+              backgroundColor: article.imageColor?.[0] ?? '#1e3a5f',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }]}>
+              <Text style={{ fontSize: 64 }}>{article.imageEmoji ?? '🌍'}</Text>
+            </View>
+          )}
           <View style={styles.heroImgPill}>
             <Text style={styles.heroImgPillText}>{cleanCatLabel(article.categoryLabel ?? article.category)}</Text>
           </View>
