@@ -103,7 +103,8 @@ const SEX_RELATIONS_FEEDS = [
   { url: 'https://www.cosmopolitan.com/rss/all.xml',          source: 'Cosmopolitan',    isItalian: false },
   { url: 'https://www.menshealth.com/rss/all.xml',            source: 'Men\'s Health',   isItalian: false },
   { url: 'https://www.womenshealthmag.com/rss/all.xml',       source: 'Women\'s Health', isItalian: false },
-  { url: 'https://www.donnamoderna.com/feed',                 source: 'Donna Moderna',   isItalian: true  },
+  { url: 'https://www.vanityfair.it/feed',                    source: 'Vanity Fair IT',  isItalian: true  },
+  { url: 'https://style.corriere.it/feed/',                   source: 'Style Corriere',  isItalian: true  },
   { url: 'https://www.iodonna.it/feed/',                      source: 'io Donna',        isItalian: true  },
 ];
 
