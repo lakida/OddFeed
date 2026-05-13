@@ -132,7 +132,7 @@ const it = {
     deleteFinalTitle: 'Ultima conferma',
     deleteFinalBody: 'Questa azione è irreversibile. Confermi di voler cancellare tutto?',
     deleteFinalConfirm: 'Elimina definitivamente',
-    version: 'OddFeed v1.0 · Aprile 2026',
+    version: 'OddFeed v1.1 · Maggio 2026',
     slots: ['Colazione', 'Pranzo', 'Cena'],
   },
 

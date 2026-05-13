@@ -126,7 +126,7 @@ const en: Translations = {
     deleteFinalTitle: 'Final confirmation',
     deleteFinalBody: 'This action is irreversible. Confirm you want to delete everything?',
     deleteFinalConfirm: 'Delete permanently',
-    version: 'OddFeed v1.0 · April 2026',
+    version: 'OddFeed v1.1 · May 2026',
     slots: ['Breakfast', 'Lunch', 'Dinner'],
   },
 
