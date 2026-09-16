@@ -15,7 +15,7 @@ import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { fetchArchive } from '../services/newsService';
-import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
+import HeroHeader from '../components/HeroHeader';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
@@ -51,23 +51,17 @@ function formatArchiveDate(publishedAt: string): string {
 
 interface ArchiveScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
-  isPremium: boolean;
   interests?: string[];
-  userStats?: { level: number; points: number; streak: number; readArticleIds: string[] };
   savedIds?: Set<string>;
   savedArticles?: NewsItem[];
   onToggleSave?: (id: string, article: NewsItem) => void;
 }
 
-export default function ArchiveScreen({ onOpenArticle, isPremium, interests = [], userStats, savedIds = new Set(), savedArticles = [], onToggleSave }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds = new Set(), savedArticles = [], onToggleSave }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
 
-  // Limite notizie basato su livello + premium
-  const newsLimit = isPremium
-    ? PREMIUM_NEWS_LIMIT
-    : (DAILY_NEWS_LIMITS[userStats?.level ?? 0] ?? 1);
   const [activeFilter, setActiveFilter] = useState('tutto');
   const [searchQuery, setSearchQuery] = useState('');
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
@@ -79,7 +73,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setHasError(false);
-    fetchArchive(language, isPremium, interests, newsLimit)
+    fetchArchive(language, interests)
       .then(news => {
         setArchiveNews(news);
         if (isRefresh) {
@@ -94,7 +88,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         setLoading(false);
         setRefreshing(false);
       });
-  }, [language, isPremium, interests, newsLimit]);
+  }, [language, interests]);
 
   useEffect(() => { loadArchive(); }, [loadArchive]);
 
@@ -157,16 +151,12 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
-      <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
-        <View style={styles.heroTop}>
-          <View>
-            <Text style={styles.heroKicker}>Storico completo</Text>
-            <Text style={styles.heroTitle}>{t.archive.title}</Text>
-            <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>Tutte le notizie assurde</Text>
-          </View>
-          <Text style={styles.heroEmoji}>🗄️</Text>
-        </View>
-      </View>
+      <HeroHeader
+        kicker="STORICO COMPLETO"
+        titleDark={t.archive.title}
+        subtitle="Tutte le notizie assurde"
+        titleSize={30}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -297,7 +287,7 @@ export default function ArchiveScreen({ onOpenArticle, isPremium, interests = []
         })}
 
         {/* Banner ad — fondo archivio (solo utenti free) */}
-        {!loading && <BannerAdSlot isPremium={isPremium} />}
+        {!loading && <BannerAdSlot />}
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -309,41 +299,6 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: Colors.bg,
-  },
-  heroArea: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  heroKicker: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  heroTitle: {
-    fontSize: 33,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -0.5,
-    lineHeight: 40,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    marginTop: 3,
-  },
-  heroEmoji: {
-    fontSize: 72,
-    lineHeight: 80,
-    marginTop: 4,
   },
   premiumBanner: {
     marginHorizontal: Spacing.lg,

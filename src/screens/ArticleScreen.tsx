@@ -47,27 +47,18 @@ import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
-import { UserStats } from '../../App';
 import { NewsItem } from '../types';
 
 interface ArticleScreenProps {
   newsId: string;
   article?: NewsItem | null;
   onBack: () => void;
-  userId: string;
-  userStats: UserStats;
-  isPremium: boolean;
-  /** Sblocco gratuito one-time per regalo onboarding */
-  oneTimeFreeAccess?: boolean;
-  onUseFreeAccess?: () => void;
-  onPointsChange: (action: 'read' | 'react' | 'share', articleId?: string) => void;
-  onUpgradePremium?: () => void;
   savedIds?: Set<string>;
   onToggleSave?: (id: string, article: NewsItem) => void;
 }
 
 
-export default function ArticleScreen({ newsId, article: articleProp, onBack, userId, onPointsChange, isPremium, oneTimeFreeAccess, onUseFreeAccess, onUpgradePremium, savedIds, onToggleSave }: ArticleScreenProps) {
+export default function ArticleScreen({ newsId, article: articleProp, onBack, savedIds, onToggleSave }: ArticleScreenProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -87,10 +78,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
   // il deep link funziona subito da qualsiasi app installata.
   const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
   const articleDeepLink = `oddfeed://articolo/${article.id}`;
-
-  // Paywall: articolo premium e utente non abbonato
-  // Bypass: oneTimeFreeAccess = regalo onboarding (una volta sola)
-  const showPaywall = (article.isPremium ?? false) && !isPremium && !oneTimeFreeAccess;
 
   // Contatore social proof: viewSeed + incremento basato sull'ora del giorno
   const viewCount = useMemo(() => {
@@ -144,12 +131,8 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
     })
   ).current;
 
-  useEffect(() => {
-    if (userId) onPointsChange('read', article.id);
-    // Consuma il free unlock one-time se attivo
-    if (oneTimeFreeAccess && onUseFreeAccess) onUseFreeAccess();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [article.id, userId]);
+  useEffect(() => {}, [article.id]);
 
   const handleShare = async () => {
     try {
@@ -163,7 +146,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
           ? { message: `${article.title}${watermark}`, url: articleUrl }
           : { message: `${article.title}\n\n${articleUrl}\n\n(Apri in OddFeed: ${articleDeepLink})${watermark}` }
       );
-      if (userId) onPointsChange('share');
     } catch (e) {}
   };
 
@@ -228,56 +210,20 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
             </View>
           </View>
 
-          {/* Testo — completo se premium/free con accesso, teaser + paywall altrimenti */}
-          {!showPaywall ? (
-            paragraphs.map((para, i) => (
-              <Text key={i} style={[styles.articleText, { color: C.text }]}>{para}</Text>
-            ))
-          ) : (
-            <>
-              {/* Teaser: prime 2 frasi visibili */}
-              <Text style={styles.articleText}>{teaserText}</Text>
+          {/* Testo completo */}
+          {paragraphs.map((para, i) => (
+            <Text key={i} style={[styles.articleText, { color: C.text }]}>{para}</Text>
+          ))}
 
-              {/* Paywall block */}
-              <View style={styles.paywallBlock}>
-                {viewCount !== null && (
-                  <View style={styles.paywallCounter}>
-                    <Text style={styles.paywallCounterText}>
-                      👁 Oggi <Text style={styles.paywallCounterNum}>{viewCount} persone</Text> hanno letto questa storia
-                    </Text>
-                  </View>
-                )}
-                <Text style={styles.paywallIcon}>🔒</Text>
-                <Text style={styles.paywallTitle}>
-                  {article.isForbidden
-                    ? 'Non dovresti leggerla.'
-                    : article.isTopOdd
-                    ? 'È bloccata. Ed è probabilmente quella giusta.'
-                    : 'Questa non è per tutti.'}
-                </Text>
-                <Text style={styles.paywallSub}>7 giorni gratis. Nessuna sorpresa.</Text>
-                <TouchableOpacity
-                  style={styles.paywallBtn}
-                  onPress={onUpgradePremium}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.paywallBtnText}>✦ Accesso completo</Text>
-                </TouchableOpacity>
-                <Text style={styles.paywallPriceHint}>Meno di un caffè al mese. Le storie più assurde del mondo, ogni giorno.</Text>
-              </View>
-            </>
-          )}
-
-          {/* Banner ad — fondo articolo, sopra la shareBar (solo utenti free) */}
-          {!showPaywall && <BannerAdSlot isPremium={isPremium} style={{ marginTop: 4, marginBottom: 4 }} />}
+          {/* Banner ad — fondo articolo */}
+          <BannerAdSlot style={{ marginTop: 4, marginBottom: 4 }} />
 
           <View style={{ height: 12 }} />
         </View>
       </ScrollView>
 
-      {/* Condividi — fisso in fondo (solo se non c'è paywall) */}
-      {!showPaywall && (
-        <View style={[styles.shareBar, { borderTopColor: C.border, backgroundColor: C.bg }]}>
+      {/* Condividi — fisso in fondo */}
+      <View style={[styles.shareBar, { borderTopColor: C.border, backgroundColor: C.bg }]}>
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
             <Ionicons name="share-outline" size={20} color="#fff" />
             <Text style={styles.shareBtnText}>{t.article.share}</Text>
@@ -311,7 +257,6 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, us
             </TouchableOpacity>
           </View>
         </View>
-      )}
     </SafeAreaView>
     </Animated.View>
   );

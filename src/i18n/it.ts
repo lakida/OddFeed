@@ -21,13 +21,14 @@ const it = {
     points: 'Punti',
     premium: 'Premium',
     profile: 'Profilo',
+    settings: 'Impostazioni',
   },
 
   // Home
   home: {
     greeting: (name: string) => `Ciao, ${name} 👋`,
     todayNews: 'Ecco la notizia di oggi',
-    todayNewsPlural: 'Ecco le tue notizie di oggi',
+    todayNewsPlural: 'Notizie curiose. Ogni giorno.',
     unread: 'Da leggere',
     read: 'Letto',
     premiumBanner: '⭐ Con Premium ricevi fino a 10 notizie al giorno',

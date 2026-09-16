@@ -19,21 +19,18 @@ try {
 }
 
 interface BannerAdSlotProps {
-  isPremium?: boolean;
   style?: ViewStyle;
 }
 
 /**
  * Banner AdMob (320×50).
- * - Nessuna pubblicità per utenti Premium
  * - Si collassa a null se il modulo nativo non è disponibile o l'annuncio non carica
  * - Nessuno spazio vuoto in caso di errore
  */
-export default function BannerAdSlot({ isPremium = false, style }: BannerAdSlotProps) {
+export default function BannerAdSlot({ style }: BannerAdSlotProps) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  if (isPremium) return null;
   if (!BannerAd || !BannerAdSize) return null;
   if (failed) return null;
 

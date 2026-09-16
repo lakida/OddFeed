@@ -10,23 +10,68 @@ import {
   Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
-import { USER_LEVELS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews, fetchTopOddNews, fetchForbiddenNews } from '../services/newsService';
-import { DAILY_NEWS_LIMITS, PREMIUM_NEWS_LIMIT } from '../../App';
+import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews, fetchTopOddNews } from '../services/newsService';
 import { NewsItem } from '../types';
-import { UserStats } from '../../App';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
 import NativeAdCard from '../components/ads/NativeAdCard';
 import { NATIVE_AD_EVERY_N } from '../ads/adConfig';
+import HeroHeader from '../components/HeroHeader';
 
 const UNREAD_COLOR = Colors.text;
 const READ_COLOR   = Colors.border;
+const VIOLET       = Colors.violet;
+
+// ─── Gradienti per categoria (fallback immagine) ──────────────────────────────
+const CATEGORY_GRADIENTS: Record<string, readonly [string, string]> = {
+  attualita:         ['#1E3A8A', '#3730A3'],
+  gossip:            ['#9D174D', '#BE185D'],
+  gossip_spettacolo: ['#6B21A8', '#9333EA'],
+  crimini_strani:    ['#7F1D1D', '#B91C1C'],
+  storie_assurde:    ['#4C1D95', '#7C3AED'],
+  psicologia_strana: ['#134E4A', '#0F766E'],
+  soldi_folli:       ['#713F12', '#CA8A04'],
+  coincidenze:       ['#312E81', '#4F46E5'],
+  tecnologia:        ['#0C4A6E', '#0284C7'],
+  record:            ['#78350F', '#D97706'],
+  animali:           ['#14532D', '#16A34A'],
+  scienza:           ['#1E3A5F', '#2563EB'],
+  leggi:             ['#1E293B', '#475569'],
+  cultura:           ['#431407', '#C2410C'],
+  gastronomia:       ['#7C2D12', '#EA580C'],
+  luoghi:            ['#042F2E', '#0F766E'],
+  sesso_relazioni:   ['#831843', '#DB2777'],
+};
+
+function getCategoryGradient(category: string): readonly [string, string] {
+  return CATEGORY_GRADIENTS[category] ?? ['#1E1B4B', '#4338CA'];
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  attualita:         'newspaper-outline',
+  gossip:            'star-outline',
+  gossip_spettacolo: 'film-outline',
+  crimini_strani:    'alert-circle-outline',
+  storie_assurde:    'happy-outline',
+  psicologia_strana: 'bulb-outline',
+  soldi_folli:       'cash-outline',
+  coincidenze:       'infinite-outline',
+  tecnologia:        'laptop-outline',
+  record:            'trophy-outline',
+  animali:           'paw-outline',
+  scienza:           'flask-outline',
+  leggi:             'document-text-outline',
+  cultura:           'globe-outline',
+  gastronomia:       'restaurant-outline',
+  luoghi:            'location-outline',
+  sesso_relazioni:   'heart-outline',
+};
 
 // Rimuove emoji e simboli dai titoli (surrogate pairs + simboli BMP comuni)
 const cleanTitle = (text: string): string => {
@@ -78,7 +123,7 @@ const badgeStyles = StyleSheet.create({
     backgroundColor: READ_COLOR,
   },
   text: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     color: '#fff',
     textTransform: 'uppercase',
@@ -92,18 +137,11 @@ const badgeStyles = StyleSheet.create({
 interface HomeScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
   onGoToArchive: () => void;
-  onGoToPremium?: () => void;
-  onGoToPoints?: () => void;
   readIds: Set<string>;
-  isPremium: boolean;
-  userName: string;
-  userStats: UserStats;
   interests?: string[];
-  /** Sblocco one-time regalo onboarding: mostra banner nella sezione forbidden */
-  freeUnlockActive?: boolean;
 }
 
-export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium, onGoToPoints, readIds, isPremium, userName, userStats, interests = [], freeUnlockActive = false }: HomeScreenProps) {
+export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, interests = [] }: HomeScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -111,39 +149,27 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [currentNews, setCurrentNews] = useState<NewsItem[]>([]);
   const [topOddNews, setTopOddNews] = useState<NewsItem[]>([]);
-  const [forbiddenNews, setForbiddenNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasError, setHasError] = useState(false);
-
-  // Limite notizie basato su livello + premium
-  const newsLimit = isPremium
-    ? PREMIUM_NEWS_LIMIT
-    : (DAILY_NEWS_LIMITS[userStats?.level ?? 0] ?? 1);
 
   const loadNews = useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setHasError(false);
     Promise.all([
-      fetchTodayNews(language, isPremium, interests, Math.max(2, newsLimit)).catch(() => []),
-      fetchRecentPastNews(language, isPremium, newsLimit, interests, 2, 7).catch(() => []),
+      fetchTodayNews(language, interests, 10).catch(() => []),
+      fetchRecentPastNews(language, interests, 2, 7).catch(() => []),
       fetchCurrentNews(language).catch(() => []),
       fetchTopOddNews(language).catch(() => []),
-      fetchForbiddenNews(language).catch(() => []),
-    ]).then(([todayArr, pastArr, currentArr, topOddArr, forbiddenArr]) => {
-      // Deduplicazione: rimuovi da today/past gli articoli già presenti in topOdd
+    ]).then(([todayArr, pastArr, currentArr, topOddArr]) => {
       const topOddIds = new Set(topOddArr.map((n) => n.id));
       const today = todayArr.filter((n) => !topOddIds.has(n.id));
-      const remaining = Math.max(0, newsLimit - today.length);
-      const past = pastArr.filter((n) => !topOddIds.has(n.id)).slice(0, remaining);
       setTodayNews(today);
       setPastNews(pastArr.filter((n) => !topOddIds.has(n.id)));
       setCurrentNews(currentArr);
       setTopOddNews(topOddArr);
-      setForbiddenNews(forbiddenArr);
-      // Se nessuna notizia ricevuta, segnala errore
-      if (today.length === 0 && past.length === 0 && currentArr.length === 0) {
+      if (today.length === 0 && pastArr.length === 0 && currentArr.length === 0) {
         setHasError(true);
       }
       if (isRefresh) {
@@ -155,17 +181,10 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
       setLoading(false);
       setRefreshing(false);
     });
-  }, [language, isPremium, newsLimit]);
+  }, [language, interests]);
 
   useEffect(() => { loadNews(); }, [loadNews]);
 
-
-  // Livello e progresso reali
-  const currentLevel = USER_LEVELS[userStats.level] ?? USER_LEVELS[0];
-  const nextLevel = USER_LEVELS[userStats.level + 1];
-  const progress = nextLevel
-    ? (userStats.points - currentLevel.minPoints) / (nextLevel.minPoints - currentLevel.minPoints)
-    : 1;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
@@ -179,28 +198,17 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           />
         }
       >
-        {/* Header violet */}
-        <View style={[styles.heroArea, { backgroundColor: C.hero }]}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.heroKicker}>BENVENUTO · OGGI</Text>
-              <Text style={styles.heroTitle}>OddFeed</Text>
-              <Text style={[styles.heroSubtitle, { color: C.heroSubtext }]}>
-                {isPremium ? t.home.todayNewsPlural : t.home.todayNews}
-              </Text>
-            </View>
-            <Text style={styles.heroEmoji}>🌍</Text>
-          </View>
-        </View>
+        <HeroHeader
+          titleDark="Odd"
+          titleViolet="Feed"
+          subtitle={t.home.todayNewsPlural}
+        />
 
         {/* ── Sezione Attualità ── */}
         {!loading && currentNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
             <View style={currentStyles.secHdr}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                <Ionicons name="newspaper-outline" size={22} color={Colors.violet} />
-                <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ATTUALITÀ</Text>
-              </View>
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ATTUALITÀ</Text>
               <TouchableOpacity onPress={onGoToArchive}>
                 <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
               </TouchableOpacity>
@@ -217,26 +225,19 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
-                  {/* Immagine con pill categoria */}
-                  <View style={currentStyles.cardImgWrap}>
-                    {item.imageUrl ? (
-                      <Image source={{ uri: item.imageUrl }} style={currentStyles.cardImg} />
-                    ) : (
-                      <View style={[currentStyles.cardImg, { backgroundColor: item.imageColor?.[0] ?? '#1e3a5f', alignItems: 'center', justifyContent: 'center' }]}>
-                        <Text style={{ fontSize: 40 }}>{item.imageEmoji ?? '📰'}</Text>
-                      </View>
-                    )}
-                    <View style={currentStyles.cardPill}>
-                      <Text style={currentStyles.cardPillText}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+
+                  {/* Layout tipografico — sempre, indipendentemente dall'immagine */}
+                  <View style={currentStyles.cardBodyTypo}>
+                    <View style={[currentStyles.typoAccent, { backgroundColor: getCategoryGradient(item.category)[0] }]} />
+                    <View style={currentStyles.typoInner}>
+                      <Text style={currentStyles.typoPill}>{(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())(cleanCatLabel(item.categoryLabel ?? item.category))}</Text>
+                      <Text style={[currentStyles.typoTitle, { color: C.text }]} numberOfLines={3}>
+                        {cleanTitle(item.title)}
+                      </Text>
+                      <Text style={[currentStyles.cardSource, { color: C.textTertiary, marginTop: 3 }]}>
+                        {item.source} · {formatDate(item.publishedAt)}
+                      </Text>
                     </View>
-                  </View>
-                  <View style={currentStyles.cardBody}>
-                    <Text style={[currentStyles.cardTitle, { color: C.text }]} numberOfLines={2}>
-                      {cleanTitle(item.title)}
-                    </Text>
-                    <Text style={[currentStyles.cardSource, { color: C.textTertiary }]}>
-                      {item.source} · {formatDate(item.publishedAt)}
-                    </Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -267,10 +268,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
         {!loading && (todayNews.length > 0 || pastNews.length > 0) && (
           <View style={currentStyles.section}>
             <View style={currentStyles.secHdr}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                <Ionicons name="time-outline" size={22} color={Colors.violet} />
-                <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE BIZZARRE</Text>
-              </View>
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ULTIME NOTIZIE BIZZARRE</Text>
               <TouchableOpacity onPress={onGoToArchive}>
                 <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
               </TouchableOpacity>
@@ -284,7 +282,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
           return allNews.map((item, idx) => {
             const isLast = idx === allNews.length - 1;
             // Inserisce un'ad card dopo ogni NATIVE_AD_EVERY_N° articolo
-            const showAdAfter = !isPremium && (idx + 1) % NATIVE_AD_EVERY_N === 0 && !isLast;
+            const showAdAfter = (idx + 1) % NATIVE_AD_EVERY_N === 0 && !isLast;
             return (
               <React.Fragment key={item.id}>
                 <TouchableOpacity
@@ -295,137 +293,48 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, onGoToPremium
                   {item.imageUrl ? (
                     <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
                   ) : (
-                    <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
-                      <Text style={styles.unThumbEmoji}>{item.imageEmoji ?? '🌍'}</Text>
-                    </View>
+                    <LinearGradient
+                      colors={getCategoryGradient(item.category)}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[styles.unThumb, { alignItems: 'center', justifyContent: 'center' }]}
+                    >
+                      <Ionicons
+                        name={CATEGORY_ICONS[item.category] ?? 'newspaper-outline'}
+                        size={34}
+                        color="rgba(255,255,255,0.30)"
+                      />
+                    </LinearGradient>
                   )}
                   <View style={styles.unBody}>
-                    <Text style={[styles.itemTitle, { color: C.text, marginBottom: 3 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                    <Text style={[styles.itemMeta, { color: C.textTertiary, marginBottom: 2 }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
-                    <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+                    <Text style={[styles.unCat, { color: Colors.violet, marginBottom: 3 }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+                    <Text style={[styles.itemTitle, { color: C.text, marginBottom: 5 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                    <Text style={[styles.itemMeta, { color: C.textTertiary }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
                   </View>
-                  <Ionicons name="bookmark-outline" size={18} color={C.textTertiary} />
+                  <Ionicons name="bookmark-outline" size={22} color={C.textTertiary} />
                 </TouchableOpacity>
                 {showAdAfter && (
-                  <NativeAdCard isPremium={isPremium} />
+                  <NativeAdCard />
                 )}
               </React.Fragment>
             );
           });
         })()}
 
-        {/* ── NON DOVRESTI LEGGERE ── */}
-        {!loading && (forbiddenNews.length > 0 || !isPremium) && (
-          <View style={[ndlStyles.container, { marginTop: 8 }]}>
-            <View style={ndlStyles.header}>
-              <View style={ndlStyles.lockBox}>
-                <Ionicons name="lock-closed-outline" size={18} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={ndlStyles.headerTitle}>NON DOVRESTI LEGGERE ✨</Text>
-                <Text style={ndlStyles.headerSub}>Alcune storie sono troppo assurde per essere vere. O forse no.</Text>
-              </View>
-            </View>
-
-            {/* PREMIUM: articoli reali leggibili */}
-            {isPremium && forbiddenNews.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={ndlStyles.row}
-                onPress={() => onOpenArticle(item.id, item)}
-                activeOpacity={0.75}
-              >
-                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
-                  <Text style={{ fontSize: 16 }}>{item.imageEmoji}</Text>
-                </View>
-                <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                  {!!item.description && (
-                    <Text style={ndlStyles.rowBlur} numberOfLines={1}>{item.description}</Text>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
-              </TouchableOpacity>
-            ))}
-
-            {/* FREE + regalo sbloccato */}
-            {!isPremium && freeUnlockActive && forbiddenNews.length > 0 && (
-              <TouchableOpacity
-                style={ndlStyles.row}
-                onPress={() => onOpenArticle(forbiddenNews[0].id, forbiddenNews[0])}
-                activeOpacity={0.75}
-              >
-                <View style={[ndlStyles.rowLock, { backgroundColor: 'rgba(99,102,241,0.4)' }]}>
-                  <Text style={{ fontSize: 14 }}>🔓</Text>
-                </View>
-                <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{forbiddenNews[0].title}</Text>
-                  <Text style={[ndlStyles.rowBlur, { color: 'rgba(255,255,255,0.6)' }]}>🎁 Sbloccato per te</Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.5)" />
-              </TouchableOpacity>
-            )}
-
-            {/* FREE senza regalo: titoli reali da Firestore, bloccati */}
-            {!isPremium && !freeUnlockActive && forbiddenNews.slice(0, 2).map((item, i) => (
-              <TouchableOpacity key={item.id} style={ndlStyles.row} onPress={onGoToPremium} activeOpacity={0.75}>
-                <View style={ndlStyles.rowLock}>
-                  <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.5)" />
-                </View>
-                <View style={ndlStyles.rowBody}>
-                  <Text style={ndlStyles.rowTitle} numberOfLines={2}>{cleanTitle(item.title)}</Text>
-                  <Text style={ndlStyles.rowBlurText} numberOfLines={2}>{item.description}</Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
-              </TouchableOpacity>
-            ))}
-
-            {/* Fallback placeholder se Firestore non ha ancora articoli forbidden */}
-            {!isPremium && !freeUnlockActive && forbiddenNews.length === 0 && (
-              ['🚫 La scoperta che tutti vogliono nasconderti', '🚫 Il segreto che nessuno osa raccontare'].map((title, i) => (
-                <TouchableOpacity key={i} style={ndlStyles.row} onPress={onGoToPremium} activeOpacity={0.75}>
-                  <View style={ndlStyles.rowLock}>
-                    <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.5)" />
-                  </View>
-                  <View style={ndlStyles.rowBody}>
-                    <Text style={ndlStyles.rowTitle} numberOfLines={2}>{title}</Text>
-                    <Text style={ndlStyles.rowBlurText} numberOfLines={2}>
-                      {i === 0 ? 'Una storia sconvolgente che sta cambiando tutto...' : 'Il dettaglio che nessuno vuole che tu sappia...'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward-outline" size={14} color="rgba(255,255,255,0.35)" />
-                </TouchableOpacity>
-              ))
-            )}
-
-            {/* Gold CTA — solo free */}
-            {!isPremium && (
-              <TouchableOpacity style={ndlStyles.cta} onPress={onGoToPremium} activeOpacity={0.85}>
-                <Text style={{ fontSize: 20 }}>👑</Text>
-                <Text style={ndlStyles.ctaText}>Scopri Premium e leggi tutto senza limiti</Text>
-                <Text style={{ fontSize: 11, color: '#5C3A00', opacity: 0.75 }}>✦</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {/* ── I tuoi punti banner ── */}
+        {/* ── CTA Archivio ── */}
         {!loading && (
           <TouchableOpacity
-            style={[ptsBannerStyles.container, { backgroundColor: C.bg2, borderColor: C.border }]}
-            onPress={onGoToPoints}
-            activeOpacity={0.75}
+            style={styles.ctaBanner}
+            onPress={onGoToArchive}
+            activeOpacity={0.85}
           >
-            <View style={ptsBannerStyles.body}>
-              <Text style={[ptsBannerStyles.label, { color: C.textSecondary }]}>I TUOI PUNTI</Text>
-              <Text style={ptsBannerStyles.value}>{userStats.points.toLocaleString('it')} pts</Text>
-              <Text style={[ptsBannerStyles.sub, { color: C.textSecondary }]}>
-                Accumula punti leggendo notizie e ottieni vantaggi esclusivi!
-              </Text>
+            <View style={styles.ctaLeft}>
+              <Text style={styles.ctaLabel}>ARCHIVIO COMPLETO</Text>
+              <Text style={styles.ctaTitle}>Tutte le notizie assurde</Text>
+              <Text style={styles.ctaSub}>Cerca, filtra e salva gli articoli che ami</Text>
             </View>
-            <View style={ptsBannerStyles.btn}>
-              <Ionicons name="gift-outline" size={15} color="#fff" />
-              <Text style={ptsBannerStyles.btnText}>Scopri i premi</Text>
+            <View style={styles.ctaArrow}>
+              <Ionicons name="arrow-forward" size={24} color={VIOLET} />
             </View>
           </TouchableOpacity>
         )}
@@ -441,41 +350,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg,
   },
-  heroArea: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  heroKicker: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  heroTitle: {
-    fontSize: 33,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -0.5,
-    lineHeight: 40,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    marginTop: 3,
-  },
-  heroEmoji: {
-    fontSize: 72,
-    lineHeight: 80,
-    marginTop: 4,
-  },
 
   // Ultime Notizie rows
   dateDivider: {
@@ -485,7 +359,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dateDividerText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
@@ -505,14 +379,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   unThumbEmoji: {
-    fontSize: 34,
+    fontSize: 41,
   },
   unBody: {
     flex: 1,
     minWidth: 0,
   },
   unCat: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
   },
   readDot: {
@@ -540,16 +414,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   itemTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: Colors.text,
-    lineHeight: 20,
+    lineHeight: 24,
     marginBottom: Spacing.xs,
   },
   itemDescription: {
     fontSize: FontSize.base,
     color: Colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 26,
     marginBottom: Spacing.sm,
   },
   itemFooter: {
@@ -592,18 +466,50 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   // CTA archivio
-  ctaArchive: {
-    marginHorizontal: Spacing.lg,
-    marginVertical: Spacing.lg,
-    paddingVertical: Spacing.lg,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.text,
+  ctaBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    backgroundColor: '#F0EEFF',
+    borderWidth: 1,
+    borderColor: 'rgba(85, 64, 255, 0.18)',
   },
-  ctaText: {
-    fontSize: FontSize.base,
-    fontWeight: '700',
-    color: '#fff',
+  ctaLeft: { flex: 1 },
+  ctaLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: Colors.violet,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  ctaTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#080A35',
+    marginBottom: 3,
+  },
+  ctaSub: {
+    fontSize: 14,
+    color: '#8884AA',
+    lineHeight: 20,
+  },
+  ctaArrow: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(85,64,255,0.15)',
+    marginLeft: 12,
+    flexShrink: 0,
   },
 
   // Empty / error state
@@ -613,7 +519,7 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     gap: 8,
   },
-  emptyEmoji: { fontSize: 44 },
+  emptyEmoji: { fontSize: 53 },
   emptyTitle: {
     fontSize: FontSize.lg,
     fontWeight: '700',
@@ -624,7 +530,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 26,
   },
   retryBtn: {
     marginTop: 8,
@@ -688,7 +594,7 @@ const styles = StyleSheet.create({
 const currentStyles = StyleSheet.create({
   section: {
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.lg,
+    paddingBottom: 0,
   },
   secHdr: {
     flexDirection: 'row',
@@ -699,17 +605,17 @@ const currentStyles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   secHdrIcon: {
-    fontSize: 13,
+    fontSize: 16,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '900',
     color: '#1E1B4B',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   secHdrLink: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.violet,
   },
@@ -732,7 +638,7 @@ const currentStyles = StyleSheet.create({
     width: '100%',
   },
   cardImgEmoji: {
-    fontSize: 36,
+    fontSize: 43,
   },
   cardPill: {
     position: 'absolute',
@@ -744,7 +650,7 @@ const currentStyles = StyleSheet.create({
     paddingVertical: 3,
   },
   cardPillText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.6,
@@ -757,15 +663,45 @@ const currentStyles = StyleSheet.create({
     gap: 4,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '700',
-    lineHeight: 19,
+    lineHeight: 23,
     marginBottom: 4,
   },
   cardSource: {
     fontSize: FontSize.xs,
     fontWeight: '500',
     marginTop: 2,
+  },
+
+  // Layout tipografico (nessuna immagine)
+  cardBodyTypo: {
+    flex: 1,
+    flexDirection: 'row',
+    minHeight: 150,
+  },
+  typoAccent: {
+    width: 4,
+    borderBottomLeftRadius: 10,
+    borderTopLeftRadius: 10,
+  },
+  typoInner: {
+    flex: 1,
+    padding: 12,
+    gap: 6,
+  },
+  typoPill: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    color: Colors.violet,
+    marginBottom: 2,
+  },
+  typoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 25,
+    flex: 1,
   },
 });
 
@@ -792,7 +728,7 @@ const topOddStyles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#dc2626',
   },
@@ -805,7 +741,7 @@ const topOddStyles = StyleSheet.create({
     paddingVertical: 2,
   },
   lockText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#6d28d9',
   },
@@ -813,7 +749,7 @@ const topOddStyles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '600',
     fontStyle: 'italic',
-    lineHeight: 14,
+    lineHeight: 17,
   },
 });
 
@@ -854,7 +790,7 @@ const forbiddenStyles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.3,
@@ -864,12 +800,12 @@ const forbiddenStyles = StyleSheet.create({
     fontSize: FontSize.lg,
     fontWeight: '700',
     color: '#f3f4f6',
-    lineHeight: 24,
+    lineHeight: 29,
   },
   subtitlePremium: {
     fontSize: FontSize.xs,
     color: '#9ca3af',
-    lineHeight: 16,
+    lineHeight: 19,
   },
   sourcePremium: {
     fontSize: FontSize.xs,
@@ -893,14 +829,14 @@ const forbiddenStyles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   lockIcon: {
-    fontSize: 20,
+    fontSize: 24,
   },
   blurredTitle: {
     fontSize: FontSize.base,
     fontWeight: '700',
     color: '#374151',
     letterSpacing: 2,
-    lineHeight: 22,
+    lineHeight: 26,
   },
   lockedHint: {
     fontSize: FontSize.xs,
@@ -955,16 +891,16 @@ const ndlStyles = StyleSheet.create({
     flexShrink: 0,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.3,
     marginBottom: 2,
   },
   headerSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
-    lineHeight: 17,
+    lineHeight: 20,
   },
   row: {
     flexDirection: 'row',
@@ -989,21 +925,21 @@ const ndlStyles = StyleSheet.create({
     minWidth: 0,
   },
   rowTitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-    lineHeight: 18,
+    lineHeight: 22,
     marginBottom: 4,
   },
   rowBlur: {
-    fontSize: 11,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.3)',
-    lineHeight: 15,
+    lineHeight: 18,
   },
   rowBlurText: {
-    fontSize: 12,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.42)',
-    lineHeight: 17,
+    lineHeight: 20,
     marginTop: 3,
     textShadowColor: 'rgba(255,255,255,0.85)',
     textShadowOffset: { width: 0, height: 0 },
@@ -1028,7 +964,7 @@ const ndlStyles = StyleSheet.create({
     elevation: 5,
   },
   ctaText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1C1917',
     letterSpacing: 0.1,
@@ -1055,23 +991,23 @@ const ptsBannerStyles = StyleSheet.create({
     minWidth: 0,
   },
   label: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 3,
   },
   value: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '900',
     color: Colors.violet,
     letterSpacing: -0.5,
-    lineHeight: 26,
+    lineHeight: 31,
     marginBottom: 3,
   },
   sub: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
   },
   btn: {
     backgroundColor: Colors.violet,
@@ -1084,7 +1020,7 @@ const ptsBannerStyles = StyleSheet.create({
     flexShrink: 0,
   },
   btnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#fff',
   },

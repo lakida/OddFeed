@@ -17,15 +17,13 @@ import { getColors } from '../theme/colors';
 // ─── Changelog: aggiungi nuove versioni in cima ──────────────────────────────
 const CHANGELOG: Record<string, { emoji: string; title: string; description: string }[]> = {
   '1.1.0': [
-    { emoji: '🔔', title: 'Scegli l\'orario delle notifiche', description: 'Ora puoi scegliere se ricevere le notizie a colazione, pranzo o cena direttamente dal Profilo.' },
-    { emoji: '⭐', title: 'Promemoria recensione', description: 'Aiutaci a crescere lasciando una recensione sull\'App Store.' },
-    { emoji: '🆕', title: 'Novità in evidenza', description: 'Questa schermata! Ogni aggiornamento ti mostrerà cosa è cambiato.' },
-    { emoji: '🐛', title: 'Bug fix e miglioramenti', description: 'Corretti vari problemi grafici, ottimizzate le immagini e migliorati i titoli delle notizie.' },
+    { emoji: '🔓', title: 'Accesso libero', description: 'Niente più registrazione o login — apri l\'app e leggi subito, senza account.' },
+    { emoji: '🏷️', title: 'Categorie personalizzate', description: 'Scegli i tuoi interessi durante il setup: le notizie si adattano a te. Puoi cambiarli in qualsiasi momento da Impostazioni.' },
+    { emoji: '🗂️', title: 'Archivio completo', description: 'Tutto l\'archivio dall\'inizio, senza limitazioni. Scorri, filtra e rileggi quando vuoi.' },
+    { emoji: '🌙', title: 'Tema scuro e lingua', description: 'Dark mode e lingua (IT/EN) ora direttamente nelle Impostazioni.' },
   ],
   '1.0.0': [
     { emoji: '🚀', title: 'Benvenuto su OddFeed!', description: 'La prima versione è live. Notizie strane e curiose dal mondo, ogni giorno.' },
-    { emoji: '🏆', title: 'Punti e livelli', description: 'Guadagna punti leggendo, reagendo e condividendo le notizie.' },
-    { emoji: '⭐', title: 'Premium', description: 'Accedi a tutte le notizie, all\'archivio completo e alle categorie esclusive.' },
   ],
 };
 
@@ -76,7 +74,7 @@ export default function WhatsNewModal({ forceVisible = false, onClose }: Props) 
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.kicker}>Versione {currentVersion}</Text>
-            <Text style={[styles.title, { color: C.text }]}>🆕 Cosa c'è di nuovo</Text>
+            <Text style={styles.title}>🆕 Cosa c'è di nuovo</Text>
           </View>
 
           {/* Lista novità */}

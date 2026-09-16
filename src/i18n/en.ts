@@ -21,6 +21,7 @@ const en: Translations = {
     points: 'Points',
     premium: 'Premium',
     profile: 'Profile',
+    settings: 'Settings',
   },
 
   home: {

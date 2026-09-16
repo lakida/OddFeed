@@ -19,26 +19,19 @@ try {
 }
 
 interface NativeAdCardProps {
-  isPremium?: boolean;
   style?: ViewStyle;
 }
 
 /**
  * Card sponsorizzata iniettata ogni N notizie nella lista.
- * Usa un BannerAd MEDIUM_RECTANGLE (300×250) racchiuso in un wrapper
- * stilizzato come le news card con badge "Sponsor".
- *
- * - Nessuna pubblicità per utenti Premium
- * - Si collassa a null se il modulo non è disponibile o l'annuncio non carica
- * - Nessuno spazio vuoto in caso di fallback
+ * Si collassa a null se il modulo non è disponibile o l'annuncio non carica.
  */
-export default function NativeAdCard({ isPremium = false, style }: NativeAdCardProps) {
+export default function NativeAdCard({ style }: NativeAdCardProps) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const { isDark } = useTheme();
   const C = getColors(isDark);
 
-  if (isPremium) return null;
   if (!BannerAd || !BannerAdSize) return null;
   if (failed) return null;
 

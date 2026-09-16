@@ -141,9 +141,8 @@ function filterAndSort<T extends { item: NewsItem; date?: string; order: number 
 // Restituisce fino a `limit` articoli, ordinati per interessi/lingua.
 export async function fetchTodayNews(
   language: 'it' | 'en',
-  isPremium: boolean,
   interests: string[] = [],
-  limit = 1
+  limit = 10
 ): Promise<NewsItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
@@ -154,10 +153,9 @@ export async function fetchTodayNews(
 
   const snap = await getDocs(q);
   const all = snap.docs
-    .filter(d => isPremium || !d.data().isPremium)
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
-      return t !== 'current' && t !== 'forbidden'; // Escludi attualità e "non dovresti"
+      return t !== 'current' && t !== 'forbidden';
     })
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
@@ -169,8 +167,6 @@ export async function fetchTodayNews(
 // Restituisce perDay articoli × days giorni (default: 2 × 3 = 6 articoli su 3 giorni).
 export async function fetchRecentPastNews(
   language: 'it' | 'en',
-  isPremium: boolean,
-  _count = 2,         // mantenuto per compatibilità, non più usato
   interests: string[] = [],
   perDay = 2,
   days = 3,
@@ -184,7 +180,6 @@ export async function fetchRecentPastNews(
 
   const snap = await getDocs(q);
   const all = snap.docs
-    .filter(d => isPremium || !d.data().isPremium)
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
       return t !== 'current' && t !== 'forbidden';
@@ -210,43 +205,36 @@ export async function fetchRecentPastNews(
 // Per utenti free limita il totale a `newsLimit` articoli.
 export async function fetchArchive(
   language: 'it' | 'en',
-  isPremium: boolean,
   interests: string[] = [],
-  newsLimit = 1
 ): Promise<NewsItem[]> {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
 
-  // L'archivio parte da 2 giorni fa: oggi e ieri sono visibili solo in Home,
-  // così l'utente non vede le stesse notizie scorrendo tra le due sezioni.
+  // Archivio: tutto tranne oggi e ieri (visibili in Home)
   const archiveEnd = new Date(today);
   archiveEnd.setDate(archiveEnd.getDate() - 1);
   const archiveEndStr = archiveEnd.toISOString().split('T')[0];
 
+  // Storico completo: ultimi 365 giorni
   const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() - (isPremium ? 365 : 7));
+  cutoff.setDate(cutoff.getDate() - 365);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   const q = query(
     collection(db, 'articles'),
     where('date', '>=', cutoffStr),
-    where('date', '<', archiveEndStr), // Escludi oggi e ieri — già visibili in Home
+    where('date', '<', archiveEndStr),
   );
 
   const snap = await getDocs(q);
   const all = snap.docs
-    .filter(d => isPremium || !d.data().isPremium)
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
       return t !== 'current' && t !== 'forbidden';
     })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
-  const sorted = filterAndSort(all, interests, language);
-  // Premium: tutto senza limite. Free: max `newsLimit` articoli per giorno × giorni
-  // (in pratica limitiamo il totale a newsLimit * 7 per evitare liste infinite)
-  const totalLimit = isPremium ? Infinity : newsLimit * 7;
-  return sorted.slice(0, totalLimit).map(x => x.item);
+  return filterAndSort(all, interests, language).map(x => x.item);
 }
 
 // Carica le 3 notizie di attualità di oggi (visibili a tutti).
