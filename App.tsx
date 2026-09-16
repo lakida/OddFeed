@@ -14,6 +14,7 @@ import {
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Asset } from 'expo-asset';
 
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -99,8 +100,12 @@ function AppContent() {
   useEffect(() => {
     const init = async () => {
       try {
-        // DEV ONLY: reset onboarding — rimuovere prima del rilascio
-        await AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_DONE);
+        // Precarica immagini in background — non blocca la transizione
+        Asset.loadAsync([
+          require('./assets/hero_background.png'),
+          require('./assets/newspaper_illustration.png'),
+        ]).catch(() => {});
+
         const [done, interestsRaw] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_DONE),
           AsyncStorage.getItem(STORAGE_KEYS.INTERESTS),
@@ -232,16 +237,25 @@ function AppContent() {
     return (
       <View style={styles.loading}>
         <View style={styles.loadingLogoWrap}>
-          <Text style={styles.loadingLogoMain}>OddFeed</Text>
-          <Text style={styles.loadingTagline}>Le notizie più strane del mondo</Text>
+          <Text style={styles.loadingLogoMain}>
+            <Text style={{ color: '#080A35' }}>Odd</Text>
+            <Text style={{ color: '#5540FF' }}>Feed</Text>
+          </Text>
+          <Text style={styles.loadingTagline}>Notizie curiose. Ogni giorno.</Text>
         </View>
-        <ActivityIndicator color="rgba(255,255,255,0.6)" style={{ marginTop: 40 }} />
+        <ActivityIndicator color="#C4BFFA" style={{ marginTop: 40 }} />
       </View>
     );
   }
 
   if (appScreen === 'Onboarding') {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+    // Wrap in lavender container so no white flash at the React render boundary
+    // while hero_background.png decodes on iOS
+    return (
+      <View style={{ flex: 1, backgroundColor: '#EEF2FF' }}>
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+      </View>
+    );
   }
 
   const tabParallax = articleSlideAnim.interpolate({
@@ -333,10 +347,10 @@ function AppContent() {
 const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: Colors.bg },
   content: { flex: 1 },
-  loading: { flex: 1, backgroundColor: Colors.violet, alignItems: 'center', justifyContent: 'center' },
+  loading: { flex: 1, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
   loadingLogoWrap: { alignItems: 'center', gap: 8 },
   loadingLogoMain: { fontSize: 40, fontWeight: '800', color: '#fff', letterSpacing: -1.5 },
-  loadingTagline:  { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.65)', letterSpacing: 0.1 },
+  loadingTagline:  { fontSize: 14, fontWeight: '500', color: '#8882AA', letterSpacing: 0.1, marginTop: 6 },
   tabBar:  {
     flexDirection: 'row',
     backgroundColor: Colors.bg2,

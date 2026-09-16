@@ -691,15 +691,14 @@ const currentStyles = StyleSheet.create({
     gap: 6,
   },
   typoPill: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.1,
+    fontSize: 13,
+    fontWeight: '700',
     color: Colors.violet,
     marginBottom: 2,
   },
   typoTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 25,
     flex: 1,
   },

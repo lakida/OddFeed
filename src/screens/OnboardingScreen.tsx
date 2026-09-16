@@ -46,8 +46,12 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   const getCatLabel = (config: typeof CATEGORY_CONFIG[0]) =>
     language === 'it' ? config.labelIt : config.labelEn;
 
+  // Welcome step: match lavender bg so SafeAreaView doesn't flash white
+  // while hero_background.png finishes decoding on iOS
+  const safeBg = step === 'benvenuto' ? '#EEF2FF' : C.bg;
+
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: safeBg }]}>
       {/* Barra progresso — nascosta nel welcome */}
       {step !== 'benvenuto' && (
         <View style={[styles.progressBarBg, { backgroundColor: C.border }]}>
@@ -60,18 +64,13 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       {step === 'benvenuto' && (
         <ImageBackground
           source={HERO_BG}
-          style={styles.welcomeBg}
+          style={[styles.welcomeBg, { backgroundColor: '#EEF2FF' }]}
           resizeMode="cover"
         >
           {isDark && <View style={styles.welcomeDarkOverlay} />}
           <View style={styles.welcomeContent}>
-            {/* Logo */}
-            <Image source={LOGO_IMG} style={styles.welcomeLogo} resizeMode="contain" />
-            {/* Wordmark */}
-            <View style={styles.welcomeWordmark}>
-              <Text style={[styles.welcomeWordmarkDark, { color: isDark ? '#fff' : NAVY }]}>Odd</Text>
-              <Text style={[styles.welcomeWordmarkViolet]}> Feed</Text>
-            </View>
+            {/* Logo (includes OddFeed wordmark in the image) */}
+            <Image source={LOGO_IMG} style={styles.welcomeLogo} />
             {/* Tagline */}
             <Text style={[styles.welcomeTagline, { color: isDark ? 'rgba(255,255,255,0.65)' : '#6B6899' }]}>
               {language === 'it' ? (
@@ -218,25 +217,10 @@ const styles = StyleSheet.create({
     paddingTop: 32,
   },
   welcomeLogo: {
-    width: 130,
-    height: 130,
-    marginBottom: 24,
-  },
-  welcomeWordmark: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 16,
-  },
-  welcomeWordmarkDark: {
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: -1,
-  },
-  welcomeWordmarkViolet: {
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: -1,
-    color: VIOLET,
+    width: 220,
+    height: 220,
+    marginBottom: 20,
+    resizeMode: 'contain',
   },
   welcomeTagline: {
     fontSize: 19,

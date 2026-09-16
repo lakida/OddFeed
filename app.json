@@ -11,14 +11,15 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#EEF2FF"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.oddfeed.app",
       "buildNumber": "2",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIDeviceFamily": [1]
       },
       "associatedDomains": [
         "applinks:oddfeed.app"
@@ -54,24 +55,6 @@
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-2396272435294555~5922806904",
           "skAdNetworkItems": []
-        }
-      ],
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.272354842276-php917dld6bdhvii5v88i2gmigk8bq4b"
-        }
-      ],
-      [
-        "react-native-fbsdk-next",
-        {
-          "appID": "2715352588826470",
-          "clientToken": "fd326ac310a3d7351cb0753d6ad88edf",
-          "displayName": "OddFeed",
-          "scheme": "fb2715352588826470",
-          "advertiserIDCollectionEnabled": false,
-          "autoLogAppEventsEnabled": false,
-          "isAutoInitEnabled": true
         }
       ]
     ],

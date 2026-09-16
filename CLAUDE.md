@@ -56,3 +56,5 @@ Vai su: GitHub repo → Settings → Secrets and variables → Actions
 ## Utente
 - Nome: Kida
 - Email: kida.mancinimesi@gmail.com
+- Path progetto sul Mac: `~/Documents/claude/projects/OddFeed`
+- Comando per entrare nel progetto: `cd ~/Documents/claude/projects/OddFeed`
