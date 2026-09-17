@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -20,6 +21,7 @@ import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
 import BannerAdSlot from '../components/ads/BannerAdSlot';
+import { getCategoryGradient, CATEGORY_ICONS } from '../utils/categoryStyles';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 
@@ -255,14 +257,23 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
               {item.imageUrl ? (
                 <Image source={{ uri: item.imageUrl }} style={styles.unThumb} />
               ) : (
-                <View style={[styles.unThumb, { backgroundColor: item.imageColor?.[0] ?? '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ fontSize: 22 }}>{item.imageEmoji ?? '🌍'}</Text>
-                </View>
+                <LinearGradient
+                  colors={getCategoryGradient(item.category)}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.unThumb, { alignItems: 'center', justifyContent: 'center' }]}
+                >
+                  <Ionicons
+                    name={CATEGORY_ICONS[item.category] ?? 'newspaper-outline'}
+                    size={34}
+                    color="rgba(255,255,255,0.30)"
+                  />
+                </LinearGradient>
               )}
               <View style={styles.unBody}>
-                <Text style={[styles.unTitle, { color: C.text }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
+                <Text style={[styles.unCat, { color: Colors.violet, marginBottom: 3 }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
+                <Text style={[styles.unTitle, { color: C.text, marginBottom: 5 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                 <Text style={[styles.unMeta, { color: C.textTertiary }]}>{item.source} · {formatArchiveDate(item.publishedAt)}</Text>
-                <Text style={[styles.unCat, { color: Colors.violet }]}>{cleanCatLabel(item.categoryLabel ?? item.category)}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => onToggleSave?.(item.id, item)}
@@ -437,11 +448,10 @@ const styles = StyleSheet.create({
   countRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
   countText: { fontSize: 11, fontWeight: '500', color: Colors.textSecondary },
   sortText: { fontSize: 11, fontWeight: '700' },
-  unRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
-  unThumb: { width: 76, height: 64, borderRadius: 10, flexShrink: 0 },
-  unThumbEmoji: { fontSize: 24 },
+  unRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
+  unThumb: { width: 99, height: 83, borderRadius: 10, flexShrink: 0, overflow: 'hidden' },
   unBody: { flex: 1, minWidth: 0 },
-  unCat: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 3 },
-  unTitle: { fontSize: 14, fontWeight: '700', lineHeight: 19, marginBottom: 3 },
-  unMeta: { fontSize: 11 },
+  unCat: { fontSize: 13, fontWeight: '700' },
+  unTitle: { fontSize: 17, fontWeight: '600', lineHeight: 24 },
+  unMeta: { fontSize: FontSize.xs, color: Colors.textTertiary },
 });
