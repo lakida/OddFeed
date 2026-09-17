@@ -12,15 +12,8 @@ name: OddFeed — Notizie del giorno
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
-  schedule:
-    # 05:30 UTC = 07:30 CEST — fascia Colazione (genera articoli + notifica mattina)
-    - cron: '30 5 * * *'
-    # 11:00 UTC = 13:00 CEST — fascia Pranzo (solo notifiche)
-    - cron: '0 11 * * *'
-    # 18:00 UTC = 20:00 CEST — fascia Cena (solo notifiche)
-    - cron: '0 18 * * *'
-
-  # Avvio manuale: utile per testare o per rigenerare le notizie di un giorno
+  # Triggerato esclusivamente da cron-job.org via API GitHub
+  # (rimuovere i trigger schedule evita doppi run)
   workflow_dispatch:
     inputs:
       force:
