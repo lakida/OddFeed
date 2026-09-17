@@ -50,11 +50,44 @@ export async function registerAndSaveToken(interests: string[]): Promise<boolean
       { merge: true },
     );
 
+    // Rimuove il flag "disabilitate manualmente"
+    await AsyncStorage.removeItem('@oddFeed_notifDisabled');
+
     return true;
   } catch (e) {
     console.warn('[OddFeed] Notifica registrazione fallita:', e);
     return false;
   }
+}
+
+/**
+ * Disabilita le notifiche su Firestore (lo switch in Impostazioni).
+ * Non revoca il permesso iOS — quello va fatto dalle Impostazioni di sistema.
+ */
+export async function disableNotifications(): Promise<void> {
+  try {
+    await AsyncStorage.setItem('@oddFeed_notifDisabled', 'true');
+    const deviceId = await getOrCreateDeviceId();
+    await setDoc(
+      doc(db, 'users', deviceId),
+      { notificationsEnabled: false, updatedAt: new Date().toISOString() },
+      { merge: true },
+    );
+  } catch (e) {
+    console.warn('[OddFeed] Disabilitazione notifiche Firestore fallita:', e);
+  }
+}
+
+/**
+ * Ritorna true se l'utente ha concesso il permesso push E le notifiche
+ * sono abilitate (cioè non le ha disattivate manualmente dal toggle).
+ */
+export async function getNotificationsEnabled(): Promise<boolean> {
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') return false;
+  // Controlla se l'utente le ha disabilitate dal toggle
+  const disabled = await AsyncStorage.getItem('@oddFeed_notifDisabled');
+  return disabled !== 'true';
 }
 
 /**

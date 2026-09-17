@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,11 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import {
+  registerAndSaveToken,
+  disableNotifications,
+  getNotificationsEnabled,
+} from '../services/notificationService';
 // @ts-ignore
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +38,37 @@ export default function SettingsScreen({ interests, onInterestsChange, onShowWha
   const C = getColors(isDark);
   const [localInterests, setLocalInterests] = useState<string[]>(interests);
   const [saved, setSaved] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  useEffect(() => {
+    getNotificationsEnabled().then(setNotifEnabled).catch(() => {});
+  }, []);
+
+  const handleNotifToggle = async (value: boolean) => {
+    if (notifLoading) return;
+    setNotifLoading(true);
+    if (value) {
+      const ok = await registerAndSaveToken(localInterests);
+      if (ok) {
+        setNotifEnabled(true);
+      } else {
+        // Permesso negato: rimanda alle Impostazioni iOS
+        Alert.alert(
+          'Notifiche disabilitate',
+          'Per attivarle vai su Impostazioni > OddFeed > Notifiche.',
+          [
+            { text: 'Annulla', style: 'cancel' },
+            { text: 'Apri Impostazioni', onPress: () => Linking.openSettings() },
+          ],
+        );
+      }
+    } else {
+      await disableNotifications();
+      setNotifEnabled(false);
+    }
+    setNotifLoading(false);
+  };
 
   const toggleInterest = (id: Category) => {
     setLocalInterests(prev =>
@@ -95,6 +131,28 @@ export default function SettingsScreen({ interests, onInterestsChange, onShowWha
                 <Text style={[styles.langBtnText, language === 'en' && styles.langBtnTextActive]}>EN</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+
+        {/* Notifiche */}
+        <View style={[styles.section, { backgroundColor: C.cardWhite, borderColor: C.border }]}>
+          <Text style={[styles.sectionTitle, { color: C.textSecondary }]}>NOTIFICHE</Text>
+
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="notifications-outline" size={20} color={Colors.violet} />
+              <View>
+                <Text style={[styles.rowLabel, { color: C.text }]}>Notizia del mattino</Text>
+                <Text style={[styles.rowSub, { color: C.textTertiary }]}>Ogni giorno alle 7:30</Text>
+              </View>
+            </View>
+            <Switch
+              value={notifEnabled}
+              onValueChange={handleNotifToggle}
+              disabled={notifLoading}
+              trackColor={{ false: Colors.border, true: Colors.violet }}
+              thumbColor="#fff"
+            />
           </View>
         </View>
 
@@ -231,6 +289,10 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  rowSub: {
+    fontSize: 12,
+    marginTop: 1,
   },
   langToggle: {
     flexDirection: 'row',
