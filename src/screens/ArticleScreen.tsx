@@ -7,7 +7,6 @@ import {
   StyleSheet,
   SafeAreaView,
   Share,
-  Platform,
   PanResponder,
   Animated,
   Easing,
@@ -137,14 +136,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
   const handleShare = async () => {
     try {
       const watermark = '\n\n🌍 Scopri OddFeed → https://oddfeed.app';
-      // Usa l'URL originale dell'articolo sorgente se disponibile,
-      // altrimenti non includere URL (evita di condividere link inventati).
-      const shareUrl = article.sourceUrl ?? null;
-      await Share.share(
-        Platform.OS === 'ios'
-          ? { message: `${article.title}${watermark}`, ...(shareUrl ? { url: shareUrl } : {}) }
-          : { message: `${article.title}${shareUrl ? `\n\n${shareUrl}` : ''}${watermark}` }
-      );
+      await Share.share({ message: `${article.title}${watermark}` });
     } catch (e) {}
   };
 
