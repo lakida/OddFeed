@@ -315,10 +315,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   title: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     color: Colors.text,
-    lineHeight: 23,
+    lineHeight: 28,
     letterSpacing: -0.3,
     marginBottom: 7,
   },
@@ -348,9 +348,9 @@ const styles = StyleSheet.create({
   },
   verifiedText: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.green },
   articleText: {
-    fontSize: 14,
+    fontSize: 17,
     color: Colors.textSecondary,
-    lineHeight: 24,
+    lineHeight: 29,
     marginBottom: Spacing.md,
   },
 
