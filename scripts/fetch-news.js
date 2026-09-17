@@ -48,14 +48,12 @@ const BIZARRE_RSS_FEEDS = [
   { url: 'https://nypost.com/weird-but-true/feed/',                     source: 'NY Post',         category: 'storie_assurde', isItalian: false },
   { url: 'https://www.odditycentral.com/feed',                          source: 'Oddity Central',  category: 'storie_assurde', isItalian: false },
   { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',     category: 'storie_assurde', isItalian: false },
-  // Mirror Weird (sostituisce Daily Star 404)
-  { url: 'https://www.mirror.co.uk/news/weird-news/rss.xml',            source: 'Mirror Weird',    category: 'storie_assurde', isItalian: false },
-  // Metro UK Weird (sostituisce The Sun — 0 articoli)
-  { url: 'https://metro.co.uk/weird/feed/',                             source: 'Metro Weird',     category: 'storie_assurde', isItalian: false },
-  // Fark — aggregatore di notizie bizzarre (sostituisce UNILAD 404)
-  { url: 'https://www.fark.com/fark.rss',                               source: 'Fark',            category: 'storie_assurde', isItalian: false },
-  // Mental Floss (sostituisce HuffPost Weird — 0 articoli)
   { url: 'https://www.mentalfloss.com/rss.xml',                         source: 'Mental Floss',    category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.thesun.co.uk/news/bizarre/feed/',                 source: 'The Sun Bizarre', category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.ladbible.com/rss.xml',                            source: 'LADbible',        category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.dailymail.co.uk/news/oddities/index.rss',         source: 'Daily Mail Odd',  category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.ripleys.com/weird-news/feed/',                    source: 'Ripley\'s',       category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.thedailybeast.com/rss.xml',                       source: 'Daily Beast',     category: 'storie_assurde', isItalian: false },
 ];
 
 // ─── Fonti RSS attualità (notizie del giorno + gossip) ────────────
@@ -94,6 +92,9 @@ const ITALIAN_RSS_FEEDS = [
   { url: 'https://www.ilfattoquotidiano.it/category/societa/feed/',                       source: 'Il Fatto Quotidiano', category: 'storie_assurde', isItalian: true },
   // Adnkronos Cultura — notizie di cultura, spettacolo, curiosità
   { url: 'https://www.adnkronos.com/RSS_Cultura.xml',                                    source: 'Adnkronos Cultura',   category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.fanpage.it/feed/',                                                  source: 'Fanpage.it',          category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.today.it/rss.xml',                                                  source: 'Today.it',            category: 'storie_assurde', isItalian: true },
+  { url: 'https://www.leggo.it/rss.xml',                                                  source: 'Leggo.it',            category: 'storie_assurde', isItalian: true },
 ];
 
 // ─── Fonti RSS sesso & relazioni ──────────────────────────────────
