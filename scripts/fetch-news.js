@@ -352,7 +352,7 @@ QUOTA ITALIA: il pubblico è italiano — se ci sono articoli 🇮🇹 che super
 Lista articoli:
 ${summaries}
 
-IMPORTANTE: è meglio salvare 2 notizie davvero buone che 5 mediocri. Se trovi solo 2-3 articoli che superano il test del bar, seleziona solo quelli. Non riempire i posti con notizie noiose.
+IMPORTANTE: cerca di selezionare fino a ${count} articoli. Abbassa leggermente il filtro se necessario per raggiungere il numero — è meglio avere 12 notizie decenti che 3 perfette. Seleziona almeno 8 articoli se disponibili.
 
 Rispondi SOLO con un JSON valido:
 {
@@ -1116,8 +1116,8 @@ async function main() {
     console.log(`   ⚠️  Pre-filtro troppo aggressivo (${filtered.length} rimasti) — uso pool completo`);
   }
 
-  // ⭐ Scoring AI: seleziona le 6 storie più virali/bizzarre dal pool
-  const MAX_ARTICLES = 6;
+  // ⭐ Scoring AI: seleziona le 12 storie più virali/bizzarre dal pool
+  const MAX_ARTICLES = 12;
   console.log('\n⭐ Selezione AI delle storie più virali...');
   const selected = await scoreAndSelectArticles(pool, MAX_ARTICLES);
 
