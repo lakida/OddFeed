@@ -203,7 +203,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
 
           {/* Condividi — inline dopo il testo */}
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
-            <Ionicons name="share-outline" size={20} color="#fff" />
+            <Ionicons name="share-outline" size={20} color={Colors.violet} />
             <Text style={styles.shareBtnText}>{t.article.share}</Text>
           </TouchableOpacity>
           <Text style={[styles.shareHint, { color: C.textTertiary }]}>Condividi e incuriosisci i tuoi amici 👀</Text>
@@ -362,22 +362,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 14,
+    gap: 8,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radius.lg,
-    backgroundColor: Colors.violet,
+    backgroundColor: '#EEF2FF',
+    marginTop: Spacing.lg,
+    marginBottom: 8,
   },
   shareBtnText: {
     fontSize: FontSize.base,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.2,
+    fontWeight: '600',
+    color: Colors.violet,
+    letterSpacing: 0.1,
   },
   shareHint: {
     fontSize: 11,
     color: Colors.textTertiary,
     textAlign: 'center',
+    marginBottom: Spacing.xl,
   },
   shareActions: {
     flexDirection: 'row',
