@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   RefreshControl,
   Image,
-  TextInput,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -64,7 +63,6 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
   const C = getColors(isDark);
 
   const [activeFilter, setActiveFilter] = useState('tutto');
-  const [searchQuery, setSearchQuery] = useState('');
   const [archiveNews, setArchiveNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,32 +118,26 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
 
   // Applica il filtro attivo agli articoli
   const filteredNews = React.useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    let base: NewsItem[];
-    if (activeFilter === 'tutto') base = archiveNews;
-    else if (activeFilter === 'settimana') {
+    if (activeFilter === 'tutto') return archiveNews;
+    if (activeFilter === 'settimana') {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const cutoff = weekAgo.toISOString().split('T')[0];
-      base = archiveNews.filter(n => (n.publishedAt ?? '') >= cutoff);
-    } else {
-      const monthNames2: Record<string, string> = {
-        'gennaio':'01','febbraio':'02','marzo':'03','aprile':'04',
-        'maggio':'05','giugno':'06','luglio':'07','agosto':'08',
-        'settembre':'09','ottobre':'10','novembre':'11','dicembre':'12',
-      };
-      const monthMatch2 = activeFilter.match(/^(\w+)\s+(\d{4})$/);
-      if (monthMatch2) {
-        const m2 = monthNames2[monthMatch2[1].toLowerCase()];
-        const y2 = monthMatch2[2];
-        base = m2 ? archiveNews.filter(n => n.publishedAt?.startsWith(`${y2}-${m2}`)) : archiveNews;
-      } else {
-        base = archiveNews.filter(n => n.category === activeFilter);
-      }
+      return archiveNews.filter(n => (n.publishedAt ?? '') >= cutoff);
     }
-    if (!q) return base;
-    return base.filter(n => (n.title ?? '').toLowerCase().includes(q) || (n.source ?? '').toLowerCase().includes(q));
-  }, [archiveNews, activeFilter, searchQuery]);
+    const monthNames2: Record<string, string> = {
+      'gennaio':'01','febbraio':'02','marzo':'03','aprile':'04',
+      'maggio':'05','giugno':'06','luglio':'07','agosto':'08',
+      'settembre':'09','ottobre':'10','novembre':'11','dicembre':'12',
+    };
+    const monthMatch2 = activeFilter.match(/^(\w+)\s+(\d{4})$/);
+    if (monthMatch2) {
+      const m2 = monthNames2[monthMatch2[1].toLowerCase()];
+      const y2 = monthMatch2[2];
+      return m2 ? archiveNews.filter(n => n.publishedAt?.startsWith(`${y2}-${m2}`)) : archiveNews;
+    }
+    return archiveNews.filter(n => n.category === activeFilter);
+  }, [archiveNews, activeFilter]);
 
 
   return (
@@ -167,23 +159,6 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
           />
         }
       >
-        {/* Search bar */}
-        <View style={[styles.searchRow, { borderColor: C.border, backgroundColor: C.bg2 }]}>
-          <Text style={[styles.searchIcon, { color: C.textTertiary }]}>🔍</Text>
-          <TextInput
-            style={[styles.searchInput, { color: C.text }]}
-            placeholder="Cerca notizie..."
-            placeholderTextColor={C.textTertiary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={{ fontSize: 16, color: C.textTertiary, paddingRight: 4 }}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
         {/* Filtri */}
         <ScrollView
           horizontal
@@ -318,25 +293,6 @@ const styles = StyleSheet.create({
     color: '#7A6010',
     fontWeight: '500',
     lineHeight: 18,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    gap: 8,
-  },
-  searchIcon: { fontSize: 14 },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    padding: 0,
   },
   filtersRow: {
     paddingHorizontal: Spacing.lg,
