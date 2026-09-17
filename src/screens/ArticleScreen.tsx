@@ -201,17 +201,19 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
           {/* Banner ad — fondo articolo */}
           <BannerAdSlot style={{ marginTop: 4, marginBottom: 4 }} />
 
-          <View style={{ height: 12 }} />
-        </View>
-      </ScrollView>
-
-      {/* Condividi — fisso in fondo */}
-      <View style={[styles.shareBar, { borderTopColor: C.border, backgroundColor: C.bg }]}>
+          {/* Condividi — inline dopo il testo */}
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
             <Ionicons name="share-outline" size={20} color="#fff" />
             <Text style={styles.shareBtnText}>{t.article.share}</Text>
           </TouchableOpacity>
-          <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
+          <Text style={[styles.shareHint, { color: C.textTertiary }]}>Condividi e incuriosisci i tuoi amici 👀</Text>
+
+          <View style={{ height: 12 }} />
+        </View>
+      </ScrollView>
+
+      {/* Barra fissa in fondo: Indietro + Salva */}
+      <View style={[styles.shareBar, { borderTopColor: C.border, backgroundColor: C.bg }]}>
           <View style={styles.shareActions}>
             <TouchableOpacity style={styles.shareActionBtn} onPress={onBack}>
               <Text style={[styles.shareActionText, { color: C.textSecondary }]}>← {t.common.back}</Text>
