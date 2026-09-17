@@ -201,14 +201,23 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
           {/* Banner ad — fondo articolo */}
           <BannerAdSlot style={{ marginTop: 4, marginBottom: 4 }} />
 
-          {/* Azioni inline: Condividi + Salva */}
-          <View style={styles.inlineActions}>
-            <TouchableOpacity style={[styles.shareBtn, { flex: 1 }]} onPress={handleShare} activeOpacity={0.75}>
-              <Ionicons name="share-outline" size={18} color="#fff" />
-              <Text style={styles.shareBtnText}>{t.article.share}</Text>
+          <View style={{ height: 12 }} />
+        </View>
+      </ScrollView>
+
+      {/* Condividi — fisso in fondo */}
+      <View style={[styles.shareBar, { borderTopColor: C.border, backgroundColor: C.bg }]}>
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
+            <Ionicons name="share-outline" size={20} color="#fff" />
+            <Text style={styles.shareBtnText}>{t.article.share}</Text>
+          </TouchableOpacity>
+          <Text style={styles.shareHint}>Condividi e incuriosisci i tuoi amici 👀</Text>
+          <View style={styles.shareActions}>
+            <TouchableOpacity style={styles.shareActionBtn} onPress={onBack}>
+              <Text style={[styles.shareActionText, { color: C.textSecondary }]}>← {t.common.back}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.saveBtn, { borderColor: isSaved ? Colors.violet : C.border }]}
+              style={styles.shareActionBtn}
               onPress={() => {
                 animateSave();
                 Haptics.impactAsync(
@@ -224,16 +233,13 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
                   size={18}
                   color={isSaved ? Colors.violet : C.textSecondary}
                 />
-                <Text style={[styles.saveText, { color: isSaved ? Colors.violet : C.textSecondary }]}>
+                <Text style={[styles.shareActionText, { color: isSaved ? Colors.violet : C.textSecondary }]}>
                   {isSaved ? 'Salvato' : 'Salva'}
                 </Text>
               </Animated.View>
             </TouchableOpacity>
           </View>
-
-          <View style={{ height: 32 }} />
         </View>
-      </ScrollView>
     </SafeAreaView>
     </Animated.View>
   );
@@ -341,16 +347,20 @@ const styles = StyleSheet.create({
   },
 
   // Share
-  inlineActions: {
-    flexDirection: 'row',
+  shareBar: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.bg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: 36,
     gap: 10,
-    marginTop: Spacing.lg,
   },
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     paddingVertical: 14,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radius.lg,
@@ -362,23 +372,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.2,
   },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
+  shareHint: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    textAlign: 'center',
   },
-  saveText: {
+  shareActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+  },
+  shareActionBtn: {
+    paddingVertical: Spacing.sm,
+  },
+  shareActionText: {
     fontSize: FontSize.base,
-    fontWeight: '600',
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
   saveRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
 
   // Paywall
