@@ -18,6 +18,7 @@ const en: Translations = {
   tabs: {
     news: 'News',
     archive: 'Archive',
+    saved: 'Saved',
     points: 'Points',
     premium: 'Premium',
     profile: 'Profile',

@@ -211,10 +211,8 @@ export async function fetchArchive(
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
 
-  // Archivio: tutto tranne oggi e ieri (visibili in Home)
-  const archiveEnd = new Date(today);
-  archiveEnd.setDate(archiveEnd.getDate() - 1);
-  const archiveEndStr = archiveEnd.toISOString().split('T')[0];
+  // Archivio: tutto tranne oggi (ieri e prima sono visibili nell'archivio)
+  const archiveEndStr = todayStr;
 
   // Storico completo: ultimi 365 giorni
   const cutoff = new Date(today);

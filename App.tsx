@@ -27,17 +27,19 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ArticleScreen from './src/screens/ArticleScreen';
 import ArchiveScreen from './src/screens/ArchiveScreen';
+import SavedScreen from './src/screens/SavedScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import WhatsNewModal from './src/components/WhatsNewModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-type Tab = 'Notizie' | 'Archivio' | 'Impostazioni';
+type Tab = 'Notizie' | 'Archivio' | 'Salvati' | 'Impostazioni';
 type AppScreen = 'Loading' | 'Onboarding' | 'Tabs' | 'Article';
 
 const TAB_ICONS: Record<Tab, { inactive: string; active: string }> = {
   Notizie:      { inactive: 'home-outline',     active: 'home'     },
   Archivio:     { inactive: 'archive-outline',  active: 'archive'  },
+  Salvati:      { inactive: 'bookmark-outline', active: 'bookmark' },
   Impostazioni: { inactive: 'settings-outline', active: 'settings' },
 };
 
@@ -162,6 +164,7 @@ function AppContent() {
   const tabScales = useRef<Record<Tab, Animated.Value>>({
     Notizie:      new Animated.Value(1),
     Archivio:     new Animated.Value(1),
+    Salvati:      new Animated.Value(1),
     Impostazioni: new Animated.Value(1),
   }).current;
 
@@ -282,6 +285,14 @@ function AppContent() {
             onOpenArticle={openArticle}
             interests={userInterests}
             savedIds={savedIds}
+            onToggleSave={handleToggleSave}
+          />
+        </View>
+
+        <View style={{ flex: 1, display: activeTab === 'Salvati' ? 'flex' : 'none' }}>
+          <SavedScreen
+            onOpenArticle={openArticle}
+            savedIds={savedIds}
             savedArticles={savedArticles}
             onToggleSave={handleToggleSave}
           />
@@ -304,6 +315,7 @@ function AppContent() {
           const TAB_LABELS: Record<Tab, string> = {
             Notizie:      t.tabs.news,
             Archivio:     t.tabs.archive,
+            Salvati:      t.tabs.saved ?? 'Salvati',
             Impostazioni: t.tabs.settings ?? 'Impostazioni',
           };
           const label    = TAB_LABELS[name];

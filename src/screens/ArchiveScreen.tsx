@@ -53,11 +53,10 @@ interface ArchiveScreenProps {
   onOpenArticle: (id: string, article: NewsItem) => void;
   interests?: string[];
   savedIds?: Set<string>;
-  savedArticles?: NewsItem[];
   onToggleSave?: (id: string, article: NewsItem) => void;
 }
 
-export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds = new Set(), savedArticles = [], onToggleSave }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds = new Set(), onToggleSave }: ArchiveScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -111,7 +110,6 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
 
     return [
       { key: 'tutto', label: 'Tutto' },
-      { key: 'salvati', label: 'Salvati' },
       { key: 'settimana', label: 'Questa settimana' },
       { key: currentMonth, label: currentMonth },
       ...cats,
@@ -123,7 +121,6 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
     const q = searchQuery.toLowerCase().trim();
     let base: NewsItem[];
     if (activeFilter === 'tutto') base = archiveNews;
-    else if (activeFilter === 'salvati') base = savedArticles;
     else if (activeFilter === 'settimana') {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -146,7 +143,7 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
     }
     if (!q) return base;
     return base.filter(n => (n.title ?? '').toLowerCase().includes(q) || (n.source ?? '').toLowerCase().includes(q));
-  }, [archiveNews, activeFilter, savedArticles, searchQuery]);
+  }, [archiveNews, activeFilter, searchQuery]);
 
 
   return (
@@ -239,14 +236,10 @@ export default function ArchiveScreen({ onOpenArticle, interests = [], savedIds 
         )}
         {!loading && !hasError && filteredNews.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>{activeFilter === 'salvati' ? '🔖' : '📭'}</Text>
-            <Text style={[styles.emptyTitle, { color: C.text }]}>
-              {activeFilter === 'salvati' ? 'Nessun articolo salvato' : 'Nessuna notizia'}
-            </Text>
+            <Text style={styles.emptyEmoji}>📭</Text>
+            <Text style={[styles.emptyTitle, { color: C.text }]}>Nessuna notizia</Text>
             <Text style={[styles.emptySub, { color: C.textSecondary }]}>
-              {activeFilter === 'salvati'
-                ? 'Premi 🔖 su un articolo per salvarlo e ritrovarlo qui.'
-                : 'Nessuna notizia per questo filtro.'}
+              Nessuna notizia per questo filtro.
             </Text>
           </View>
         )}

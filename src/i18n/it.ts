@@ -18,6 +18,7 @@ const it = {
   tabs: {
     news: 'Notizie',
     archive: 'Archivio',
+    saved: 'Salvati',
     points: 'Punti',
     premium: 'Premium',
     profile: 'Profilo',
