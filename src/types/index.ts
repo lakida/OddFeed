@@ -66,6 +66,7 @@ export interface NewsItem {
   viewSeed?: number;    // base per il contatore social proof
   isPremium?: boolean;
   readTime?: string;   // es. "3 min di lettura"
+  sourceUrl?: string;  // URL originale dell'articolo sorgente
 }
 
 export interface UserLevel {

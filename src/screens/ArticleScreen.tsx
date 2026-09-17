@@ -137,14 +137,13 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
   const handleShare = async () => {
     try {
       const watermark = '\n\n🌍 Scopri OddFeed → https://oddfeed.app';
-      // Su iOS, `url` viene aggiunto automaticamente dopo `message`,
-      // quindi non va incluso nel testo per evitare il doppio link.
-      // Usiamo il web URL come URL primario; il deep link è nel testo per Android
-      // così chi ha OddFeed installato può aprirlo direttamente.
+      // Usa l'URL originale dell'articolo sorgente se disponibile,
+      // altrimenti non includere URL (evita di condividere link inventati).
+      const shareUrl = article.sourceUrl ?? null;
       await Share.share(
         Platform.OS === 'ios'
-          ? { message: `${article.title}${watermark}`, url: articleUrl }
-          : { message: `${article.title}\n\n${articleUrl}\n\n(Apri in OddFeed: ${articleDeepLink})${watermark}` }
+          ? { message: `${article.title}${watermark}`, ...(shareUrl ? { url: shareUrl } : {}) }
+          : { message: `${article.title}${shareUrl ? `\n\n${shareUrl}` : ''}${watermark}` }
       );
     } catch (e) {}
   };

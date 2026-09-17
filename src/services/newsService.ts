@@ -102,6 +102,7 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
     isForbidden: d.isForbidden ?? false,
     viewSeed: d.viewSeed ?? null,
     isPremium: d.isPremium ?? false,
+    sourceUrl: d.sourceUrl ?? undefined,
   };
 }
 
