@@ -84,9 +84,16 @@ function findBestArticle(articles, interests, isPremium, articleIndex = 0) {
   return ranked[articleIndex] ?? ranked[0] ?? null;
 }
 
-function buildNotifText(article, isPremium) {
+function buildNotifText(article, isPremium, notifSlot) {
   const emoji = EMOJI_MAP[article.category] ?? '📰';
-  const titleText = (article.titleIt ?? 'Notizia del giorno').substring(0, 60);
+  const titleText = (article.titleIt ?? 'Notizia del giorno').substring(0, 70);
+
+  if (notifSlot === 'morning') {
+    return {
+      title: '👀 Hai letto la notizia di oggi?',
+      body: `${emoji} ${titleText}`,
+    };
+  }
   if (isPremium) {
     return {
       title: titleText,
@@ -155,7 +162,7 @@ async function main() {
     const article = findBestArticle(articles, interests, userIsPrem, articleIdx);
     if (!article) continue;
 
-    const { title, body } = buildNotifText(article, userIsPrem);
+    const { title, body } = buildNotifText(article, userIsPrem, slot);
 
     messages.push({
       userId,

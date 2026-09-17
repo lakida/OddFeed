@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView, ScrollView, Image, ImageBackground,
+  SafeAreaView, ScrollView, Image, ImageBackground, ActivityIndicator,
 } from 'react-native';
+import { registerAndSaveToken } from '../services/notificationService';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 
 const HERO_BG   = require('../../assets/hero_background.png');
@@ -18,7 +19,7 @@ interface OnboardingScreenProps {
   onComplete: (interests: Category[]) => void;
 }
 
-const STEPS = ['benvenuto', 'interessi', 'pronto'] as const;
+const STEPS = ['benvenuto', 'interessi', 'notifiche', 'pronto'] as const;
 type Step = typeof STEPS[number];
 
 export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
@@ -29,6 +30,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
 
   const [step, setStep] = useState<Step>('benvenuto');
   const [interests, setInterests] = useState<Category[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
 
   const stepIndex = STEPS.indexOf(step);
   const progress = (stepIndex + 1) / STEPS.length;
@@ -153,10 +155,65 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
 
           <TouchableOpacity
             style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-            onPress={() => canContinue && setStep('pronto')}
+            onPress={() => canContinue && setStep('notifiche')}
             activeOpacity={canContinue ? 0.85 : 1}
           >
             <Text style={styles.primaryBtnText}>{ob.interestsBtn}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Step: Notifiche */}
+      {step === 'notifiche' && (
+        <View style={styles.stepContainer}>
+          <Text style={[styles.stepTitle, { color: C.text }]}>
+            {language === 'it' ? '🔔 Resta aggiornato' : '🔔 Stay updated'}
+          </Text>
+          <Text style={[styles.stepSubtitle, { color: C.textSecondary }]}>
+            {language === 'it'
+              ? 'Ogni mattina alle 7:30 ti mandiamo la notizia più strana del giorno. Non perdertela.'
+              : 'Every morning at 7:30 we send you the strangest story of the day. Don\'t miss it.'}
+          </Text>
+
+          {/* Anteprima notifica */}
+          <View style={[styles.notifCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <View style={styles.notifRow}>
+              <View style={styles.notifIconDot} />
+              <Text style={[styles.notifAppLabel, { color: C.textTertiary }]}>OddFeed  ·  ora</Text>
+            </View>
+            <Text style={[styles.notifTitle, { color: C.text }]}>👀 Hai letto la notizia di oggi?</Text>
+            <Text style={[styles.notifBody, { color: C.textSecondary }]}>
+              🤪 Un uomo in Giappone ha fatto causa alla pioggia per averlo bagnato senza preavviso...
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, notifLoading && { opacity: 0.6 }]}
+            activeOpacity={0.85}
+            onPress={async () => {
+              if (notifLoading) return;
+              setNotifLoading(true);
+              await registerAndSaveToken(interests as string[]);
+              setNotifLoading(false);
+              setStep('pronto');
+            }}
+          >
+            {notifLoading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.primaryBtnText}>
+                  {language === 'it' ? 'Attiva notifiche' : 'Enable notifications'}
+                </Text>
+            }
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={() => setStep('pronto')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.skipBtnText, { color: C.textTertiary }]}>
+              {language === 'it' ? 'Non ora' : 'Not now'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -328,4 +385,21 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.35 },
   primaryBtnText: { fontSize: FontSize.base, fontWeight: '700', color: '#fff' },
+
+  // Notifiche step
+  notifCard: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    marginVertical: Spacing.xl,
+    gap: 6,
+  },
+  notifRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  notifIconDot: { width: 20, height: 20, borderRadius: 5, backgroundColor: Colors.violet },
+  notifAppLabel: { fontSize: 12, fontWeight: '500' },
+  notifTitle: { fontSize: 15, fontWeight: '700', lineHeight: 22 },
+  notifBody: { fontSize: 13, lineHeight: 19 },
+
+  skipBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
+  skipBtnText: { fontSize: FontSize.base, fontWeight: '500' },
 });
