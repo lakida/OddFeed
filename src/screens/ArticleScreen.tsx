@@ -40,11 +40,9 @@ const cleanCatLabel = (label: string) => {
 };
 // @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { formatDate } from '../utils/date';
 import BannerAdSlot from '../components/ads/BannerAdSlot';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
-import { getCategoryGradient, CATEGORY_ICONS } from '../utils/categoryStyles';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
@@ -165,28 +163,15 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero image con category pill */}
-        <View style={styles.heroImgWrap}>
-          {article.imageUrl ? (
+        {/* Hero image — mostrata solo se disponibile */}
+        {article.imageUrl ? (
+          <View style={styles.heroImgWrap}>
             <Image source={{ uri: article.imageUrl }} style={styles.heroImg} />
-          ) : (
-            <LinearGradient
-              colors={getCategoryGradient(article.category)}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.heroImg, { alignItems: 'center', justifyContent: 'center' }]}
-            >
-              <Ionicons
-                name={CATEGORY_ICONS[article.category] ?? 'newspaper-outline'}
-                size={72}
-                color="rgba(255,255,255,0.20)"
-              />
-            </LinearGradient>
-          )}
-          <View style={styles.heroImgPill}>
-            <Text style={styles.heroImgPillText}>{cleanCatLabel(article.categoryLabel ?? article.category)}</Text>
+            <View style={styles.heroImgPill}>
+              <Text style={styles.heroImgPillText}>{cleanCatLabel(article.categoryLabel ?? article.category)}</Text>
+            </View>
           </View>
-        </View>
+        ) : null}
 
         <View style={[styles.body, { backgroundColor: C.bg }]}>
           {/* Tags */}
