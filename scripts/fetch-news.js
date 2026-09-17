@@ -50,10 +50,8 @@ const BIZARRE_RSS_FEEDS = [
   { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',     category: 'storie_assurde', isItalian: false },
   { url: 'https://www.mentalfloss.com/rss.xml',                         source: 'Mental Floss',    category: 'storie_assurde', isItalian: false },
   { url: 'https://www.thesun.co.uk/news/bizarre/feed/',                 source: 'The Sun Bizarre', category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.ladbible.com/rss.xml',                            source: 'LADbible',        category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.dailymail.co.uk/news/oddities/index.rss',         source: 'Daily Mail Odd',  category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.ripleys.com/weird-news/feed/',                    source: 'Ripley\'s',       category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.thedailybeast.com/rss.xml',                       source: 'Daily Beast',     category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.huffpost.com/section/weird-news/feed',            source: 'HuffPost Weird',  category: 'storie_assurde', isItalian: false },
+  { url: 'https://feeds.arstechnica.com/arstechnica/index',             source: 'Ars Technica',    category: 'tecnologia',     isItalian: false },
 ];
 
 // ─── Fonti RSS attualità (notizie del giorno + gossip) ────────────
@@ -92,9 +90,6 @@ const ITALIAN_RSS_FEEDS = [
   { url: 'https://www.ilfattoquotidiano.it/category/societa/feed/',                       source: 'Il Fatto Quotidiano', category: 'storie_assurde', isItalian: true },
   // Adnkronos Cultura — notizie di cultura, spettacolo, curiosità
   { url: 'https://www.adnkronos.com/RSS_Cultura.xml',                                    source: 'Adnkronos Cultura',   category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.fanpage.it/feed/',                                                  source: 'Fanpage.it',          category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.today.it/rss.xml',                                                  source: 'Today.it',            category: 'storie_assurde', isItalian: true },
-  { url: 'https://www.leggo.it/rss.xml',                                                  source: 'Leggo.it',            category: 'storie_assurde', isItalian: true },
 ];
 
 // ─── Fonti RSS sesso & relazioni ──────────────────────────────────
@@ -355,11 +350,8 @@ ${summaries}
 
 IMPORTANTE: cerca di selezionare fino a ${count} articoli. Abbassa leggermente il filtro se necessario per raggiungere il numero — è meglio avere 12 notizie decenti che 3 perfette. Seleziona almeno 8 articoli se disponibili.
 
-Rispondi SOLO con un JSON valido:
-{
-  "selected": [indici dal più bizzarro al meno, es. [3, 7, 1]],
-  "reasoning": "breve spiegazione"
-}`;
+Rispondi SOLO con un JSON valido (niente testo prima o dopo):
+{"selected": [indici dal più bizzarro al meno, es. [3, 7, 1]]}`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -371,7 +363,6 @@ Rispondi SOLO con un JSON valido:
     const raw = completion.choices[0].message.content ?? '{}';
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const result = JSON.parse(clean);
-    console.log(`   Selezione AI: ${result.reasoning}`);
     const indices = result.selected?.slice(0, count) ?? [];
     const selected = indices.map(i => candidates[i]).filter(Boolean);
     if (selected.length === 0) {
@@ -565,7 +556,7 @@ Scarta notizie tecniche, comunicati stampa, articoli di opinione.
 Lista:
 ${summaries}
 
-Rispondi SOLO con JSON: {"selected": [i1, i2, i3, i4, i5, i6], "reasoning": "..."}`;
+Rispondi SOLO con JSON (niente testo prima o dopo): {"selected": [i1, i2, i3, i4, i5, i6]}`;
 
   let selectedArticles = [];
   try {
@@ -577,7 +568,6 @@ Rispondi SOLO con JSON: {"selected": [i1, i2, i3, i4, i5, i6], "reasoning": "...
     });
     const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const result = JSON.parse(raw);
-    console.log(`   Selezione AI: ${result.reasoning}`);
     selectedArticles = (result.selected ?? []).slice(0, 6).map(i => articles[i]).filter(Boolean);
   } catch (e) {
     console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 6`);
