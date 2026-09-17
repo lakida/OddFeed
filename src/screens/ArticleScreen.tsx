@@ -40,9 +40,11 @@ const cleanCatLabel = (label: string) => {
 };
 // @ts-ignore — @expo/vector-icons types not declared in this project
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { formatDate } from '../utils/date';
 import BannerAdSlot from '../components/ads/BannerAdSlot';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
+import { getCategoryGradient, CATEGORY_ICONS } from '../utils/categoryStyles';
 import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
@@ -168,13 +170,18 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
           {article.imageUrl ? (
             <Image source={{ uri: article.imageUrl }} style={styles.heroImg} />
           ) : (
-            <View style={[styles.heroImg, {
-              backgroundColor: article.imageColor?.[0] ?? '#1e3a5f',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }]}>
-              <Text style={{ fontSize: 64 }}>{article.imageEmoji ?? '🌍'}</Text>
-            </View>
+            <LinearGradient
+              colors={getCategoryGradient(article.category)}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.heroImg, { alignItems: 'center', justifyContent: 'center' }]}
+            >
+              <Ionicons
+                name={CATEGORY_ICONS[article.category] ?? 'newspaper-outline'}
+                size={72}
+                color="rgba(255,255,255,0.20)"
+              />
+            </LinearGradient>
           )}
           <View style={styles.heroImgPill}>
             <Text style={styles.heroImgPillText}>{cleanCatLabel(article.categoryLabel ?? article.category)}</Text>
