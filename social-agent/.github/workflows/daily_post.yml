@@ -1,0 +1,109 @@
+name: OddFeed — Social Post
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pubblica su Facebook e Instagram 3 volte al giorno.
+# Triggerato da cron-job.org via workflow_dispatch (no schedule interni).
+#
+#   07:00 CEST (05:00 UTC) — mattina → storie_assurde
+#   12:00 CEST (10:00 UTC) — pranzo  → coincidenze
+#   18:00 CEST (16:00 UTC) — sera    → sesso_relazioni
+#
+# Il job token_renewal rinnova il token IG ogni giorno alle 03:00 CEST.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Fascia: morning | lunch | evening'
+        required: true
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - lunch
+          - evening
+      renew_token:
+        description: 'Solo rinnova token IG (true/false)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  # ── Rinnovo token Instagram ────────────────────────────────────────────────
+  token_renewal:
+    name: Rinnova token Instagram
+    runs-on: ubuntu-latest
+    if: github.event.inputs.renew_token == 'true'
+
+    steps:
+      - name: Rinnova token e aggiorna secret
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GH_TOKEN:        ${{ secrets.GH_TOKEN }}
+          REPO:            ${{ github.repository }}
+        run: |
+          NEW_TOKEN=$(curl -s \
+            "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${IG_ACCESS_TOKEN}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+          if [ -z "$NEW_TOKEN" ] || [ "$NEW_TOKEN" = "None" ]; then
+            echo "::error::Rinnovo token IG fallito"
+            exit 1
+          fi
+
+          echo "$NEW_TOKEN" | gh secret set IG_ACCESS_TOKEN -R "$REPO"
+          echo "✅ Token IG rinnovato"
+
+  # ── Pubblica post ──────────────────────────────────────────────────────────
+  publish:
+    name: Pubblica — ${{ github.event.inputs.slot }}
+    runs-on: ubuntu-latest
+    if: github.event.inputs.renew_token != 'true'
+
+    permissions:
+      contents: write   # per fare commit della history
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installa font Liberation Sans
+        run: sudo apt-get install -y fonts-liberation
+
+      - name: Installa dipendenze Python
+        run: pip install -r requirements.txt
+
+      - name: Pubblica post
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FB_PAGE_ID:                    ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN:          ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_USER_ID:                    ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN:               ${{ secrets.IG_ACCESS_TOKEN }}
+        run: python -m agent.main --slot ${{ github.event.inputs.slot }}
+
+      - name: Commit cronologia
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/history.json
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica alla history."
+          else
+            git commit -m "chore: aggiorna history [${{ github.event.inputs.slot }}] $(date -u '+%Y-%m-%d')"
+            git push
+          fi
+
+      - name: Notifica fallimento
+        if: failure()
+        run: |
+          echo "::error::Pubblicazione ${{ github.event.inputs.slot }} fallita — $(date -u '+%Y-%m-%d %H:%M') UTC"

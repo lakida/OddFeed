@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OddFeed — Notizie che non ti aspetti</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F9FAFB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .wordmark { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+    .wordmark span:first-child { color: #1E1B4B; }
+    .wordmark span:last-child  { color: #4F46E5; }
+    .tagline { color: #6B7280; font-size: 15px; margin-bottom: 32px; }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      margin-bottom: 12px;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-ios { background: #1E1B4B; color: #fff; }
+    .btn-android { background: #4F46E5; color: #fff; }
+    .btn-secondary { background: #F3F4F6; color: #374151; font-size: 14px; }
+    .msg { font-size: 13px; color: #9CA3AF; margin-top: 20px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="wordmark"><span>Odd</span><span>Feed</span></div>
+  <p class="tagline">Notizie che non ti aspetti</p>
+  <div id="buttons"></div>
+  <p class="msg">Gratuito · Senza login</p>
+</div>
+
+<script>
+  const APPSTORE  = 'https://apps.apple.com/it/app/oddfeed/id6762468858';
+  const PLAYSTORE = 'PLAYSTORE_URL_PLACEHOLDER';
+
+  const ua = navigator.userAgent || '';
+  const isIOS     = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const container = document.getElementById('buttons');
+
+  function btn(href, cls, icon, label) {
+    const a = document.createElement('a');
+    a.href = href; a.className = 'btn ' + cls;
+    a.innerHTML = icon + label;
+    container.appendChild(a);
+  }
+
+  const appleIcon  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>';
+  const androidIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.341l-1.56-.9L14.9 16.1l1.56.9zM6.477 8.659L4.917 9.56l1.063 1.658 1.56-.9zm10.183-1.617L15.097 5.384a.5.5 0 00-.684.184l-.353.611A5.97 5.97 0 0012 5.5a5.97 5.97 0 00-2.06.699l-.353-.611a.5.5 0 00-.684-.184L7.34 7.042A.5.5 0 007.157 7.7l.354.611A5.985 5.985 0 006 12H3v1h1v6a1 1 0 001 1h1v2h2v-2h8v2h2v-2h1a1 1 0 001-1v-6h1v-1h-3a5.985 5.985 0 00-1.511-3.689l.354-.611a.5.5 0 00-.183-.658zM10 14.5a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2z"/></svg>';
+
+  if (isIOS) {
+    window.location.href = APPSTORE;
+  } else if (isAndroid) {
+    if (PLAYSTORE !== 'PLAYSTORE_URL_PLACEHOLDER') {
+      window.location.href = PLAYSTORE;
+    } else {
+      btn(APPSTORE, 'btn-secondary', '', '📱 Disponibile su iOS · Android prossimamente');
+    }
+  } else {
+    // Desktop: mostra entrambi
+    btn(APPSTORE, 'btn-ios', appleIcon, 'Scarica su App Store');
+    if (PLAYSTORE !== 'PLAYSTORE_URL_PLACEHOLDER') {
+      btn(PLAYSTORE, 'btn-android', androidIcon, 'Scarica su Google Play');
+    } else {
+      const p = document.createElement('p');
+      p.className = 'btn btn-secondary';
+      p.textContent = '🤖 Android — prossimamente';
+      container.appendChild(p);
+    }
+  }
+</script>
+</body>
+</html>
