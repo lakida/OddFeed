@@ -455,7 +455,7 @@ Rispondi SOLO con un JSON valido:
   "titleEn": "...",
   "descriptionIt": "...",
   "descriptionEn": "...",
-  "descriptionIg": "1 frase max 110 caratteri, tono parlante e curioso, stile Instagram — può essere una domanda, un'esclamazione o un fatto che lascia a bocca aperta. NO gergo giornalistico. Es: 'Viveva con un coccodrillo da 9 anni e il padrone di casa non lo sapeva.' oppure 'È stato arrestato per flatulenza. No, non è uno scherzo.'",
+  "descriptionIg": "2-3 frasi, max 280 caratteri, tono parlante e curioso — racconta il fatto principale più un dettaglio di contesto che aiuta a capire la storia. Stile: come se lo raccontassi a un amico su Instagram. Può iniziare con una domanda o fatto sorprendente, poi aggiunge il contesto essenziale. NO gergo giornalistico. Es: 'Un uomo in Florida ha chiamato il 112 per denunciare che gli avevano rubato la droga. La polizia è arrivata, ha confermato il furto... e lo ha arrestato.' oppure 'Viveva con un coccodrillo da 9 anni nel suo appartamento a Miami. Il padrone di casa lo ha scoperto solo quando il rettile ha risposto al campanello.'",
   "fullTextIt": "paragrafo 1\\n\\nparagrafo 2\\n\\nparagrafo 3\\n\\nparagrafo 4",
   "fullTextEn": "paragraph 1\\n\\nparagraph 2\\n\\nparagraph 3\\n\\nparagraph 4",
   "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
