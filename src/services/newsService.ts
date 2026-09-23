@@ -5,6 +5,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  getDoc,
   doc,
   updateDoc,
   increment,
@@ -316,6 +317,20 @@ export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsIte
     .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
     .slice(0, 2)
     .map(d => docToNewsItem(d, language));
+}
+
+// Fetcha un singolo articolo da Firestore per ID (usato dal deep link)
+export async function getArticleById(
+  articleId: string,
+  language: 'it' | 'en' = 'it'
+): Promise<NewsItem | null> {
+  try {
+    const snap = await getDoc(doc(db, 'articles', articleId));
+    if (!snap.exists()) return null;
+    return docToNewsItem(snap, language);
+  } catch {
+    return null;
+  }
 }
 
 // Aggiorna il conteggio di una reazione

@@ -47,6 +47,7 @@ import { useTheme } from '../context/ThemeContext';
 import { MOCK_NEWS } from '../data/mockData';
 import { useTranslation } from '../context/LanguageContext';
 import { NewsItem } from '../types';
+import { getArticleById } from '../services/newsService';
 
 interface ArticleScreenProps {
   newsId: string;
@@ -61,7 +62,19 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
-  const article = articleProp ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
+
+  const [fetchedArticle, setFetchedArticle] = React.useState<NewsItem | null>(null);
+
+  // Se non abbiamo l'article prop (es. deep link), fetchiamo da Firestore
+  React.useEffect(() => {
+    if (!articleProp && newsId) {
+      getArticleById(newsId).then(a => {
+        if (a) setFetchedArticle(a);
+      }).catch(() => {});
+    }
+  }, [newsId, articleProp]);
+
+  const article = articleProp ?? fetchedArticle ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
   const isSaved = savedIds?.has(article.id) ?? false;
 
   // Animazione scale sul bottone salva
