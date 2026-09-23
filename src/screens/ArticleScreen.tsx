@@ -12,6 +12,7 @@ import {
   Easing,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -64,17 +65,30 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
   const C = getColors(isDark);
 
   const [fetchedArticle, setFetchedArticle] = React.useState<NewsItem | null>(null);
+  const [fetchLoading, setFetchLoading] = React.useState(false);
 
   // Se non abbiamo l'article prop (es. deep link), fetchiamo da Firestore
   React.useEffect(() => {
-    if (!articleProp && newsId) {
+    if (!articleProp && newsId && newsId !== '1') {
+      setFetchLoading(true);
       getArticleById(newsId).then(a => {
         if (a) setFetchedArticle(a);
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => setFetchLoading(false));
     }
   }, [newsId, articleProp]);
 
-  const article = articleProp ?? fetchedArticle ?? MOCK_NEWS.find((n) => n.id === newsId) ?? MOCK_NEWS[0];
+  // Priorità: prop passato direttamente > fetch da Firestore > mock (solo se id=1)
+  const article = articleProp ?? fetchedArticle ?? MOCK_NEWS.find((n) => n.id === newsId) ?? null;
+
+  // Loading: articolo non ancora disponibile (deep link in fetch)
+  if (!article || fetchLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.background }}>
+        <ActivityIndicator size="large" color={Colors.violet} />
+      </SafeAreaView>
+    );
+  }
+
   const isSaved = savedIds?.has(article.id) ?? false;
 
   // Animazione scale sul bottone salva

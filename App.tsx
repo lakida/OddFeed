@@ -115,7 +115,8 @@ function AppContent() {
         if (interestsRaw) {
           setUserInterests(JSON.parse(interestsRaw));
         }
-        setAppScreen(done === 'true' ? 'Tabs' : 'Onboarding');
+        // Non sovrascrivere 'Article' se il deep link l'ha già impostato
+        setAppScreen(prev => prev === 'Article' ? 'Article' : (done === 'true' ? 'Tabs' : 'Onboarding'));
       } catch {
         setAppScreen('Onboarding');
       }
