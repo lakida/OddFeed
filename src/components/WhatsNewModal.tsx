@@ -48,12 +48,7 @@ export default function WhatsNewModal({ forceVisible = false, onClose }: Props) 
       setVisible(true);
       return;
     }
-    // Mostra automaticamente solo se la versione è cambiata
-    AsyncStorage.getItem(STORAGE_KEY).then(lastSeen => {
-      if (lastSeen !== currentVersion && CHANGELOG[currentVersion]) {
-        setVisible(true);
-      }
-    }).catch(() => {});
+    // Auto-show disabilitato: il modal si apre solo da Impostazioni
   }, [forceVisible, currentVersion]);
 
   const handleClose = async () => {
