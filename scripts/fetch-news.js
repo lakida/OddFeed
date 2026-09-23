@@ -44,26 +44,26 @@ const openai = new OpenAI({ apiKey: OPENAI_KEY });
 // Queste fonti pubblicano GIÀ solo notizie strane/virali/assurde.
 // Non serve cercare il bizzarro: ogni articolo è già pre-selezionato.
 const BIZARRE_RSS_FEEDS = [
-  // ── Fonti core bizzarre internazionali ───────────────────────────────────────
-  { url: 'https://rss.upi.com/news/Odd_News.rss',                      source: 'UPI Odd News',       category: 'storie_assurde', isItalian: false },
-  { url: 'https://nypost.com/weird-but-true/feed/',                     source: 'NY Post Weird',      category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.odditycentral.com/feed',                          source: 'Oddity Central',     category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',        category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.thesun.co.uk/news/bizarre/feed/',                 source: 'The Sun Bizarre',    category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.huffpost.com/section/weird-news/feed',            source: 'HuffPost Weird',     category: 'storie_assurde', isItalian: false },
-  // ── Nuove fonti virali ad alto impatto ──────────────────────────────────────
-  { url: 'https://www.ladbible.com/rss',                                source: 'LADbible',           category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.unilad.com/rss',                                  source: 'UNILAD',             category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.dailystar.co.uk/weird-news/rss.xml',              source: 'Daily Star Weird',   category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.mirror.co.uk/news/weird-news/rss.xml',            source: 'Mirror Weird',       category: 'storie_assurde', isItalian: false },
-  // ── Animali bizzarri ────────────────────────────────────────────────────────
-  { url: 'https://www.thedodo.com/rss.xml',                             source: 'The Dodo',           category: 'animali',        isItalian: false },
+  // ── Fonti core bizzarre internazionali (verificate) ──────────────────────────
+  { url: 'https://rss.upi.com/news/Odd_News.rss',                        source: 'UPI Odd News',       category: 'storie_assurde', isItalian: false },
+  { url: 'https://nypost.com/weird-but-true/feed/',                       source: 'NY Post Weird',      category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.odditycentral.com/feed',                            source: 'Oddity Central',     category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.boredpanda.com/feed/',                              source: 'Bored Panda',        category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.mentalfloss.com/rss.xml',                           source: 'Mental Floss',       category: 'storie_assurde', isItalian: false },
   // ── Crimini assurdi / incompetenti ──────────────────────────────────────────
-  { url: 'https://www.thesmokinggun.com/rss.xml',                        source: 'The Smoking Gun',    category: 'crimini_strani', isItalian: false },
+  { url: 'https://www.thesmokinggun.com/rss.xml',                         source: 'The Smoking Gun',    category: 'crimini_strani', isItalian: false },
+  // ── Reddit — notizie reali che sembrano inventate (perfetto per OddFeed) ────
+  { url: 'https://www.reddit.com/r/nottheonion/.rss',                     source: 'r/nottheonion',      category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.reddit.com/r/mildlyinfuriating/.rss',               source: 'r/mildlyinfuriating',category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.reddit.com/r/tifu/.rss',                            source: 'r/tifu',             category: 'storie_assurde', isItalian: false },
+  // ── Animali & natura bizzarra ────────────────────────────────────────────────
+  { url: 'https://www.reddit.com/r/AnimalsBeingDerps/.rss',               source: 'r/AnimalsBeingDerps',category: 'animali',        isItalian: false },
+  // ── Record & storie estreme ──────────────────────────────────────────────────
+  { url: 'https://www.guinnessworldrecords.com/news/rss',                  source: 'Guinness Records',   category: 'record',         isItalian: false },
+  // ── Leggi assurde & burocrazia folle ────────────────────────────────────────
+  { url: 'https://reason.com/feed/',                                       source: 'Reason',             category: 'leggi',          isItalian: false },
   // ── Tecnologia strana ───────────────────────────────────────────────────────
-  { url: 'https://feeds.arstechnica.com/arstechnica/index',             source: 'Ars Technica',       category: 'tecnologia',     isItalian: false },
-  // ── Mental Floss: curiosità e record ────────────────────────────────────────
-  { url: 'https://www.mentalfloss.com/rss.xml',                         source: 'Mental Floss',       category: 'storie_assurde', isItalian: false },
+  { url: 'https://feeds.arstechnica.com/arstechnica/index',               source: 'Ars Technica',       category: 'tecnologia',     isItalian: false },
 ];
 
 // ─── Fonti RSS attualità (notizie del giorno + gossip) ────────────
@@ -365,7 +365,7 @@ QUOTA ITALIA: il pubblico è italiano — se ci sono articoli 🇮🇹 che super
 Lista articoli:
 ${summaries}
 
-IMPORTANTE: È meglio selezionare 4-5 notizie davvero virali che 12 mediocri. NON abbassare il filtro per raggiungere un numero minimo. La qualità è tutto. Se non ci sono abbastanza articoli davvero buoni, seleziona solo quelli buoni.
+IMPORTANTE: Seleziona idealmente 6-10 articoli. Se ne trovi di meno buoni, seleziona solo quelli buoni (meglio 4 virali che 10 mediocri). NON selezionare articoli che non superano il test virale solo per raggiungere un numero — la qualità è più importante della quantità. Ma ricorda: se un articolo ti fa anche solo sorridere o alzare un sopracciglio, probabilmente vale la pena includerlo.
 
 Rispondi SOLO con un JSON valido (niente testo prima o dopo):
 {"selected": [indici dal più virale/assurdo al meno, es. [3, 7, 1]]}`;
