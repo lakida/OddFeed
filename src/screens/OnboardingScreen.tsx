@@ -171,8 +171,8 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           </Text>
           <Text style={[styles.stepSubtitle, { color: C.textSecondary }]}>
             {language === 'it'
-              ? 'Ogni mattina alle 7:30 ti mandiamo la notizia più strana del giorno. Non perdertela.'
-              : 'Every morning at 7:30 we send you the strangest story of the day. Don\'t miss it.'}
+              ? 'Due volte al giorno la notizia più strana: ogni mattina alle 7:20 per iniziare bene e ogni sera alle 21:15 per concludere in bellezza.'
+              : 'Twice a day, the strangest story: every morning at 7:20 to start right, and every evening at 21:15 to end on a high.'}
           </Text>
 
           {/* Anteprima notifica */}
@@ -181,9 +181,9 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
               <View style={styles.notifIconDot} />
               <Text style={[styles.notifAppLabel, { color: C.textTertiary }]}>OddFeed  ·  ora</Text>
             </View>
-            <Text style={[styles.notifTitle, { color: C.text }]}>👀 Hai letto la notizia di oggi?</Text>
+            <Text style={[styles.notifTitle, { color: C.text }]}>🤯 La notizia di stamattina ti aspetta</Text>
             <Text style={[styles.notifBody, { color: C.textSecondary }]}>
-              🤪 Un uomo in Giappone ha fatto causa alla pioggia per averlo bagnato senza preavviso...
+              Un uomo in Giappone ha fatto causa alla pioggia per averlo bagnato senza preavviso...
             </Text>
           </View>
 

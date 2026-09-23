@@ -44,14 +44,26 @@ const openai = new OpenAI({ apiKey: OPENAI_KEY });
 // Queste fonti pubblicano GIÀ solo notizie strane/virali/assurde.
 // Non serve cercare il bizzarro: ogni articolo è già pre-selezionato.
 const BIZARRE_RSS_FEEDS = [
-  { url: 'https://rss.upi.com/news/Odd_News.rss',                      source: 'UPI Odd News',    category: 'storie_assurde', isItalian: false },
-  { url: 'https://nypost.com/weird-but-true/feed/',                     source: 'NY Post',         category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.odditycentral.com/feed',                          source: 'Oddity Central',  category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',     category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.mentalfloss.com/rss.xml',                         source: 'Mental Floss',    category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.thesun.co.uk/news/bizarre/feed/',                 source: 'The Sun Bizarre', category: 'storie_assurde', isItalian: false },
-  { url: 'https://www.huffpost.com/section/weird-news/feed',            source: 'HuffPost Weird',  category: 'storie_assurde', isItalian: false },
-  { url: 'https://feeds.arstechnica.com/arstechnica/index',             source: 'Ars Technica',    category: 'tecnologia',     isItalian: false },
+  // ── Fonti core bizzarre internazionali ───────────────────────────────────────
+  { url: 'https://rss.upi.com/news/Odd_News.rss',                      source: 'UPI Odd News',       category: 'storie_assurde', isItalian: false },
+  { url: 'https://nypost.com/weird-but-true/feed/',                     source: 'NY Post Weird',      category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.odditycentral.com/feed',                          source: 'Oddity Central',     category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.boredpanda.com/feed/',                            source: 'Bored Panda',        category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.thesun.co.uk/news/bizarre/feed/',                 source: 'The Sun Bizarre',    category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.huffpost.com/section/weird-news/feed',            source: 'HuffPost Weird',     category: 'storie_assurde', isItalian: false },
+  // ── Nuove fonti virali ad alto impatto ──────────────────────────────────────
+  { url: 'https://www.ladbible.com/rss',                                source: 'LADbible',           category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.unilad.com/rss',                                  source: 'UNILAD',             category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.dailystar.co.uk/weird-news/rss.xml',              source: 'Daily Star Weird',   category: 'storie_assurde', isItalian: false },
+  { url: 'https://www.mirror.co.uk/news/weird-news/rss.xml',            source: 'Mirror Weird',       category: 'storie_assurde', isItalian: false },
+  // ── Animali bizzarri ────────────────────────────────────────────────────────
+  { url: 'https://www.thedodo.com/rss.xml',                             source: 'The Dodo',           category: 'animali',        isItalian: false },
+  // ── Crimini assurdi / incompetenti ──────────────────────────────────────────
+  { url: 'https://www.thesmokinggun.com/rss.xml',                        source: 'The Smoking Gun',    category: 'crimini_strani', isItalian: false },
+  // ── Tecnologia strana ───────────────────────────────────────────────────────
+  { url: 'https://feeds.arstechnica.com/arstechnica/index',             source: 'Ars Technica',       category: 'tecnologia',     isItalian: false },
+  // ── Mental Floss: curiosità e record ────────────────────────────────────────
+  { url: 'https://www.mentalfloss.com/rss.xml',                         source: 'Mental Floss',       category: 'storie_assurde', isItalian: false },
 ];
 
 // ─── Fonti RSS attualità (notizie del giorno + gossip) ────────────
@@ -321,37 +333,42 @@ async function scoreAndSelectArticles(candidates, count = 5) {
   const prompt = `Sei il curatore di OddFeed, un'app italiana di notizie bizzarre.
 Il pubblico è italiano: notizie dall'Italia hanno priorità.
 
-REGOLA FONDAMENTALE: seleziona SOLO articoli in cui il fatto bizzarro/assurdo è già evidente nel titolo o nel sommario originale. Non selezionare articoli normali sperando di renderli interessanti in fase di scrittura — non funziona.
+MISSIONE: OddFeed esiste per raccontare storie che fanno esclamare "MA DAI?!" ad alta voce. Storie che si condividono su WhatsApp perché troppo assurde per non dirlo a qualcuno.
 
-DOMANDA DA FARTI per ogni articolo: "Se racconto questa storia a un amico al bar, si stupirà o si annoierà?" → Se si annoia, scarta.
+═══ TEST VIRALE ═══
+Prima di selezionare un articolo, chiediti: "Se mando questa storia su un gruppo WhatsApp, la gente risponde con 😱🤣😂 o con il silenzio?"
+→ Silenzio = scarta. Reazioni = includi.
 
-✅ SELEZIONA se nell'originale c'è già:
-- Una persona che fa qualcosa di ridicolo/illegale/imbarazzante
-- Un animale in un posto assurdo
-- Una legge o sentenza ridicola
-- Un record assurdo o una coincidenza incredibile
-- Uno scandalo imbarazzante
-- Un crimine comico o incompetente
+✅ SELEZIONA SOLO se c'è UNO di questi elementi:
+1. ASSURDO UMANO: Una persona che fa qualcosa di talmente stupido/folle/imbarazzante da essere quasi incredibile (es. ladro che chiama il 112 per denunciare che gli hanno rubato la droga; uomo arrestato tre volte nello stesso giorno)
+2. ANIMALE PROTAGONISTA: Un animale che fa cose che non dovrebbe fare in posti impossibili (es. orso che guida un carrello al supermercato; pinguino che sfugge allo zoo e vive in un ristorante di pesce per 3 settimane)
+3. RECORD O CASO ESTREMO: Qualcosa di così esagerato che sembra impossibile ma è vero (es. donna che vince alla lotteria 4 volte nella stessa settimana; uomo che vive in aeroporto per 7 anni)
+4. LEGGE O SENTENZA RIDICOLA: Regole o decisioni giudiziarie che fanno ridere/inorridire (es. condannato a 15 anni per aver rubato 3 caramelle in Louisiana; città che vieta ai residenti di urlare dopo le 10)
+5. COINCIDENZA INCREDIBILE: Qualcosa di così improbabile da sembrare inventato
+6. CRIMINE TRAGICOMICO: Ladri/criminali talmente incompetenti o assurdi da essere comici
+7. SCANDALO IMBARAZZANTE: Situazioni umilianti che coinvolgono personaggi pubblici in modi inaspettati
 
-❌ SCARTA SEMPRE (anche se 🇮🇹):
-- Missioni spaziali, astronomia, NASA (notizie normali di scienza)
-- Politica, elezioni, governo, parlamento
-- Economia, mercati, inflazione, banche
-- Guerra, conflitti, crisi internazionali
-- Sport (partite, campionati, trasferimenti)
-- Salute, medicina, farmaci, pandemie
-- Clima, ambiente, disastri naturali
-- Qualsiasi notizia "seria" travestita da bizzarra
+❌ SCARTA SENZA ECCEZIONI — non importa quanto sembri "interessante":
+- Qualsiasi notizia di politica, governo, elezioni (ANCHE bizzarra nella forma)
+- Economia, mercati, aziende (anche se c'è un fatto strano)
+- Guerra, conflitti, tensioni internazionali
+- Sport (partite, record sportivi, trasferimenti)
+- Salute, farmaci, studi scientifici (anche curiosi)
+- Clima, meteo, disastri naturali
+- Astronomia, spazio, NASA/ESA (salvo alieni veri... che non esistono)
+- "Studio rivela che..." o "Ricerca dimostra che..." → quasi sempre noiosi
+- Notizie con titoli che iniziano con "Come..." o "Perché..." o "I vantaggi di..."
+- Qualsiasi cosa che in un TG normale sarebbe nella sezione "economia" o "esteri"
 
-QUOTA ITALIA: il pubblico è italiano — se ci sono articoli 🇮🇹 che superano il test del bar, includi almeno ${MIN_ITALIAN} su ${count}. Se ne trovi di più buoni, includili tutti.
+QUOTA ITALIA: il pubblico è italiano — se ci sono articoli 🇮🇹 che superano il test virale, includi almeno ${MIN_ITALIAN} su ${count}.
 
 Lista articoli:
 ${summaries}
 
-IMPORTANTE: cerca di selezionare fino a ${count} articoli. Abbassa leggermente il filtro se necessario per raggiungere il numero — è meglio avere 12 notizie decenti che 3 perfette. Seleziona almeno 8 articoli se disponibili.
+IMPORTANTE: È meglio selezionare 4-5 notizie davvero virali che 12 mediocri. NON abbassare il filtro per raggiungere un numero minimo. La qualità è tutto. Se non ci sono abbastanza articoli davvero buoni, seleziona solo quelli buoni.
 
 Rispondi SOLO con un JSON valido (niente testo prima o dopo):
-{"selected": [indici dal più bizzarro al meno, es. [3, 7, 1]]}`;
+{"selected": [indici dal più virale/assurdo al meno, es. [3, 7, 1]]}`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -404,23 +421,33 @@ Usa SOLO fatti presenti nell'articolo originale. Non aggiungere dettagli inventa
 Se il testo originale ha dettagli specifici (nomi, numeri, luoghi, citazioni), usali — rendono l'articolo credibile e interessante.
 
 ═══ TITOLO ═══
-- Max 70 caratteri, emoji iniziale obbligatoria
-- Cattura il fatto più assurdo/curioso con tono ironico
-- Usa numeri reali se presenti ("47 gatti", "3 anni di prigione", ecc.)
-- Tecniche che funzionano: gap di curiosità ("scopri perché…"), contrasto assurdo, superlativo reale
-- EVITA titoli generici o giornalistici — punta allo stupore immediato
-- ✗ MALE: "🐊 Coccodrillo trovato in appartamento a Miami"
-- ✓ BENE: "🐊 Viveva con un coccodrillo da 9 anni senza dirlo al padrone di casa"
+- Max 75 caratteri, emoji iniziale obbligatoria (che rappresenti il soggetto principale)
+- Deve contenere IL fatto più assurdo — chi legge il titolo deve già capire perché la storia è incredibile
+- Usa numeri reali e specifici ("47 gatti", "3 anni di prigione", "9 anni senza dirlo")
+- Scrivi come un amico che racconta una storia incredibile, NON come un giornalista
+- Il titolo deve creare immediato stupore/risata/incredulità
+
+ESEMPI — studia queste trasformazioni:
+- ✗ "🐊 Coccodrillo trovato in appartamento a Miami" → generico, potrebbe essere ovunque
+- ✓ "🐊 Viveva con un coccodrillo da 9 anni senza dirlo al padrone di casa" → specifico, assurdo, personale
+- ✗ "🐈 Gatto entra in banca a Londra" → descrittivo, noioso
+- ✓ "🐈 Un gatto si è presentato in banca come cliente e ha aspettato in fila per 20 minuti" → cinematografico
+- ✗ "🍕 Uomo denuncia ristorante per pizza sbagliata" → normale
+- ✓ "🍕 Ha fatto causa per 5 anni a una pizzeria perché gli hanno messo il mais: ha vinto" → specifico, escalation, sorpresa finale
+- ✗ "💰 Truffatore arrestato dopo aver rubato milioni" → normale cronaca
+- ✓ "💰 Ha truffato 3 milioni di euro fingendosi farmacista su TikTok — i clienti lo seguivano ancora dopo l'arresto" → dettaglio incredibile
 
 ═══ TESTO ═══
 Scrivi 3-4 paragrafi sostanziosi (non liste, non bullet). Ogni paragrafo almeno 3-4 frasi.
-- Paragrafo 1: apri con il fatto più assurdo per agganciare il lettore. Chi, cosa, dove, quando.
-- Paragrafo 2: approfondisci con dettagli, contesto, background. Usa tutti i dettagli disponibili nell'originale.
-- Paragrafo 3: sviluppi, reazioni, conseguenze o aspetti secondari interessanti presenti nell'articolo.
-- Paragrafo 4 (opzionale): curiosità finale, dato sorprendente, o chiusura ironica se c'è materiale.
+- Paragrafo 1: INIZIA con il fatto più assurdo già nella prima frase — NON costruire suspense prima di rivelare il fatto. Il lettore deve capire subito perché questa storia è incredibile. Chi, cosa, dove, quando. Sii diretto e specifico.
+- Paragrafo 2: approfondisci con dettagli, contesto, background. Usa TUTTI i dettagli specifici disponibili nell'originale (nomi, numeri, date, luoghi). I dettagli specifici rendono la storia credibile e ancora più incredibile.
+- Paragrafo 3: sviluppi, reazioni, conseguenze o aspetti secondari. Come hanno reagito le persone coinvolte? Cosa è successo dopo? Le reazioni degli altri spesso sono la parte più divertente.
+- Paragrafo 4 (opzionale): curiosità finale, statistica sorprendente, confronto con casi simili, o chiusura ironica. Se hai materiale, chiudi con una frase che fa riflettere o ridere.
+
+Tono: conversazionale e ironico, come se stessi raccontando la storia a un amico. NON usare il gergo giornalistico tipo "fonti confermano", "secondo quanto emerge", "la vicenda".
 
 ═══ DESCRIZIONE ═══
-- 2 frasi che catturano l'essenza bizzarra (max 180 caratteri)
+- 2 frasi concise che catturano l'essenza bizzarra. La prima deve essere il fatto più incredibile, la seconda un dettaglio che amplifica lo stupore. Max 180 caratteri.
 
 Rispondi SOLO con un JSON valido:
 {
