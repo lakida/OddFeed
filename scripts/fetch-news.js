@@ -455,6 +455,7 @@ Rispondi SOLO con un JSON valido:
   "titleEn": "...",
   "descriptionIt": "...",
   "descriptionEn": "...",
+  "descriptionIg": "1 frase max 110 caratteri, tono parlante e curioso, stile Instagram — può essere una domanda, un'esclamazione o un fatto che lascia a bocca aperta. NO gergo giornalistico. Es: 'Viveva con un coccodrillo da 9 anni e il padrone di casa non lo sapeva.' oppure 'È stato arrestato per flatulenza. No, non è uno scherzo.'",
   "fullTextIt": "paragrafo 1\\n\\nparagrafo 2\\n\\nparagrafo 3\\n\\nparagrafo 4",
   "fullTextEn": "paragraph 1\\n\\nparagraph 2\\n\\nparagraph 3\\n\\nparagraph 4",
   "category": "una di: animali|scienza|tecnologia|record|leggi|cultura|gastronomia|luoghi|sesso_relazioni|gossip|crimini_strani|storie_assurde|psicologia_strana|soldi_folli|coincidenze",
