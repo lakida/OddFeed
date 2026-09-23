@@ -2,7 +2,7 @@
   "expo": {
     "name": "OddFeed",
     "slug": "OddFeed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "scheme": "oddfeed",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
