@@ -631,8 +631,9 @@ ESEMPI:
 2 frasi. Prima: il fatto core. Seconda: la svolta o il dettaglio che incuriosisce.
 
 ═══ TESTO ═══
-2 paragrafi. Paragrafo 1: chi/cosa/dove/quando + il punto più interessante.
-Paragrafo 2: contesto, conseguenze, o reazione pubblica rilevante.
+2 paragrafi sostanziosi. Ogni paragrafo almeno 3-4 frasi.
+Paragrafo 1: INIZIA subito con il fatto reale — chi, cosa, dove, quando. Il lettore deve capire esattamente cosa è successo già dalla prima frase. Niente suspense prima di rivelare il fatto, niente eufemismi o linguaggio vago.
+Paragrafo 2: contesto, conseguenze, reazione pubblica. Usa tutti i dettagli specifici disponibili (nomi, numeri, luoghi).
 
 Rispondi SOLO con JSON:
 {
@@ -975,8 +976,9 @@ Il titolo deve far pensare "devo assolutamente leggere questo". Tecniche:
 2 frasi. Tono diretto e incuriosente — invoglia ad aprire l'articolo.
 
 ═══ TESTO ═══
-2 paragrafi sostanziosi. Paragrafo 1: il dato/fatto più interessante + contesto.
-Paragrafo 2: implicazioni, variabili, reazione degli esperti o della comunità.
+2 paragrafi sostanziosi. Ogni paragrafo almeno 3-4 frasi.
+Paragrafo 1: INIZIA con il dato/fatto principale espresso chiaramente — cosa dice lo studio o cosa è successo, chi lo ha condotto/coinvolto, i numeri reali. Il lettore deve capire subito di cosa si tratta. Nessun linguaggio vago o eufemistico.
+Paragrafo 2: implicazioni, variabili, reazione degli esperti o della comunità. Usa dettagli specifici.
 
 Rispondi SOLO con JSON:
 {
