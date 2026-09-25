@@ -1090,10 +1090,30 @@ async function fetchAccaddeDavvero(today, db) {
     .map((e, i) => `[${i}] (${e.year}) ${(e.text ?? '').substring(0, 160)}`)
     .join('\n');
 
-  const selPrompt = `Sei il curatore di "Accadde Davvero", sezione di OddFeed dedicata a fatti storici assurdi, curiosi o sorprendenti.
-Seleziona i 3 eventi più bizzarri, insoliti o sorprendenti da questa lista di fatti storici avvenuti oggi nel corso della storia.
-Privilegia: leggi assurde, invenzioni improbabili, record curiosi, eventi paradossali, personaggi eccentrici, disastri grotteschi, prime volte memorabili.
-Evita: guerre/battaglie standard, elezioni, morti di persone famose senza nulla di assurdo, eventi politici di routine.
+  const selPrompt = `Sei il curatore di "Accadde Davvero", sezione di OddFeed dedicata a fatti storici assurdi, curiosi e sorprendenti.
+Seleziona i 3 eventi PIÙ ASSURDI e DIVERTENTI da questa lista. Ogni evento deve far pensare "ma davvero?!".
+
+✅ SELEZIONA SOLO questi tipi:
+- Invenzioni improbabili o fallimentari
+- Leggi assurde o bizzarre
+- Record curiosi o ridicoli
+- Personaggi eccentrici con storie paradossali
+- Prima volta di qualcosa di insolito
+- Storie di animali celebri o comportamenti animali assurdi
+- Scoperte scientifiche sorprendenti o controintuitive
+- Coincidenze incredibili
+- Mode o tendenze culturali strane
+- Fatti storici paradossali o ironici
+
+❌ ESCLUDI ASSOLUTAMENTE (anche se sembrano curiosi):
+- Condanne penali, arresti, crimini
+- Terremoti, uragani, eruzioni, disastri naturali
+- Incidenti aerei, ferroviari, marittimi
+- Morti di qualsiasi tipo
+- Guerre, battaglie, conflitti
+- Elezioni, politica, presidenti
+- Attentati terroristici
+- Scandali sessuali
 
 Lista eventi:
 ${summaries}
@@ -1105,16 +1125,22 @@ Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
     const res = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: selPrompt }],
+      response_format: { type: 'json_object' },
       temperature: 0.4,
-      max_tokens: 180,
+      max_tokens: 200,
     });
-    const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const raw = res.choices[0].message.content ?? '{}';
     const result = JSON.parse(raw);
     console.log(`   Selezione AI: ${result.reasoning}`);
     selectedEvents = (result.selected ?? []).slice(0, 3).map(i => events[i]).filter(Boolean);
   } catch (e) {
-    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 3`);
-    selectedEvents = events.slice(0, 3);
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 3 eventi non dark`);
+    // Fallback: prendi i primi 3 che non contengono parole chiave pesanti
+    const darkKeywords = ['died', 'death', 'killed', 'earthquake', 'crash', 'sentenced', 'convicted', 'attack', 'war', 'disaster', 'hurricane'];
+    selectedEvents = events
+      .filter(e => !darkKeywords.some(kw => (e.text ?? '').toLowerCase().includes(kw)))
+      .slice(0, 3);
+    if (selectedEvents.length === 0) selectedEvents = events.slice(0, 3);
   }
 
   const batch = db.batch();
@@ -1164,10 +1190,11 @@ Rispondi SOLO con JSON valido:
       const res = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: rewritePrompt }],
+        response_format: { type: 'json_object' },
         temperature: 0.7,
-        max_tokens: 1100,
+        max_tokens: 1200,
       });
-      const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const raw = res.choices[0].message.content ?? '{}';
       const ai = JSON.parse(raw);
 
       const docRef = db.collection('articles').doc();

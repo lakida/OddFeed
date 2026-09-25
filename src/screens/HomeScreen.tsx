@@ -163,45 +163,53 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
         />
 
         {/* ── Sezione Accadde Davvero ── */}
-        {!loading && accaddeNews.length > 0 && (
-          <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
-            <View style={currentStyles.secHdr}>
-              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ACCADDE DAVVERO</Text>
-              <TouchableOpacity onPress={onGoToArchive}>
-                <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={currentStyles.row}
-            >
-              {accaddeNews.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[currentStyles.card, { backgroundColor: C.cardWhite, borderColor: C.border }]}
-                  onPress={() => onOpenArticle(item.id, item)}
-                  activeOpacity={0.75}
-                >
-                  <View style={currentStyles.cardBodyTypo}>
-                    <View style={[currentStyles.typoAccent, { backgroundColor: '#4F46E5' }]} />
-                    <View style={currentStyles.typoInner}>
-                      {item.historicalYear != null && (
-                        <Text style={[currentStyles.typoPill, { color: '#4F46E5' }]}>{item.historicalYear}</Text>
-                      )}
-                      <Text style={[currentStyles.typoTitle, { color: C.text }]} numberOfLines={3}>
-                        {cleanTitle(item.title)}
-                      </Text>
-                      <Text style={[currentStyles.cardSource, { color: C.textTertiary, marginTop: 3 }]}>
-                        Wikipedia
-                      </Text>
-                    </View>
-                  </View>
+        {!loading && accaddeNews.length > 0 && (() => {
+          const now = new Date();
+          const dd = now.getDate();
+          const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+          const mese = MESI[now.getMonth()];
+          return (
+            <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
+              <View style={currentStyles.secHdr}>
+                <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ACCADDE DAVVERO</Text>
+                <TouchableOpacity onPress={onGoToArchive}>
+                  <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={currentStyles.row}
+              >
+                {accaddeNews.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[currentStyles.card, { backgroundColor: C.cardWhite, borderColor: C.border }]}
+                    onPress={() => onOpenArticle(item.id, item)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={currentStyles.cardBodyTypo}>
+                      <View style={[currentStyles.typoAccent, { backgroundColor: '#4F46E5' }]} />
+                      <View style={currentStyles.typoInner}>
+                        {item.historicalYear != null && (
+                          <Text style={[currentStyles.typoPill, { color: '#4F46E5' }]}>
+                            {`${dd} ${mese} ${item.historicalYear}`}
+                          </Text>
+                        )}
+                        <Text style={[currentStyles.typoTitle, { color: C.text }]} numberOfLines={3}>
+                          {cleanTitle(item.title)}
+                        </Text>
+                        <Text style={[currentStyles.cardSource, { color: C.textTertiary, marginTop: 3 }]}>
+                          Wikipedia
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          );
+        })()}
 
         {/* Skeleton mentre carica */}
         {loading && <SkeletonNewsList count={4} variant="row" />}
