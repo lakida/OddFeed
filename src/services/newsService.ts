@@ -324,30 +324,22 @@ export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsIte
     .map(d => docToNewsItem(d, language));
 }
 
-// Carica gli articoli "Accadde Davvero" — oggi + ultimi 7 giorni, max 10.
+// Carica gli articoli "Accadde Davvero" di oggi, max 10.
 export async function fetchAccaddeDavveroNews(language: 'it' | 'en'): Promise<NewsItem[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
-
+  const today = new Date().toISOString().split('T')[0];
   const q = query(
     collection(db, 'articles'),
+    where('date', '==', today),
     where('articleType', '==', 'accadde_davvero'),
-    where('date', '>=', cutoffStr),
   );
   const snap = await getDocs(q);
   if (!snap.empty) {
     return snap.docs
-      .sort((a, b) => {
-        // Prima per data (più recente), poi per order
-        const dateDiff = (b.data().date ?? '').localeCompare(a.data().date ?? '');
-        if (dateDiff !== 0) return dateDiff;
-        return (a.data().order ?? 0) - (b.data().order ?? 0);
-      })
+      .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
       .slice(0, 10)
       .map(d => docToNewsItem(d, language));
   }
-  // Fallback: prendi gli ultimi 10 disponibili
+  // Fallback: giorno più recente disponibile
   const qFallback = query(
     collection(db, 'articles'),
     where('articleType', '==', 'accadde_davvero'),
