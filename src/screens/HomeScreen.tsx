@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchTodayNews, fetchRecentPastNews, fetchAccaddeDavveroNews, fetchTopOddNews } from '../services/newsService';
+import { fetchTodayNews, fetchRecentPastNews, fetchAccaddeDavveroNews, fetchCurrentNews, fetchTopOddNews } from '../services/newsService';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
@@ -106,6 +106,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
   const [todayNews, setTodayNews] = useState<NewsItem[]>([]);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [accaddeNews, setAccaddeNews] = useState<NewsItem[]>([]);
+  const [currentNews, setCurrentNews] = useState<NewsItem[]>([]);
   const [topOddNews, setTopOddNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,13 +120,15 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
       fetchTodayNews(language, interests, 10).catch(() => []),
       fetchRecentPastNews(language, interests, 2, 7).catch(() => []),
       fetchAccaddeDavveroNews(language).catch(() => []),
+      fetchCurrentNews(language).catch(() => []),
       fetchTopOddNews(language).catch(() => []),
-    ]).then(([todayArr, pastArr, accaddeArr, topOddArr]) => {
+    ]).then(([todayArr, pastArr, accaddeArr, currentArr, topOddArr]) => {
       const topOddIds = new Set(topOddArr.map((n) => n.id));
       const today = todayArr.filter((n) => !topOddIds.has(n.id));
       setTodayNews(today);
       setPastNews(pastArr.filter((n) => !topOddIds.has(n.id)));
       setAccaddeNews(accaddeArr);
+      setCurrentNews(currentArr);
       setTopOddNews(topOddArr);
       if (today.length === 0 && pastArr.length === 0 && accaddeArr.length === 0) {
         setHasError(true);
@@ -295,6 +298,39 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
             );
           });
         })()}
+
+        {/* ── Sezione Attualità (lista semplice, meno peso) ── */}
+        {!loading && currentNews.length > 0 && (
+          <View style={[attStyles.section, { borderColor: C.border, backgroundColor: C.bg }]}>
+            <View style={[attStyles.header, { borderBottomWidth: 0.5, borderBottomColor: C.border }]}>
+              <Text style={[attStyles.headerTitle, { color: C.textSecondary }]}>ATTUALITÀ</Text>
+              <TouchableOpacity onPress={onGoToArchive}>
+                <Text style={attStyles.headerLink}>Vedi tutte ›</Text>
+              </TouchableOpacity>
+            </View>
+            {currentNews.slice(0, 4).map((item, idx) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  attStyles.row,
+                  idx < Math.min(currentNews.length, 4) - 1 && { borderBottomWidth: 0.5, borderBottomColor: C.border },
+                ]}
+                onPress={() => onOpenArticle(item.id, item)}
+                activeOpacity={0.7}
+              >
+                <View style={attStyles.dot} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[attStyles.title, { color: C.text }]} numberOfLines={2}>
+                    {cleanTitle(item.title)}
+                  </Text>
+                  <Text style={[attStyles.meta, { color: C.textTertiary }]}>
+                    {item.source} · {formatDate(item.publishedAt)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* ── CTA Archivio ── */}
         {!loading && (
@@ -676,6 +712,64 @@ const currentStyles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 25,
     flex: 1,
+  },
+});
+
+// Stili sezione Attualità semplificata (meno peso visivo)
+const attStyles = StyleSheet.create({
+  section: {
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 0.5,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  headerTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: Colors.textSecondary,
+  },
+  headerLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.violet,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 10,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: Colors.textTertiary,
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  title: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    color: Colors.text,
+  },
+  meta: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    marginTop: 2,
   },
 });
 

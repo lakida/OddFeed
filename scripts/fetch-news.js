@@ -1118,7 +1118,7 @@ Seleziona i 3 eventi PIÙ ASSURDI e DIVERTENTI da questa lista. Ogni evento deve
 Lista eventi:
 ${summaries}
 
-Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
+Rispondi SOLO con JSON: {"selected": [i1, i2, i3, i4, i5, i6], "reasoning": "..."}`;
 
   let selectedEvents = [];
   try {
@@ -1127,20 +1127,19 @@ Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
       messages: [{ role: 'user', content: selPrompt }],
       response_format: { type: 'json_object' },
       temperature: 0.4,
-      max_tokens: 200,
+      max_tokens: 220,
     });
     const raw = res.choices[0].message.content ?? '{}';
     const result = JSON.parse(raw);
     console.log(`   Selezione AI: ${result.reasoning}`);
-    selectedEvents = (result.selected ?? []).slice(0, 3).map(i => events[i]).filter(Boolean);
+    selectedEvents = (result.selected ?? []).slice(0, 6).map(i => events[i]).filter(Boolean);
   } catch (e) {
-    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 3 eventi non dark`);
-    // Fallback: prendi i primi 3 che non contengono parole chiave pesanti
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 6 eventi non dark`);
     const darkKeywords = ['died', 'death', 'killed', 'earthquake', 'crash', 'sentenced', 'convicted', 'attack', 'war', 'disaster', 'hurricane'];
     selectedEvents = events
       .filter(e => !darkKeywords.some(kw => (e.text ?? '').toLowerCase().includes(kw)))
-      .slice(0, 3);
-    if (selectedEvents.length === 0) selectedEvents = events.slice(0, 3);
+      .slice(0, 6);
+    if (selectedEvents.length === 0) selectedEvents = events.slice(0, 6);
   }
 
   const batch = db.batch();
