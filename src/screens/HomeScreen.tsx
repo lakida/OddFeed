@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '800',
     color: Colors.text,
     lineHeight: 24,
     marginBottom: Spacing.xs,
@@ -576,7 +576,7 @@ const currentStyles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#1E1B4B',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
@@ -631,7 +631,7 @@ const currentStyles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '800',
     lineHeight: 23,
     marginBottom: 4,
   },
@@ -965,7 +965,7 @@ const ptsBannerStyles = StyleSheet.create({
   },
   value: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: '800',
     color: Colors.violet,
     letterSpacing: -0.5,
     lineHeight: 31,

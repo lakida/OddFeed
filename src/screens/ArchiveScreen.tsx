@@ -408,6 +408,6 @@ const styles = StyleSheet.create({
   unThumb: { width: 69, height: 83, borderRadius: 10, flexShrink: 0, overflow: 'hidden' },
   unBody: { flex: 1, minWidth: 0 },
   unCat: { fontSize: 13, fontWeight: '700' },
-  unTitle: { fontSize: 17, fontWeight: '900', lineHeight: 24 },
+  unTitle: { fontSize: 17, fontWeight: '800', lineHeight: 24 },
   unMeta: { fontSize: FontSize.xs, color: Colors.textTertiary },
 });
