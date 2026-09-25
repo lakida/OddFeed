@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchTodayNews, fetchRecentPastNews, fetchCurrentNews, fetchTopOddNews } from '../services/newsService';
+import { fetchTodayNews, fetchRecentPastNews, fetchAccaddeDavveroNews, fetchTopOddNews } from '../services/newsService';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
@@ -105,7 +105,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
   const C = getColors(isDark);
   const [todayNews, setTodayNews] = useState<NewsItem[]>([]);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
-  const [currentNews, setCurrentNews] = useState<NewsItem[]>([]);
+  const [accaddeNews, setAccaddeNews] = useState<NewsItem[]>([]);
   const [topOddNews, setTopOddNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -118,16 +118,16 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
     Promise.all([
       fetchTodayNews(language, interests, 10).catch(() => []),
       fetchRecentPastNews(language, interests, 2, 7).catch(() => []),
-      fetchCurrentNews(language).catch(() => []),
+      fetchAccaddeDavveroNews(language).catch(() => []),
       fetchTopOddNews(language).catch(() => []),
-    ]).then(([todayArr, pastArr, currentArr, topOddArr]) => {
+    ]).then(([todayArr, pastArr, accaddeArr, topOddArr]) => {
       const topOddIds = new Set(topOddArr.map((n) => n.id));
       const today = todayArr.filter((n) => !topOddIds.has(n.id));
       setTodayNews(today);
       setPastNews(pastArr.filter((n) => !topOddIds.has(n.id)));
-      setCurrentNews(currentArr);
+      setAccaddeNews(accaddeArr);
       setTopOddNews(topOddArr);
-      if (today.length === 0 && pastArr.length === 0 && currentArr.length === 0) {
+      if (today.length === 0 && pastArr.length === 0 && accaddeArr.length === 0) {
         setHasError(true);
       }
       if (isRefresh) {
@@ -162,11 +162,11 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
           subtitle={t.home.todayNewsPlural}
         />
 
-        {/* ── Sezione Attualità ── */}
-        {!loading && currentNews.length > 0 && (
+        {/* ── Sezione Accadde Davvero ── */}
+        {!loading && accaddeNews.length > 0 && (
           <View style={[currentStyles.section, { borderBottomColor: C.border }]}>
             <View style={currentStyles.secHdr}>
-              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ATTUALITÀ</Text>
+              <Text style={[currentStyles.sectionTitle, { color: '#1E1B4B' }]}>ACCADDE DAVVERO</Text>
               <TouchableOpacity onPress={onGoToArchive}>
                 <Text style={currentStyles.secHdrLink}>Vedi tutte ›</Text>
               </TouchableOpacity>
@@ -176,24 +176,24 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={currentStyles.row}
             >
-              {currentNews.map((item) => (
+              {accaddeNews.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={[currentStyles.card, { backgroundColor: C.cardWhite, borderColor: C.border }]}
                   onPress={() => onOpenArticle(item.id, item)}
                   activeOpacity={0.75}
                 >
-
-                  {/* Layout tipografico — sempre, indipendentemente dall'immagine */}
                   <View style={currentStyles.cardBodyTypo}>
-                    <View style={[currentStyles.typoAccent, { backgroundColor: getCategoryGradient(item.category)[0] }]} />
+                    <View style={[currentStyles.typoAccent, { backgroundColor: '#4F46E5' }]} />
                     <View style={currentStyles.typoInner}>
-                      <Text style={currentStyles.typoPill}>{(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())(cleanCatLabel(item.categoryLabel ?? item.category))}</Text>
+                      {item.historicalYear != null && (
+                        <Text style={[currentStyles.typoPill, { color: '#4F46E5' }]}>{item.historicalYear}</Text>
+                      )}
                       <Text style={[currentStyles.typoTitle, { color: C.text }]} numberOfLines={3}>
                         {cleanTitle(item.title)}
                       </Text>
                       <Text style={[currentStyles.cardSource, { color: C.textTertiary, marginTop: 3 }]}>
-                        {item.source} · {formatDate(item.publishedAt)}
+                        Wikipedia
                       </Text>
                     </View>
                   </View>

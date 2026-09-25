@@ -20,7 +20,9 @@ export type Category =
   | 'coincidenze'
   // Attualità
   | 'attualita'
-  | 'gossip_spettacolo';
+  | 'gossip_spettacolo'
+  // Accadde Davvero (Wikipedia OnThisDay)
+  | 'accadde_davvero';
 
 export type CategoryWeight = 'high' | 'medium' | 'low';
 
@@ -60,7 +62,8 @@ export interface NewsItem {
   daysAgo: number;
   reactions: Reaction[];
   userReaction: ReactionType | null;
-  articleType?: 'bizarre' | 'current' | 'top_odd' | 'forbidden'; // tipo di articolo
+  articleType?: 'bizarre' | 'current' | 'top_odd' | 'forbidden' | 'accadde_davvero'; // tipo di articolo
+  historicalYear?: number; // anno storico (solo per accadde_davvero)
   isTopOdd?: boolean;   // tra le 3 più assurde del giorno
   isForbidden?: boolean; // sezione "Non dovresti leggerla"
   viewSeed?: number;    // base per il contatore social proof

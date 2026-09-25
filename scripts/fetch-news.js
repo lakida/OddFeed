@@ -1038,6 +1038,186 @@ Rispondi SOLO con JSON:
 }
 
 // ─── Funzione principale ───────────────────────────────────────────
+// ─── Accadde Davvero: 3 eventi storici dal Wikipedia OnThisDay API ────────────
+// Ogni giorno, 3 fatti storici assurdi/curiosi avvenuti in questa stessa data nel passato.
+// Salvati con articleType: 'accadde_davvero', category: 'accadde_davvero'.
+async function fetchAccaddeDavvero(today, db) {
+  console.log('\n📅 Recupero "Accadde Davvero" (Wikipedia OnThisDay)...');
+
+  const existing = await db.collection('articles')
+    .where('date', '==', today)
+    .where('category', '==', 'accadde_davvero')
+    .get();
+
+  if (!existing.empty && !process.argv.includes('--force')) {
+    console.log('   ℹ️  Articoli "Accadde Davvero" già presenti, skip.');
+    return;
+  }
+  if (!existing.empty) {
+    const del = db.batch();
+    existing.docs.forEach(d => del.delete(d.ref));
+    await del.commit();
+  }
+
+  // Wikipedia OnThisDay: mm/dd
+  const parts = today.split('-');
+  const month = parts[1];
+  const day = parts[2];
+  const wikiUrl = `https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${month}/${day}`;
+
+  let events = [];
+  try {
+    const resp = await fetch(wikiUrl, {
+      headers: { 'User-Agent': 'OddFeed/1.0 (kida.mancinimesi@gmail.com)' },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    events = data.events ?? [];
+    console.log(`   → ${events.length} eventi trovati per ${day}/${month}`);
+  } catch (e) {
+    console.log(`   ⚠️  Wikipedia API error: ${e.message}`);
+    return;
+  }
+
+  if (events.length === 0) {
+    console.log('   ⚠️  Nessun evento trovato.');
+    return;
+  }
+
+  // Selezione AI: i 3 eventi più assurdi/curiosi/sorprendenti
+  const summaries = events
+    .slice(0, 60)
+    .map((e, i) => `[${i}] (${e.year}) ${(e.text ?? '').substring(0, 160)}`)
+    .join('\n');
+
+  const selPrompt = `Sei il curatore di "Accadde Davvero", sezione di OddFeed dedicata a fatti storici assurdi, curiosi o sorprendenti.
+Seleziona i 3 eventi più bizzarri, insoliti o sorprendenti da questa lista di fatti storici avvenuti oggi nel corso della storia.
+Privilegia: leggi assurde, invenzioni improbabili, record curiosi, eventi paradossali, personaggi eccentrici, disastri grotteschi, prime volte memorabili.
+Evita: guerre/battaglie standard, elezioni, morti di persone famose senza nulla di assurdo, eventi politici di routine.
+
+Lista eventi:
+${summaries}
+
+Rispondi SOLO con JSON: {"selected": [i1, i2, i3], "reasoning": "..."}`;
+
+  let selectedEvents = [];
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: selPrompt }],
+      temperature: 0.4,
+      max_tokens: 180,
+    });
+    const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const result = JSON.parse(raw);
+    console.log(`   Selezione AI: ${result.reasoning}`);
+    selectedEvents = (result.selected ?? []).slice(0, 3).map(i => events[i]).filter(Boolean);
+  } catch (e) {
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 3`);
+    selectedEvents = events.slice(0, 3);
+  }
+
+  const batch = db.batch();
+  for (let i = 0; i < selectedEvents.length; i++) {
+    const ev = selectedEvents[i];
+    process.stdout.write(`   [${i + 1}/${selectedEvents.length}] (${ev.year}) ${(ev.text ?? '').substring(0, 55)}... `);
+
+    const extract = ev.pages?.[0]?.extract ?? '';
+    const rewritePrompt = `Sei il redattore di "Accadde Davvero", la sezione di OddFeed dedicata a fatti storici bizzarri e sorprendenti.
+Riscrivi questo evento storico per un pubblico italiano: deve risultare incredibile, curioso, divertente o sorprendente.
+
+Anno: ${ev.year}
+Evento originale (inglese): ${ev.text ?? ''}
+${extract ? `Approfondimento: ${extract.substring(0, 800)}` : ''}
+
+═══ REGOLA N.1 — NON INVENTARE MAI ═══
+Usa SOLO fatti presenti nell'evento e nell'approfondimento. Non aggiungere dettagli inventati.
+
+═══ TITOLO ═══
+- Max 75 caratteri, NIENTE emoji — solo testo
+- Inizia con "Nel [anno]," oppure "[anno]:" per ancorare subito nel tempo
+- Deve contenere IL fatto più assurdo o sorprendente
+- Scrivi come un amico che racconta: "Nel 1923 qualcuno brevettò..."
+
+═══ TESTO ═══
+Scrivi 2-3 paragrafi. Ogni paragrafo 3-4 frasi.
+- Paragrafo 1: INIZIA subito con il fatto — anno, chi, cosa, dove. Niente suspense.
+- Paragrafo 2: approfondisci con contesto, dettagli, conseguenze.
+- Paragrafo 3 (opzionale): curiosità finale, parallelo con oggi, chiusura ironica.
+
+Tono: come se stessi raccontando a un amico qualcosa di assurdo letto su un libro di storia. Vivace, curioso, ironico ma preciso.
+
+═══ DESCRIZIONE ═══
+2 frasi concise. La prima: il fatto principale con l'anno. La seconda: il dettaglio più sorprendente. Max 180 caratteri.
+
+Rispondi SOLO con JSON valido:
+{
+  "titleIt": "...",
+  "titleEn": "...",
+  "descriptionIt": "...",
+  "descriptionEn": "...",
+  "fullTextIt": "...",
+  "fullTextEn": "..."
+}`;
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: rewritePrompt }],
+        temperature: 0.7,
+        max_tokens: 1100,
+      });
+      const raw = (res.choices[0].message.content ?? '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const ai = JSON.parse(raw);
+
+      const docRef = db.collection('articles').doc();
+      batch.set(docRef, {
+        titleIt: ai.titleIt,
+        titleEn: ai.titleEn,
+        descriptionIt: ai.descriptionIt,
+        descriptionEn: ai.descriptionEn,
+        fullTextIt: ai.fullTextIt,
+        fullTextEn: ai.fullTextEn,
+        category: 'accadde_davvero',
+        categoryLabelIt: '📅 Accadde Davvero',
+        categoryLabelEn: '📅 Did It Really Happen',
+        articleType: 'accadde_davvero',
+        historicalYear: ev.year,
+        source: 'Wikipedia',
+        sourceUrl: ev.pages?.[0]?.content_urls?.desktop?.page ?? 'https://en.wikipedia.org/wiki/Wikipedia:On_this_day',
+        imageUrl: ev.pages?.[0]?.thumbnail?.source ?? null,
+        date: today,
+        isToday: true,
+        order: i,
+        isPremium: false,
+        isTopOdd: false,
+        imageEmoji: '📅',
+        imageColor: ['#1E1B4B', '#4F46E5'],
+        country: '🌍 Mondo',
+        countryCode: 'WD',
+        engagementLevel: 'high',
+        viewSeed: Math.floor(Math.random() * 5000) + 10000,
+        daysAgo: 0,
+        reactions: [
+          { emoji: '🤯', count: 0, label: 'Sconvolto' },
+          { emoji: '😮', count: 0, label: 'Sorpreso' },
+          { emoji: '😂', count: 0, label: 'Divertente' },
+          { emoji: '🤔', count: 0, label: 'Interessante' },
+          { emoji: '❤️', count: 0, label: 'Adoro' },
+        ],
+        createdAt: new Date(),
+      });
+      process.stdout.write(' ✓\n');
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e) {
+      process.stdout.write(` ✗ (${e.message})\n`);
+    }
+  }
+
+  await batch.commit();
+  console.log(`   ✅ "Accadde Davvero" salvato per il ${today}.`);
+}
+
 async function main() {
   console.log('🚀 OddFeed — Generazione notizie del giorno\n');
 
@@ -1236,6 +1416,9 @@ async function main() {
   // Genera le notizie di attualità ("In primo piano")
   await fetchAndSaveCurrentNews(today, db);
   await fetchAndSaveSexNews(today, db);
+
+  // Genera gli articoli "Accadde Davvero" (Wikipedia OnThisDay)
+  await fetchAccaddeDavvero(today, db);
 
   // Genera gli articoli "Non dovresti leggerla" dal pool già scaricato
   await fetchAndSaveForbiddenNews(today, db, selected);

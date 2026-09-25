@@ -16,6 +16,7 @@ import { NewsItem } from '../types';
 // Mappe di fallback per le label delle categorie (usate quando il valore salvato è grezzo o mancante)
 const FALLBACK_LABELS_IT: Record<string, string> = {
   attualita: '📰 Attualità',
+  accadde_davvero: '📅 Accadde Davvero',
   gossip_spettacolo: '🌟 Gossip & Spettacolo',
   animali: '🐾 Animali',
   tecnologia: '💻 Tecnologia',
@@ -35,6 +36,7 @@ const FALLBACK_LABELS_IT: Record<string, string> = {
 };
 const FALLBACK_LABELS_EN: Record<string, string> = {
   attualita: '📰 Current Affairs',
+  accadde_davvero: '📅 Did It Really Happen',
   gossip_spettacolo: '🌟 Gossip & Entertainment',
   animali: '🐾 Animals',
   tecnologia: '💻 Technology',
@@ -104,6 +106,7 @@ function docToNewsItem(docSnap: any, language: 'it' | 'en'): NewsItem {
     viewSeed: d.viewSeed ?? null,
     isPremium: d.isPremium ?? false,
     sourceUrl: d.sourceUrl ?? undefined,
+    historicalYear: d.historicalYear ?? undefined,
   };
 }
 
@@ -157,7 +160,7 @@ export async function fetchTodayNews(
   const all = snap.docs
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
-      return t !== 'current' && t !== 'forbidden';
+      return t !== 'current' && t !== 'forbidden' && t !== 'accadde_davvero';
     })
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
@@ -184,7 +187,7 @@ export async function fetchRecentPastNews(
   const all = snap.docs
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
-      return t !== 'current' && t !== 'forbidden';
+      return t !== 'current' && t !== 'forbidden' && t !== 'accadde_davvero';
     })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
@@ -230,6 +233,8 @@ export async function fetchArchive(
   const all = snap.docs
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
+      // Includi accadde_davvero nell'archivio (filtrabili per categoria)
+      // Escludi solo current (attualità) e forbidden (sezione adulti)
       return t !== 'current' && t !== 'forbidden';
     })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
@@ -316,6 +321,33 @@ export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsIte
   return snapFallback.docs
     .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
     .slice(0, 2)
+    .map(d => docToNewsItem(d, language));
+}
+
+// Carica gli articoli "Accadde Davvero" di oggi (Wikipedia OnThisDay).
+export async function fetchAccaddeDavveroNews(language: 'it' | 'en'): Promise<NewsItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const q = query(
+    collection(db, 'articles'),
+    where('date', '==', today),
+    where('articleType', '==', 'accadde_davvero'),
+  );
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    return snap.docs
+      .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+      .map(d => docToNewsItem(d, language));
+  }
+  // Fallback: mostra gli ultimi 3 articoli accadde_davvero più recenti
+  const qFallback = query(
+    collection(db, 'articles'),
+    where('articleType', '==', 'accadde_davvero'),
+    limit(15),
+  );
+  const snapFallback = await getDocs(qFallback);
+  return snapFallback.docs
+    .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
+    .slice(0, 3)
     .map(d => docToNewsItem(d, language));
 }
 
