@@ -421,7 +421,7 @@ Usa SOLO fatti presenti nell'articolo originale. Non aggiungere dettagli inventa
 Se il testo originale ha dettagli specifici (nomi, numeri, luoghi, citazioni), usali — rendono l'articolo credibile e interessante.
 
 ═══ TITOLO ═══
-- Max 75 caratteri, emoji iniziale obbligatoria (che rappresenti il soggetto principale)
+- Max 75 caratteri, NIENTE emoji — solo testo
 - Deve contenere IL fatto più assurdo — chi legge il titolo deve già capire perché la storia è incredibile
 - Usa numeri reali e specifici ("47 gatti", "3 anni di prigione", "9 anni senza dirlo")
 - Scrivi come un amico che racconta una storia incredibile, NON come un giornalista
@@ -614,7 +614,7 @@ Titolo originale: ${article.webTitle}
 Sommario: ${article.fields?.trailText ?? ''}
 
 ═══ TITOLO (max 70 caratteri) ═══
-Emoji iniziale obbligatoria + titolo che cattura l'attenzione in 2 secondi.
+NIENTE emoji — solo testo. Titolo che cattura l'attenzione in 2 secondi.
 Scegli UNA di queste tecniche:
   • Gap di curiosità: rivela solo metà ("Il motivo dietro X ti sorprenderà")
   • Contrasto/ironia: accosta due elementi che non ti aspetti insieme
@@ -786,11 +786,11 @@ Sommario: ${article.fields?.trailText ?? ''}
 ${article._fullText ? `Testo: ${article._fullText.substring(0, 2000)}` : ''}
 
 ═══ TITOLO ═══
-Inizia SEMPRE con "🚫" + max 65 caratteri. Tono: rivelazione segreta, confessione, tabù.
+Max 65 caratteri, NIENTE emoji — solo testo. Tono: rivelazione segreta, confessione, tabù.
 Il titolo deve creare una tensione insopportabile — il lettore DEVE aprirlo.
 Tecniche:
-  • Confessione: "🚫 Ha ammesso di farlo ogni giorno per 10 anni"
-  • Tabù rotto: "🚫 Il dettaglio che nessun manuale ti dirà mai"
+  • Confessione: "Ha ammesso di farlo ogni giorno per 10 anni"
+  • Tabù rotto: "Il dettaglio che nessun manuale ti dirà mai"
   • Rivelazione shock: "🚫 La verità dietro X che cambia tutto quello che pensavi"
   • Contraddizione: "🚫 Ha fatto X — e tutti continuano a dargli ragione"
 
@@ -960,7 +960,7 @@ Sommario: ${article.fields?.trailText ?? ''}
 Fonte: ${article._source ?? ''}
 
 ═══ TITOLO (max 70 caratteri) ═══
-Emoji iniziale: 💋 ❤️ 🔥 😏 🫦 o altra coerente con il contenuto.
+NIENTE emoji — solo testo.
 Il titolo deve far pensare "devo assolutamente leggere questo". Tecniche:
   • Studio scientifico sorprendente: cita il dato concreto
   • Contrasto inaspettato: "Chi fa X fa anche Y — lo dice la scienza"
