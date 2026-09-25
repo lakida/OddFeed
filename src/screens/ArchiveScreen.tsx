@@ -405,9 +405,9 @@ const styles = StyleSheet.create({
   countText: { fontSize: 11, fontWeight: '500', color: Colors.textSecondary },
   sortText: { fontSize: 11, fontWeight: '700' },
   unRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
-  unThumb: { width: 99, height: 83, borderRadius: 10, flexShrink: 0, overflow: 'hidden' },
+  unThumb: { width: 69, height: 83, borderRadius: 10, flexShrink: 0, overflow: 'hidden' },
   unBody: { flex: 1, minWidth: 0 },
   unCat: { fontSize: 13, fontWeight: '700' },
-  unTitle: { fontSize: 17, fontWeight: '600', lineHeight: 24 },
+  unTitle: { fontSize: 17, fontWeight: '900', lineHeight: 24 },
   unMeta: { fontSize: FontSize.xs, color: Colors.textTertiary },
 });

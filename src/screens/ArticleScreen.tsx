@@ -102,7 +102,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
   // URL di condivisione: web URL + fallback scheme per deep link
   // Il web URL richiede Associated Domains (da configurare in produzione);
   // il deep link funziona subito da qualsiasi app installata.
-  const articleUrl = `https://oddfeed.app/articolo/${article.id}`;
+  const articleUrl = `https://lakida.github.io/OddFeed/?id=${article.id}`;
   const articleDeepLink = `oddfeed://articolo/${article.id}`;
 
   // Contatore social proof: viewSeed + incremento basato sull'ora del giorno
@@ -162,8 +162,7 @@ export default function ArticleScreen({ newsId, article: articleProp, onBack, sa
 
   const handleShare = async () => {
     try {
-      const watermark = '\n\n🌍 Scopri OddFeed → https://oddfeed.app';
-      await Share.share({ message: `${article.title}${watermark}` });
+      await Share.share({ message: `${article.title}\n\n${articleUrl}` });
     } catch (e) {}
   };
 
@@ -336,10 +335,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     color: Colors.text,
-    lineHeight: 28,
+    lineHeight: 31,
     letterSpacing: -0.3,
     marginBottom: 7,
   },
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
   articleText: {
     fontSize: 17,
     color: Colors.textSecondary,
-    lineHeight: 29,
+    lineHeight: 26,
     marginBottom: Spacing.md,
   },
 

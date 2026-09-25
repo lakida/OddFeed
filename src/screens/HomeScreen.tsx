@@ -95,9 +95,11 @@ interface HomeScreenProps {
   onGoToArchive: () => void;
   readIds: Set<string>;
   interests?: string[];
+  savedIds?: Set<string>;
+  onToggleSave?: (id: string, article: NewsItem) => void;
 }
 
-export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, interests = [] }: HomeScreenProps) {
+export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, interests = [], savedIds = new Set(), onToggleSave }: HomeScreenProps) {
   const { t, language } = useTranslation();
   const { isDark } = useTheme();
   const C = getColors(isDark);
@@ -267,7 +269,16 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
                     <Text style={[styles.itemTitle, { color: C.text, marginBottom: 5 }]} numberOfLines={2}>{cleanTitle(item.title)}</Text>
                     <Text style={[styles.itemMeta, { color: C.textTertiary }]}>{item.source} · {formatDate(item.publishedAt)}</Text>
                   </View>
-                  <Ionicons name="bookmark-outline" size={22} color={C.textTertiary} />
+                  <TouchableOpacity
+                    onPress={(e) => { e.stopPropagation(); onToggleSave?.(item.id, item); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name={savedIds.has(item.id) ? 'bookmark' : 'bookmark-outline'}
+                      size={22}
+                      color={savedIds.has(item.id) ? Colors.violet : C.textTertiary}
+                    />
+                  </TouchableOpacity>
                 </TouchableOpacity>
                 {showAdAfter && (
                   <NativeAdCard />
@@ -328,7 +339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   unThumb: {
-    width: 99,
+    width: 69,
     height: 83,
     borderRadius: 10,
     flexShrink: 0,
@@ -371,7 +382,7 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '900',
     color: Colors.text,
     lineHeight: 24,
     marginBottom: Spacing.xs,
@@ -620,7 +631,7 @@ const currentStyles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '900',
     lineHeight: 23,
     marginBottom: 4,
   },

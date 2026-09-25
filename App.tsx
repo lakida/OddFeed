@@ -278,6 +278,8 @@ function AppContent() {
             onGoToArchive={() => switchTab('Archivio')}
             readIds={readIds}
             interests={userInterests}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
           />
         </View>
 
