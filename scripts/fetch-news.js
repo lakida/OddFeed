@@ -1451,7 +1451,7 @@ function buildNotifText(article, isPremium) {
   // Free: tono standard
   const titleText = article.titleIt?.substring(0, 60) ?? 'Notizia del giorno';
   return {
-    title: `${emoji} ${titleText}`,
+    title: titleText,
     body: 'La tua notizia curiosa di oggi è pronta.',
   };
 }

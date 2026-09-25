@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Asset } from 'expo-asset';
+import * as Notifications from 'expo-notifications';
 
 import { LanguageProvider, useTranslation } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -107,6 +108,9 @@ function AppContent() {
           require('./assets/hero_background.png'),
           require('./assets/newspaper_illustration.png'),
         ]).catch(() => {});
+
+        // Azzera il badge all'apertura dell'app
+        Notifications.setBadgeCountAsync(0).catch(() => {});
 
         const [done, interestsRaw] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_DONE),
