@@ -614,18 +614,15 @@ Titolo originale: ${article.webTitle}
 Sommario: ${article.fields?.trailText ?? ''}
 
 ═══ TITOLO (max 70 caratteri) ═══
-NIENTE emoji — solo testo. Titolo che cattura l'attenzione in 2 secondi.
-Scegli UNA di queste tecniche:
-  • Gap di curiosità: rivela solo metà ("Il motivo dietro X ti sorprenderà")
-  • Contrasto/ironia: accosta due elementi che non ti aspetti insieme
-  • Cifra concreta: usa il numero preciso se c'è ("in 48 ore", "per €3")
-  • Conseguenza shock: inizia dall'effetto, non dalla causa
+NIENTE emoji — solo testo. Il titolo deve contenere il fatto reale, non nasconderlo.
+Deve essere chiaro e specifico: chi ha fatto cosa. Puoi renderlo coinvolgente ma NON vago.
+Usa numeri e dettagli concreti quando disponibili.
 
 ESEMPI:
-  ✗ "📰 Il governo approva la nuova legge sul lavoro"
-  ✓ "📰 La legge che potrebbe cambiare come lavori già da lunedì"
-  ✗ "🌟 Il cantante X ha rilasciato una dichiarazione"
-  ✓ "🌟 X ha detto in diretta TV ciò che tutti pensavano ma nessuno osava dire"
+  ✗ "La notizia che sta sconvolgendo tutti"  → vago, non dice niente
+  ✓ "Condannato a 3 anni per aver falsificato 200 ricette mediche su TikTok"  → chiaro e specifico
+  ✗ "Il dettaglio che nessuno ti ha mai detto"  → nasconde il fatto
+  ✓ "La legge italiana che vieta di fare rumore in bagno dopo le 22"  → diretto e curioso
 
 ═══ DESCRIZIONE (max 160 caratteri) ═══
 2 frasi. Prima: il fatto core. Seconda: la svolta o il dettaglio che incuriosisce.
@@ -787,11 +784,11 @@ Sommario: ${article.fields?.trailText ?? ''}
 ${article._fullText ? `Testo: ${article._fullText.substring(0, 2000)}` : ''}
 
 ═══ TITOLO ═══
-Max 65 caratteri, NIENTE emoji — solo testo. Tono: rivelazione segreta, confessione, tabù.
-Il titolo deve creare una tensione insopportabile — il lettore DEVE aprirlo.
-Tecniche:
-  • Confessione: "Ha ammesso di farlo ogni giorno per 10 anni"
-  • Tabù rotto: "Il dettaglio che nessun manuale ti dirà mai"
+Max 65 caratteri, NIENTE emoji — solo testo. Il titolo deve dire chiaramente cosa è successo.
+Può essere intrigante e diretto allo stesso tempo — usa il fatto reale come gancio.
+Usa dettagli specifici (nomi, numeri, azioni concrete).
+  ✗ "La confessione che nessuno oserebbe fare"  → vago, non dice niente
+  ✓ "Arrestato per aver tirato un peto in faccia alla moglie mentre dormiva"  → chiaro e assurdo
   • Rivelazione shock: "🚫 La verità dietro X che cambia tutto quello che pensavi"
   • Contraddizione: "🚫 Ha fatto X — e tutti continuano a dargli ragione"
 
@@ -800,7 +797,7 @@ EVITA titoli generici, descrittivi o che sembrino un comunicato stampa.
 ✓ "🚫 È stato fermato 12 volte nello stesso supermercato — nessuno sa perché continuasse"
 
 ═══ DESCRIZIONE (max 160 caratteri) ═══
-Prima frase: l'hook intrigante. Seconda frase: il dettaglio che lascia a bocca aperta.
+Prima frase: il fatto principale espresso chiaramente (cosa è successo, in modo diretto). Seconda frase: il dettaglio più sorprendente o la conseguenza. Niente frasi vaghe o misteriose.
 
 ═══ TESTO ═══
 3 paragrafi narrativi. Apri con il fatto reale esatto (cosa è successo, chi, dove),
