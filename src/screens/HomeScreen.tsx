@@ -665,7 +665,7 @@ const currentStyles = StyleSheet.create({
   },
   typoTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '800',
     lineHeight: 25,
     flex: 1,
   },
