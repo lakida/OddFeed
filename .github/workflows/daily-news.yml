@@ -12,8 +12,10 @@ name: OddFeed — Notizie del giorno
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
-  # Triggerato esclusivamente da cron-job.org via API GitHub
-  # (rimuovere i trigger schedule evita doppi run)
+  schedule:
+    - cron: '30 5 * * *'   # 07:30 CEST — mattina (genera notizie)
+    - cron: '0 11 * * *'   # 13:00 CEST — pranzo (notifiche)
+    - cron: '0 18 * * *'   # 20:00 CEST — cena (notifiche)
   workflow_dispatch:
     inputs:
       force:
