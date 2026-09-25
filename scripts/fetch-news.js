@@ -802,10 +802,11 @@ EVITA titoli generici, descrittivi o che sembrino un comunicato stampa.
 Prima frase: l'hook intrigante. Seconda frase: il dettaglio che lascia a bocca aperta.
 
 ═══ TESTO ═══
-3 paragrafi narrativi. Apri con il dettaglio più scioccante, poi costruisci il contesto,
-poi chiudi con la conseguenza o la rivelazione finale. Tono: giornalismo tabloide di qualità.
-
-Rimani SEMPRE sui fatti reali — il mistero viene solo dal modo di raccontare.
+3 paragrafi narrativi. Apri con il fatto reale esatto (cosa è successo, chi, dove),
+poi costruisci il contesto, poi chiudi con la conseguenza o la rivelazione finale.
+Tono: giornalismo tabloide di qualità — divertente ma CHIARO.
+IMPORTANTE: il lettore deve capire esattamente cosa è successo già dal primo paragrafo.
+Non usare eufemismi o linguaggio vago per nascondere i fatti — racconta quello che è successo davvero.
 Categoria: sesso_relazioni, gossip, crimini_strani, o storie_assurde
 
 Rispondi SOLO con JSON:
