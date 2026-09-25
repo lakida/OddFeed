@@ -120,7 +120,12 @@ function AppContent() {
           setUserInterests(JSON.parse(interestsRaw));
         }
         // Non sovrascrivere 'Article' se il deep link l'ha già impostato
-        setAppScreen(prev => prev === 'Article' ? 'Article' : (done === 'true' ? 'Tabs' : 'Onboarding'));
+        setAppScreen(prev => {
+          if (prev === 'Article') return 'Article';
+          // Reset parallax: se il deep link ha spostato l'animazione, la riportiamo a riposo
+          articleSlideAnim.setValue(SCREEN_WIDTH);
+          return done === 'true' ? 'Tabs' : 'Onboarding';
+        });
       } catch {
         setAppScreen('Onboarding');
       }
