@@ -1244,6 +1244,228 @@ Rispondi SOLO con JSON valido:
   console.log(`   ✅ "Accadde Davvero" salvato per il ${today}.`);
 }
 
+// ─── Lo Sapevi Che: fatti curiosi da Wikipedia DYK ───────────────────────────
+// Ogni giorno, 10 fatti sorprendenti che quasi nessuno conosce.
+// Fonte primaria: Wikipedia Featured Feed (DYK section).
+// Salvati con articleType: 'lo_sapevi_che', category: 'lo_sapevi_che'.
+async function fetchLoSapeviChe(today, db) {
+  console.log('\n💡 Recupero "Lo Sapevi Che" (Wikipedia DYK)...');
+
+  const existing = await db.collection('articles')
+    .where('date', '==', today)
+    .where('category', '==', 'lo_sapevi_che')
+    .get();
+
+  if (!existing.empty && !process.argv.includes('--force')) {
+    console.log('   ℹ️  Articoli "Lo Sapevi Che" già presenti, skip.');
+    return;
+  }
+  if (!existing.empty) {
+    const del = db.batch();
+    existing.docs.forEach(d => del.delete(d.ref));
+    await del.commit();
+  }
+
+  // Wikipedia Featured Feed — contiene sezione "dyk" (Did You Know)
+  const parts = today.split('-');
+  const wikiUrl = `https://en.wikipedia.org/api/rest_v1/feed/featured/${parts[0]}/${parts[1]}/${parts[2]}`;
+
+  let rawFacts = [];
+  try {
+    const resp = await fetch(wikiUrl, {
+      headers: { 'User-Agent': 'OddFeed/1.0 (kida.mancinimesi@gmail.com)' },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    // Estrai fatti DYK — testo HTML con <li> separati
+    const dykText = data.dyk?.text ?? '';
+    if (dykText) {
+      // Rimuovi tag HTML e dividi per bullet
+      const plain = dykText
+        .replace(/<li>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, ' ');
+      rawFacts = plain
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 30 && s.startsWith('...that'));
+    }
+    console.log(`   → ${rawFacts.length} fatti DYK trovati`);
+  } catch (e) {
+    console.log(`   ⚠️  Wikipedia Featured Feed error: ${e.message}`);
+  }
+
+  // Complementa con fatti generati da GPT se DYK < 10
+  const needed = Math.max(0, 15 - rawFacts.length);
+  if (needed > 0) {
+    const topics = [
+      'biologia animale', 'corpo umano', 'fisica e chimica', 'psicologia',
+      'storia delle invenzioni', 'astronomia', 'matematica curiosa',
+      'record naturali', 'linguistica', 'neuroscienze',
+    ].sort(() => Math.random() - 0.5).slice(0, 5);
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Genera ${needed} fatti curiosi e verificati su questi argomenti: ${topics.join(', ')}.
+Ogni fatto deve essere sorprendente, controintuitivo o poco noto al grande pubblico.
+Usa solo fatti scientificamente accertati. Inizia ogni fatto con "...that" in inglese.
+Un fatto per riga. Solo i fatti, nessun altro testo.`,
+        }],
+        temperature: 0.8,
+        max_tokens: 600,
+      });
+      const extra = (res.choices[0].message.content ?? '')
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 20);
+      rawFacts = [...rawFacts, ...extra];
+      console.log(`   → ${extra.length} fatti GPT aggiunti (totale: ${rawFacts.length})`);
+    } catch (e) {
+      console.log(`   ⚠️  GPT facts fallback error: ${e.message}`);
+    }
+  }
+
+  if (rawFacts.length === 0) {
+    console.log('   ⚠️  Nessun fatto disponibile.');
+    return;
+  }
+
+  // Selezione AI: i 10 più sorprendenti/curiosi
+  const summaries = rawFacts
+    .slice(0, 40)
+    .map((f, i) => `[${i}] ${f.substring(0, 200)}`)
+    .join('\n');
+
+  const selPrompt = `Sei il curatore di "Lo Sapevi Che?", sezione di OddFeed con fatti curiosi che stupiscono.
+Seleziona i 10 fatti più sorprendenti, controintuitivi o assurdi da questa lista.
+Privilegia: fatti sul corpo umano, animali, fisica, record naturali, numeri incredibili.
+Evita: fatti troppo banali, eventi storici pesanti, politica, morti, guerre.
+
+Lista:
+${summaries}
+
+Rispondi SOLO con JSON: {"selected": [i1,i2,i3,i4,i5,i6,i7,i8,i9,i10], "reasoning": "..."}`;
+
+  let selectedFacts = [];
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: selPrompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 250,
+    });
+    const result = JSON.parse(res.choices[0].message.content ?? '{}');
+    console.log(`   Selezione AI: ${result.reasoning}`);
+    selectedFacts = (result.selected ?? []).slice(0, 10).map(i => rawFacts[i]).filter(Boolean);
+  } catch (e) {
+    console.log(`   ⚠️  Selezione fallita: ${e.message} — uso i primi 10`);
+    selectedFacts = rawFacts.slice(0, 10);
+  }
+
+  const batch = db.batch();
+  for (let i = 0; i < selectedFacts.length; i++) {
+    const fact = selectedFacts[i];
+    process.stdout.write(`   [${i + 1}/${selectedFacts.length}] ${fact.substring(0, 60)}... `);
+
+    const rewritePrompt = `Sei il redattore di "Lo Sapevi Che?", la sezione di OddFeed dedicata a fatti curiosi e sorprendenti.
+Riscrivi questo fatto in italiano in modo coinvolgente e sorprendente.
+
+Fatto originale (inglese): ${fact}
+
+═══ REGOLA N.1 — NON INVENTARE MAI ═══
+Usa SOLO fatti presenti nell'originale. Non aggiungere dettagli inventati.
+
+═══ TITOLO ═══
+- Inizia SEMPRE con "Lo sapevi che" seguito dal fatto principale
+- Max 80 caratteri — diretto, sorprendente, niente emoji
+- Esempio: "Lo sapevi che le api riconoscono i volti umani come noi?"
+
+═══ TESTO ═══
+2 paragrafi brevi (2-3 frasi ciascuno).
+- Paragrafo 1: il fatto principale, espresso chiaramente e direttamente.
+- Paragrafo 2: contesto, spiegazione scientifica o curiosità aggiuntiva.
+Tono: meraviglia e stupore, come spiegare a un amico qualcosa di incredibile.
+
+═══ DESCRIZIONE ═══
+1-2 frasi. Il fatto più sorprendente in modo diretto. Max 140 caratteri.
+
+Rispondi SOLO con JSON valido:
+{
+  "titleIt": "Lo sapevi che ...",
+  "titleEn": "Did you know that ...",
+  "descriptionIt": "...",
+  "descriptionEn": "...",
+  "fullTextIt": "...",
+  "fullTextEn": "..."
+}`;
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: rewritePrompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.6,
+        max_tokens: 700,
+      });
+      const ai = JSON.parse(res.choices[0].message.content ?? '{}');
+
+      const docRef = db.collection('articles').doc();
+      batch.set(docRef, {
+        titleIt: ai.titleIt,
+        titleEn: ai.titleEn,
+        descriptionIt: ai.descriptionIt,
+        descriptionEn: ai.descriptionEn,
+        fullTextIt: ai.fullTextIt,
+        fullTextEn: ai.fullTextEn,
+        category: 'lo_sapevi_che',
+        categoryLabelIt: '💡 Lo Sapevi Che?',
+        categoryLabelEn: '💡 Did You Know?',
+        articleType: 'lo_sapevi_che',
+        source: 'Wikipedia',
+        sourceUrl: 'https://en.wikipedia.org/wiki/Wikipedia:Did_you_know',
+        imageUrl: null,
+        date: today,
+        isToday: true,
+        order: i,
+        isPremium: false,
+        isTopOdd: false,
+        imageEmoji: '💡',
+        imageColor: ['#92400E', '#D97706'],
+        country: '🌍 Mondo',
+        countryCode: 'WD',
+        engagementLevel: 'high',
+        viewSeed: Math.floor(Math.random() * 5000) + 8000,
+        daysAgo: 0,
+        reactions: [
+          { emoji: '🤯', count: 0, label: 'Sconvolto' },
+          { emoji: '😮', count: 0, label: 'Sorpreso' },
+          { emoji: '😂', count: 0, label: 'Divertente' },
+          { emoji: '🤔', count: 0, label: 'Interessante' },
+          { emoji: '❤️', count: 0, label: 'Adoro' },
+        ],
+        createdAt: new Date(),
+      });
+      process.stdout.write(' ✓\n');
+      await new Promise(r => setTimeout(r, 400));
+    } catch (e) {
+      process.stdout.write(` ✗ (${e.message})\n`);
+    }
+  }
+
+  await batch.commit();
+  console.log(`   ✅ "Lo Sapevi Che?" salvato per il ${today}.`);
+}
+
 async function main() {
   console.log('🚀 OddFeed — Generazione notizie del giorno\n');
 
@@ -1445,6 +1667,9 @@ async function main() {
 
   // Genera gli articoli "Accadde Davvero" (Wikipedia OnThisDay)
   await fetchAccaddeDavvero(today, db);
+
+  // Genera i fatti "Lo Sapevi Che?" (Wikipedia DYK)
+  await fetchLoSapeviChe(today, db);
 
   // Genera gli articoli "Non dovresti leggerla" dal pool già scaricato
   await fetchAndSaveForbiddenNews(today, db, selected);

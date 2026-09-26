@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, getColors, FontSize, Spacing, Radius } from '../theme/colors';
 import { useTranslation } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchTodayNews, fetchRecentPastNews, fetchAccaddeDavveroNews, fetchCurrentNews, fetchTopOddNews } from '../services/newsService';
+import { fetchTodayNews, fetchRecentPastNews, fetchAccaddeDavveroNews, fetchLoSapeviCheNews, fetchCurrentNews, fetchTopOddNews } from '../services/newsService';
 import { NewsItem } from '../types';
 import { SkeletonNewsList } from '../components/SkeletonNewsCard';
 import { formatDate } from '../utils/date';
@@ -106,6 +106,7 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
   const [todayNews, setTodayNews] = useState<NewsItem[]>([]);
   const [pastNews, setPastNews] = useState<NewsItem[]>([]);
   const [accaddeNews, setAccaddeNews] = useState<NewsItem[]>([]);
+  const [loSapeviNews, setLoSapeviNews] = useState<NewsItem[]>([]);
   const [currentNews, setCurrentNews] = useState<NewsItem[]>([]);
   const [topOddNews, setTopOddNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,14 +121,16 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
       fetchTodayNews(language, interests, 10).catch(() => []),
       fetchRecentPastNews(language, interests, 2, 7).catch(() => []),
       fetchAccaddeDavveroNews(language).catch(() => []),
+      fetchLoSapeviCheNews(language).catch(() => []),
       fetchCurrentNews(language).catch(() => []),
       fetchTopOddNews(language).catch(() => []),
-    ]).then(([todayArr, pastArr, accaddeArr, currentArr, topOddArr]) => {
+    ]).then(([todayArr, pastArr, accaddeArr, loSapeviArr, currentArr, topOddArr]) => {
       const topOddIds = new Set(topOddArr.map((n) => n.id));
       const today = todayArr.filter((n) => !topOddIds.has(n.id));
       setTodayNews(today);
       setPastNews(pastArr.filter((n) => !topOddIds.has(n.id)));
       setAccaddeNews(accaddeArr);
+      setLoSapeviNews(loSapeviArr);
       setCurrentNews(currentArr);
       setTopOddNews(topOddArr);
       if (today.length === 0 && pastArr.length === 0 && accaddeArr.length === 0) {
@@ -213,6 +216,38 @@ export default function HomeScreen({ onOpenArticle, onGoToArchive, readIds, inte
             </View>
           );
         })()}
+
+        {/* ── Sezione Lo Sapevi Che? ── */}
+        {!loading && loSapeviNews.length > 0 && (
+          <View style={dykStyles.section}>
+            <View style={dykStyles.secHdr}>
+              <Text style={dykStyles.sectionTitle}>💡 Lo Sapevi Che?</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[dykStyles.row, { paddingRight: Spacing.lg }]}
+            >
+              {loSapeviNews.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={dykStyles.card}
+                  onPress={() => onOpenArticle(item.id, item)}
+                  activeOpacity={0.75}
+                >
+                  <View style={dykStyles.topBar} />
+                  <View style={dykStyles.cardInner}>
+                    <Text style={dykStyles.label}>Lo sapevi che...</Text>
+                    <Text style={dykStyles.factText} numberOfLines={4}>
+                      {cleanTitle(item.title).replace(/^Lo sapevi che\s*/i, '')}
+                    </Text>
+                    <Text style={dykStyles.source}>Wikipedia</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Skeleton mentre carica */}
         {loading && <SkeletonNewsList count={4} variant="row" />}
@@ -712,6 +747,68 @@ const currentStyles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 25,
     flex: 1,
+  },
+});
+
+// Stili sezione "Lo Sapevi Che?" — flashcard oro/ambra
+const dykStyles = StyleSheet.create({
+  section: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
+  },
+  secHdr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#92400E',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  row: {
+    paddingHorizontal: Spacing.lg,
+    gap: 10,
+  },
+  card: {
+    width: 220,
+    borderRadius: Radius.md,
+    backgroundColor: '#FFFBEB',
+    overflow: 'hidden',
+    borderWidth: 0,
+  },
+  topBar: {
+    height: 4,
+    backgroundColor: '#D97706',
+  },
+  cardInner: {
+    padding: 13,
+    gap: 8,
+    minHeight: 148,
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#D97706',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  factText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1C1917',
+    lineHeight: 22,
+    flex: 1,
+  },
+  source: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#A16207',
   },
 });
 

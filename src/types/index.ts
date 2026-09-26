@@ -22,7 +22,9 @@ export type Category =
   | 'attualita'
   | 'gossip_spettacolo'
   // Accadde Davvero (Wikipedia OnThisDay)
-  | 'accadde_davvero';
+  | 'accadde_davvero'
+  // Lo Sapevi Che (Wikipedia DYK)
+  | 'lo_sapevi_che';
 
 export type CategoryWeight = 'high' | 'medium' | 'low';
 

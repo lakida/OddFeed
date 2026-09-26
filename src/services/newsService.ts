@@ -17,6 +17,7 @@ import { NewsItem } from '../types';
 const FALLBACK_LABELS_IT: Record<string, string> = {
   attualita: '📰 Attualità',
   accadde_davvero: '📅 Accadde Davvero',
+  lo_sapevi_che: '💡 Lo Sapevi Che?',
   gossip_spettacolo: '🌟 Gossip & Spettacolo',
   animali: '🐾 Animali',
   tecnologia: '💻 Tecnologia',
@@ -37,6 +38,7 @@ const FALLBACK_LABELS_IT: Record<string, string> = {
 const FALLBACK_LABELS_EN: Record<string, string> = {
   attualita: '📰 Current Affairs',
   accadde_davvero: '📅 Did It Really Happen',
+  lo_sapevi_che: '💡 Did You Know?',
   gossip_spettacolo: '🌟 Gossip & Entertainment',
   animali: '🐾 Animals',
   tecnologia: '💻 Technology',
@@ -160,7 +162,7 @@ export async function fetchTodayNews(
   const all = snap.docs
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
-      return t !== 'current' && t !== 'forbidden' && t !== 'accadde_davvero';
+      return t !== 'current' && t !== 'forbidden' && t !== 'accadde_davvero' && t !== 'lo_sapevi_che';
     })
     .map(d => ({ item: docToNewsItem(d, language), order: d.data().order ?? 0 }));
 
@@ -187,7 +189,7 @@ export async function fetchRecentPastNews(
   const all = snap.docs
     .filter(d => {
       const t = d.data().articleType ?? 'bizarre';
-      return t !== 'current' && t !== 'forbidden' && t !== 'accadde_davvero';
+      return t !== 'current' && t !== 'forbidden' && t !== 'accadde_davvero' && t !== 'lo_sapevi_che';
     })
     .map(d => ({ item: docToNewsItem(d, language), date: d.data().date ?? '', order: d.data().order ?? 0 }));
 
@@ -321,6 +323,34 @@ export async function fetchForbiddenNews(language: 'it' | 'en'): Promise<NewsIte
   return snapFallback.docs
     .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
     .slice(0, 2)
+    .map(d => docToNewsItem(d, language));
+}
+
+// Carica i fatti "Lo Sapevi Che?" di oggi, max 10.
+export async function fetchLoSapeviCheNews(language: 'it' | 'en'): Promise<NewsItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const q = query(
+    collection(db, 'articles'),
+    where('date', '==', today),
+    where('articleType', '==', 'lo_sapevi_che'),
+  );
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    return snap.docs
+      .sort((a, b) => (a.data().order ?? 0) - (b.data().order ?? 0))
+      .slice(0, 10)
+      .map(d => docToNewsItem(d, language));
+  }
+  // Fallback: giorno più recente disponibile
+  const qFallback = query(
+    collection(db, 'articles'),
+    where('articleType', '==', 'lo_sapevi_che'),
+    limit(30),
+  );
+  const snapFallback = await getDocs(qFallback);
+  return snapFallback.docs
+    .sort((a, b) => (b.data().date ?? '').localeCompare(a.data().date ?? ''))
+    .slice(0, 10)
     .map(d => docToNewsItem(d, language));
 }
 
